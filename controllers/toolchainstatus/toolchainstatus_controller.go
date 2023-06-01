@@ -312,7 +312,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	// if we are running in production we also
 	// check that deployed version matches source code repository commit
 	var errVersionCheck error
-	if r.toolchainConfig.Environment() == "prod" && r.toolchainConfig.GitHubSecret().AccessTokenKey() != "" {
+	if isProdEnvironment(r.toolchainConfig) {
 		versionCondition := status.CheckDeployedVersionIsUpToDate(r.GithubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
 		errVersionCheck = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
 		toolchainStatus.Status.HostOperator.Conditions = append(toolchainStatus.Status.HostOperator.Conditions, *versionCondition)
@@ -323,6 +323,10 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	}
 
 	return errDeploy == nil && errVersionCheck == nil
+}
+
+func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
+	return toolchainConfig.Environment() == "prod" && toolchainConfig.GitHubSecret().AccessTokenKey() != ""
 }
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
@@ -858,7 +862,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 
 	// if we are running in production we also
 	// check that deployed version matches source code repository commit
-	if s.toolchainConfig.Environment() == "prod" {
+	if isProdEnvironment(s.toolchainConfig) {
 		versionCondition := status.CheckDeployedVersionIsUpToDate(s.githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
 		err = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
 		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *versionCondition)

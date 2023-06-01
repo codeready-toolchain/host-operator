@@ -64,14 +64,13 @@ func (f *fakeHTTPClient) Get(_ string) (*http.Response, error) {
 }
 
 const buildCommitSHA = "64af1be5c6011fae5497a7c35e2a986d633b3421"
-const respBodyGood = `{"alive":true,"environment":"dev","revision":"` + buildCommitSHA + `","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
+const respBodyGood = `{"alive":true,"environment":"prod","revision":"` + buildCommitSHA + `","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 const respBodyInvalid = `{"not found"}`
-const respBodyBad = `{"alive":false,"environment":"dev","revision":"` + buildCommitSHA + `","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
+const respBodyBad = `{"alive":false,"environment":"prod","revision":"` + buildCommitSHA + `","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
 var logger = logf.Log.WithName("toolchainstatus_controller_test")
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient, mockedGitHubClient *github.Client, memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
-
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -196,7 +195,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 	})
 
@@ -224,7 +223,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason, "unable to get the deployment: OPERATOR_NAME must be set"),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -243,10 +242,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason, "unable to get the deployment: deployments.apps \"host-operator-controller-manager\" not found"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -266,10 +264,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotReadyReason, "deployment has unready status conditions: Available"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -289,20 +286,24 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotReadyReason, "deployment has unready status conditions: Progressing"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Host operator and registration service deployments version are not up to date", func(t *testing.T) {
 			// given
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+			// we have a secret that contains the access token for GitHub authenticated APIs
+			githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
+				"accessToken": []byte("abcd1234"),
+			})
 			commitTimeStamp := OneHourAgo()
-			latestCommitSHA := "xxxxaaaaa"
+			latestCommitSHA := "xxxxaaaaa"                                                                                                                                           // we set the latest commit to something that differs from the `buildCommitSHA` constant
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockGitHubClient(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
-				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -313,14 +314,107 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThresholdInMinutes).Format(time.RFC3339)),
+					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(
 					conditionReady("RegServiceReady"),
-					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThresholdInMinutes).Format(time.RFC3339)),
+					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
 				)). // also regservice is not up-to-date since we return the same mocked github commit
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+		})
+
+		t.Run("Host operator and registration service deployments version are up to date", func(t *testing.T) {
+			// given
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
+			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+			// we have a secret that contains the access token for GitHub authenticated APIs
+			githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
+				"accessToken": []byte("abcd1234"),
+			})
+			commitTimeStamp := OneHourAgo()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockGitHubClient(buildCommitSHA, commitTimeStamp), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
+
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
+					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
+					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
+				)).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(
+					conditionReady("RegServiceReady"),
+					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
+				)). // also regservice is not up-to-date since we return the same mocked github commit
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+		})
+
+		t.Run("deployment version check is disabled", func(t *testing.T) {
+			t.Run("when environment is not prod", func(t *testing.T) {
+				// given
+				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("dev"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
+				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+				// we have a secret that contains the access token for GitHub authenticated APIs
+				githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
+					"accessToken": []byte("abcd1234"),
+				})
+				commitTimeStamp := OneHourAgo()
+				latestCommitSHA := "xxxxaaaaa"
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockGitHubClient(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
+					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
+
+				// when
+				res, err := reconciler.Reconcile(context.TODO(), req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
+						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason), // only one condition is reported
+					)).
+					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(
+						conditionReady("RegServiceReady"), // only one condition is reported
+					)).
+					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+			})
+
+			t.Run("when environment is prod but github secret is not present", func(t *testing.T) {
+				// given
+				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"),
+					testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken")) // the secret is not present
+				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+				commitTimeStamp := OneHourAgo()
+				latestCommitSHA := "xxxxaaaaa"
+				githubSecret := test.CreateSecret("othersecret", test.HostOperatorNs, map[string][]byte{ // we create some other random secret
+					"mykey": []byte("abcd1234"),
+				})
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockGitHubClient(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
+					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
+
+				// when
+				res, err := reconciler.Reconcile(context.TODO(), req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
+						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason), // only one condition is reported
+					)).
+					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(
+						conditionReady("RegServiceReady"), // only one condition is reported
+					)).
+					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+			})
 		})
 	})
 
@@ -494,7 +588,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostRoutesTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("", proxyRouteUnavailable("routes.route.openshift.io \"api\" not found"))
 		})
 
@@ -516,7 +610,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("http://api-toolchain-host-operator.host-cluster/api", hostRoutesAvailable())
 		})
 	})
@@ -541,7 +635,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus().
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -575,7 +669,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -612,7 +706,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", spaceCount(10), ready()),
 				).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -648,7 +742,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", spaceCount(10), ready()),
 					memberCluster("member-2", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -673,7 +767,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -697,7 +791,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", noResourceUsage(), spaceCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 					memberCluster("member-2", noResourceUsage(), spaceCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -722,7 +816,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 					memberCluster("member-2", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -746,7 +840,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(counterTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -772,7 +866,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -794,7 +888,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1"), memberCluster("member-2")).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
@@ -829,7 +923,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						memberCluster("member-2", ready()),
 						memberCluster("member-3", noResourceUsage(), spaceCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
-					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 			})
 
@@ -852,7 +946,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+					HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 			})
 		})
@@ -979,7 +1073,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 
 		// Confirm there is no notification
@@ -1231,7 +1325,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasMemberClusterStatus(
 				memberCluster("member-1", ready(), spaceCount(8)),
 				memberCluster("member-2", ready(), spaceCount(2))).
-			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 			Exists().HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 2, // users "cookie-00" and "pasta-00"
 			"2,internal": 2, // users "cookie-01" and "pasta-01"
@@ -1264,7 +1358,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				HasMemberClusterStatus(
 					memberCluster("member-1", ready(), spaceCount(9)),
 					memberCluster("member-2", ready(), spaceCount(2))).
-				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason)))
+				HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady")))
 		})
 
 	})
@@ -1305,7 +1399,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasMemberClusterStatus(
 				memberCluster("member-1", ready(), spaceCount(7)), // was incremented
 				memberCluster("member-2", ready(), spaceCount(2))).
-			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"), conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason))).
+			HasRegistrationServiceStatus(registrationServiceReadyWithHealthConditions(conditionReady("RegServiceReady"))).
 			HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
 				"1,external": 1, // unchanged
@@ -1676,11 +1770,6 @@ func hostOperatorStatusReady() toolchainv1alpha1.HostOperatorStatus {
 				Status: corev1.ConditionTrue,
 				Reason: toolchainv1alpha1.ToolchainStatusDeploymentReadyReason,
 			},
-			{
-				Type:   toolchainv1alpha1.ConditionReady,
-				Status: corev1.ConditionTrue,
-				Reason: toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason,
-			},
 		},
 		BuildTimestamp: version.BuildTime,
 		DeploymentName: defaultHostOperatorDeploymentName,
@@ -1807,11 +1896,6 @@ func registrationServiceDeploymentNotReady(reason, msg string) toolchainv1alpha1
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
 			Reason: "RegServiceReady",
-		},
-		{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason,
 		},
 	}
 	return registrationServiceStatus(deploy, conditions)

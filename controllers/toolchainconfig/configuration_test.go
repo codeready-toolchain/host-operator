@@ -484,9 +484,9 @@ func TestGitHubSecret(t *testing.T) {
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.GitHubSecret().
-				Ref("github").
-				AccessTokenKey("accessToken"))
+			testconfig.ToolchainStatus().
+				GitHubSecretRef("github").
+				GitHubSecretAccessTokenKey("accessToken"))
 		gitHubSecretValues := make(map[string]string)
 		gitHubSecretValues["accessToken"] = "abc123"
 		secrets := make(map[string]map[string]string)

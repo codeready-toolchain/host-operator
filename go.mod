@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20230530173150-e8a39402e87c
+	github.com/codeready-toolchain/api v0.0.0-20230601085531-c1f5bdd73897
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20230504150220-4ca56e68a966
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -32,10 +32,8 @@ require (
 )
 
 require (
-	github.com/gofri/go-github-ratelimit v1.0.3
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/uuid v1.3.0
-	golang.org/x/oauth2 v0.7.0
 )
 
 require (
@@ -65,6 +63,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
+	github.com/gofri/go-github-ratelimit v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -98,6 +97,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/term v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
@@ -118,6 +118,4 @@ require (
 
 go 1.19
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230601061444-7bf8a4c8a16e
-
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230531115846-9601ce4a7fc4
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230601131649-0434d7cc1aca

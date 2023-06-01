@@ -82,7 +82,7 @@ func (c *ToolchainConfig) Environment() string {
 }
 
 func (c *ToolchainConfig) GitHubSecret() GitHubSecret {
-	return GitHubSecret{s: c.cfg.Host.GitHubSecret,
+	return GitHubSecret{s: c.cfg.Host.ToolchainStatus.GitHubSecret,
 		secrets: c.secrets,
 	}
 }
