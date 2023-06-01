@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/codeready-toolchain/host-operator/pkg/pendo"
 	"net/http"
 	"os"
 	goruntime "runtime"
@@ -191,6 +192,13 @@ func main() { // nolint:gocyclo
 		}()
 	}
 
+	// initialize pendo client
+	pendoClient, err := pendo.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
+	if err != nil {
+		setupLog.Error(err, "unable to init the pendo client")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -274,6 +282,7 @@ func main() { // nolint:gocyclo
 		Namespace:      namespace,
 		Scheme:         mgr.GetScheme(),
 		SegmentClient:  segmentClient,
+		PendoClient:    pendoClient,
 		ClusterManager: capacity.NewClusterManager(commoncluster.GetMemberClusters, mgr.GetClient()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")

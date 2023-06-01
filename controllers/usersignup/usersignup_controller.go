@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
+	"github.com/codeready-toolchain/host-operator/pkg/pendo"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -70,6 +71,7 @@ type Reconciler struct {
 	Namespace      string
 	Scheme         *runtime.Scheme
 	SegmentClient  *segment.Client
+	PendoClient    *pendo.Client
 	ClusterManager *capacity.ClusterManager
 }
 
@@ -580,6 +582,12 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
 	} else {
 		logger.Info("segment client not configured to track account activations")
+	}
+	// track the MUR creation as an account activattion event in pendo
+	if r.PendoClient != nil {
+		r.PendoClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+	} else {
+		logger.Info("pendo client not configured to track account activations")
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
