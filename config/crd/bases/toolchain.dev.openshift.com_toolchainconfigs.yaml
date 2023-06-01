@@ -118,18 +118,6 @@ spec:
                     description: Environment specifies the host-operator environment
                       such as prod, stage, unit-tests, e2e-tests, dev, etc
                     type: string
-                  gitHubSecret:
-                    description: Defines all secrets related to GitHub authentication/integration
-                    properties:
-                      accessTokenKey:
-                        description: The key for the GitHub Access token in the secret
-                          values map
-                        type: string
-                      ref:
-                        description: Reference is the name of the secret resource
-                          to look up
-                        type: string
-                    type: object
                   metrics:
                     description: Keeps parameters concerned with metrics
                     properties:
@@ -412,6 +400,18 @@ spec:
                   toolchainStatus:
                     description: Keeps parameters concerned with the toolchainstatus
                     properties:
+                      gitHubSecret:
+                        description: Defines all secrets related to GitHub authentication/integration
+                        properties:
+                          accessTokenKey:
+                            description: The key for the GitHub Access token in the
+                              secret values map
+                            type: string
+                          ref:
+                            description: Reference is the name of the secret resource
+                              to look up
+                            type: string
+                        type: object
                       toolchainStatusRefreshTime:
                         description: ToolchainStatusRefreshTime specifies how often
                           the ToolchainStatus should load and refresh the current
@@ -523,21 +523,21 @@ spec:
                         description: Environment specifies the member-operator environment
                           such as prod, stage, unit-tests, e2e-tests, dev, etc
                         type: string
-                      gitHubSecret:
-                        description: Defines all secrets related to GitHub authentication/integration
-                        properties:
-                          accessTokenKey:
-                            description: The key for the GitHub Access token in the
-                              secret values map
-                            type: string
-                          ref:
-                            description: Reference is the name of the secret resource
-                              to look up
-                            type: string
-                        type: object
                       memberStatus:
                         description: Keeps parameters concerned with member status
                         properties:
+                          gitHubSecret:
+                            description: Defines all secrets related to GitHub authentication/integration
+                            properties:
+                              accessTokenKey:
+                                description: The key for the GitHub Access token in
+                                  the secret values map
+                                type: string
+                              ref:
+                                description: Reference is the name of the secret resource
+                                  to look up
+                                type: string
+                            type: object
                           refreshPeriod:
                             description: Defines the period between refreshes of the
                               member status
@@ -663,21 +663,21 @@ spec:
                           description: Environment specifies the member-operator environment
                             such as prod, stage, unit-tests, e2e-tests, dev, etc
                           type: string
-                        gitHubSecret:
-                          description: Defines all secrets related to GitHub authentication/integration
-                          properties:
-                            accessTokenKey:
-                              description: The key for the GitHub Access token in
-                                the secret values map
-                              type: string
-                            ref:
-                              description: Reference is the name of the secret resource
-                                to look up
-                              type: string
-                          type: object
                         memberStatus:
                           description: Keeps parameters concerned with member status
                           properties:
+                            gitHubSecret:
+                              description: Defines all secrets related to GitHub authentication/integration
+                              properties:
+                                accessTokenKey:
+                                  description: The key for the GitHub Access token
+                                    in the secret values map
+                                  type: string
+                                ref:
+                                  description: Reference is the name of the secret
+                                    resource to look up
+                                  type: string
+                              type: object
                             refreshPeriod:
                               description: Defines the period between refreshes of
                                 the member status
