@@ -189,6 +189,10 @@ spec:
                                   write key
                                 type: string
                             type: object
+                          pendoTrackEventKey:
+                            description: PendoTrackEventKey specifies the pendo track
+                              event key for tracking events
+                            type: string
                           segmentWriteKey:
                             description: SegmentWriteKey specifies the segment write
                               key for sandbox
