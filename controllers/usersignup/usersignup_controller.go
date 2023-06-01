@@ -3,6 +3,8 @@ package usersignup
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -21,7 +23,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"github.com/redhat-cop/operator-utils/pkg/util"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -372,7 +373,13 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		alreadyVerificationRequired := condition.IsFalseWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, toolchainv1alpha1.UserSignupVerificationRequiredReason)
+		err := r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		if err == nil && !alreadyVerificationRequired {
+			// increment the verification required counter only the first time the UserSignup status is set to verification required
+			metrics.UserSignupVerificationRequiredTotal.Inc()
+		}
+		return err
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.ClusterManager)
@@ -487,20 +494,25 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(oldState, state)
+	r.updateUserSignupMetricsByState(userSignup, oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
+		if states.ApprovedManually(userSignup) {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual").Inc()
+		} else {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic").Inc()
+		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
