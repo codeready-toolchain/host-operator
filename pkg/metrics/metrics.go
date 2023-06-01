@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/prometheus/client_golang/prometheus"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -46,6 +47,8 @@ var (
 	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
 	MasterUserRecordGaugeVec *prometheus.GaugeVec
+	// HostOperatorVersionGaugeVec reflects the current version of the host-operator (via the `version` label)
+	HostOperatorVersionGaugeVec *prometheus.GaugeVec
 )
 
 // collections
@@ -78,6 +81,7 @@ func initMetrics() {
 	SpaceGaugeVec = newGaugeVec("spaces_current", "Current number of Spaces (per member cluster)", "cluster_name")
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
+	HostOperatorVersionGaugeVec = newGaugeVec("host_operator_version", "Current version of the host operator", "commit")
 	log.Info("custom metrics initialized")
 }
 
@@ -138,5 +142,9 @@ func RegisterCustomMetrics() {
 	for _, v := range allGaugeVecs {
 		k8smetrics.Registry.MustRegister(v)
 	}
+
+	// expose the HostOperatorVersionGaugeVec metric (static ie, 1 value per build/deployment)
+	HostOperatorVersionGaugeVec.WithLabelValues(version.Commit[0:7]).Set(1)
+
 	log.Info("custom metrics registered")
 }
