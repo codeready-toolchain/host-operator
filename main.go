@@ -32,9 +32,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	"github.com/google/go-github/v52/github"
 	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/client-go/rest"
 
@@ -258,11 +258,17 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 		os.Exit(1)
 	}
+
+	githubClient, err := commonclient.NewGitHubClient(crtConfig.GitHubSecret().AccessTokenKey())
+	if err != nil {
+		setupLog.Error(err, "unable to create github client")
+		os.Exit(1)
+	}
 	if err := (&toolchainstatus.Reconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		HTTPClientImpl: &http.Client{},
-		GithubClient:   github.NewClient(nil),
+		GithubClient:   githubClient,
 		GetMembersFunc: commoncluster.GetMemberClusters,
 		Namespace:      namespace,
 	}).SetupWithManager(mgr); err != nil {

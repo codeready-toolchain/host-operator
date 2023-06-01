@@ -312,7 +312,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	// if we are running in production we also
 	// check that deployed version matches source code repository commit
 	var errVersionCheck error
-	if r.toolchainConfig.Environment() == "prod" {
+	if r.toolchainConfig.Environment() == "prod" && r.toolchainConfig.GitHubSecret().AccessTokenKey() != "" {
 		versionCondition := status.CheckDeployedVersionIsUpToDate(r.GithubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
 		errVersionCheck = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
 		toolchainStatus.Status.HostOperator.Conditions = append(toolchainStatus.Status.HostOperator.Conditions, *versionCondition)

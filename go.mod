@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96
+	github.com/codeready-toolchain/api v0.0.0-20230530173150-e8a39402e87c
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20230504150220-4ca56e68a966
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -31,7 +31,12 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-require github.com/google/go-github/v52 v52.0.0
+require (
+	github.com/gofri/go-github-ratelimit v1.0.3
+	github.com/google/go-github/v52 v52.0.0
+	github.com/google/uuid v1.3.0
+	golang.org/x/oauth2 v0.7.0
+)
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
@@ -68,7 +73,6 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/huandu/xstrings v1.3.1 // indirect
@@ -94,7 +98,6 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/term v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
@@ -115,6 +118,6 @@ require (
 
 go 1.19
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230529173140-a83bdc6c0b40
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230601061444-7bf8a4c8a16e
 
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230526093749-f4f301177237
+replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230531115846-9601ce4a7fc4

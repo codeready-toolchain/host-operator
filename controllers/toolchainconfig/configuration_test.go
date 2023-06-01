@@ -474,3 +474,26 @@ func TestUsers(t *testing.T) {
 		assert.Equal(t, []string{"sugar", "cream"}, toolchainCfg.Users().ForbiddenUsernameSuffixes())
 	})
 }
+
+func TestGitHubSecret(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Empty(t, toolchainCfg.GitHubSecret().AccessTokenKey())
+	})
+	t.Run("non-default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.GitHubSecret().
+				Ref("github").
+				AccessTokenKey("accessToken"))
+		gitHubSecretValues := make(map[string]string)
+		gitHubSecretValues["accessToken"] = "abc123"
+		secrets := make(map[string]map[string]string)
+		secrets["github"] = gitHubSecretValues
+
+		toolchainCfg := newToolchainConfig(cfg, secrets)
+
+		assert.Equal(t, "abc123", toolchainCfg.GitHubSecret().AccessTokenKey())
+	})
+}
