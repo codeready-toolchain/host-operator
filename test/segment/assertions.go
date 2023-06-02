@@ -19,9 +19,12 @@ func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, acc
 	require.IsType(t, &MockClient{}, cl.Client())
 	require.Len(t, cl.Client().(*MockClient).Queue, 1)
 	assert.Equal(t, analytics.Track{
-		UserId:     segment.Hash(username),
-		Event:      event,
-		Properties: analytics.NewProperties().Set("user_id", userID),
+		UserId: segment.Hash(username),
+		Event:  event,
+		Properties: analytics.Properties{
+			"user_id":    userID,
+			"account_id": accountID,
+		},
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
 				"groupId": accountID,
