@@ -310,7 +310,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	toolchainStatus.Status.HostOperator = operatorStatus
 
 	// if we are running in production we also
-	// check that deployed version matches source code repository commit
+	// check that deployed version matches the latest commit from source code repository
 	var errVersionCheck error
 	if isProdEnvironment(r.toolchainConfig) {
 		versionCondition := status.CheckDeployedVersionIsUpToDate(r.GithubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
