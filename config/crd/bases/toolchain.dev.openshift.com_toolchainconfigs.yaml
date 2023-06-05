@@ -188,19 +188,10 @@ spec:
                                 description: SegmentWriteKey specifies the segment
                                   write key
                                 type: string
-                              woopraDomain:
-                                description: WoopraDomain specifies the woopra domain
-                                  name
-                                type: string
                             type: object
                           segmentWriteKey:
                             description: SegmentWriteKey specifies the segment write
                               key for sandbox
-                            type: string
-                          woopraDomain:
-                            description: WoopraDomain specifies the woopra domain
-                              name TODO remove once config updated to have woopra
-                              in devspaces
                             type: string
                         type: object
                       auth:
@@ -409,6 +400,18 @@ spec:
                   toolchainStatus:
                     description: Keeps parameters concerned with the toolchainstatus
                     properties:
+                      gitHubSecret:
+                        description: Defines all secrets related to GitHub authentication/integration
+                        properties:
+                          accessTokenKey:
+                            description: The key for the GitHub Access token in the
+                              secret values map
+                            type: string
+                          ref:
+                            description: Reference is the name of the secret resource
+                              to look up
+                            type: string
+                        type: object
                       toolchainStatusRefreshTime:
                         description: ToolchainStatusRefreshTime specifies how often
                           the ToolchainStatus should load and refresh the current
@@ -516,9 +519,25 @@ spec:
                             description: Defines the console route name
                             type: string
                         type: object
+                      environment:
+                        description: Environment specifies the member-operator environment
+                          such as prod, stage, unit-tests, e2e-tests, dev, etc
+                        type: string
                       memberStatus:
                         description: Keeps parameters concerned with member status
                         properties:
+                          gitHubSecret:
+                            description: Defines all secrets related to GitHub authentication/integration
+                            properties:
+                              accessTokenKey:
+                                description: The key for the GitHub Access token in
+                                  the secret values map
+                                type: string
+                              ref:
+                                description: Reference is the name of the secret resource
+                                  to look up
+                                type: string
+                            type: object
                           refreshPeriod:
                             description: Defines the period between refreshes of the
                               member status
@@ -640,9 +659,25 @@ spec:
                               description: Defines the console route name
                               type: string
                           type: object
+                        environment:
+                          description: Environment specifies the member-operator environment
+                            such as prod, stage, unit-tests, e2e-tests, dev, etc
+                          type: string
                         memberStatus:
                           description: Keeps parameters concerned with member status
                           properties:
+                            gitHubSecret:
+                              description: Defines all secrets related to GitHub authentication/integration
+                              properties:
+                                accessTokenKey:
+                                  description: The key for the GitHub Access token
+                                    in the secret values map
+                                  type: string
+                                ref:
+                                  description: Reference is the name of the secret
+                                    resource to look up
+                                  type: string
+                              type: object
                             refreshPeriod:
                               description: Defines the period between refreshes of
                                 the member status
