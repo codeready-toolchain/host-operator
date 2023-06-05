@@ -259,18 +259,13 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 
-	githubClient, err := commonclient.NewGitHubClient(crtConfig.GitHubSecret().AccessTokenKey())
-	if err != nil {
-		setupLog.Error(err, "unable to create github client")
-		os.Exit(1)
-	}
 	if err := (&toolchainstatus.Reconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		HTTPClientImpl: &http.Client{},
-		GithubClient:   githubClient,
-		GetMembersFunc: commoncluster.GetMemberClusters,
-		Namespace:      namespace,
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		HTTPClientImpl:      &http.Client{},
+		GetGithubClientFunc: commonclient.NewGitHubClient,
+		GetMembersFunc:      commoncluster.GetMemberClusters,
+		Namespace:           namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
 		os.Exit(1)

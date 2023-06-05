@@ -31,10 +31,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-require (
-	github.com/google/go-github/v52 v52.0.0
-	github.com/google/uuid v1.3.0
-)
+require github.com/google/uuid v1.3.0
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
@@ -70,6 +67,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-github/v52 v52.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -118,4 +116,4 @@ require (
 
 go 1.19
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230602070922-12ec03753f87
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230605135007-75cb1295d0fb
