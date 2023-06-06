@@ -39,7 +39,7 @@ func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, acc
 	assert.Equal(t, expectedTrackEvent.Context, actualTrackEvent.Context)
 	assert.Equal(t, expectedTrackEvent.Properties["user_id"], actualTrackEvent.Properties["user_id"])
 	assert.Equal(t, expectedTrackEvent.Properties["account_id"], actualTrackEvent.Properties["account_id"])
-	assert.NotEmpty(t, actualTrackEvent.Properties["epoch_time"])
+	assert.NotEmpty(t, actualTrackEvent.Properties["epoch_time"]) // not comparing the timestamp in test
 }
 
 func AssertNoMessageQueued(t *testing.T, cl *segment.Client) {
