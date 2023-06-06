@@ -87,6 +87,11 @@ objects:
     - spiaccesstokens
     - spifilecontentrequests
     - spiaccesstokendataupdates
+    verbs:
+    - "*"
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - remotesecrets
     verbs:
     - "*"
