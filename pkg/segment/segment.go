@@ -2,6 +2,7 @@ package segment
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/segmentio/analytics-go/v3"
@@ -48,7 +49,8 @@ func (c *Client) TrackAccountActivation(username, userID, accountID string) {
 		UserId: Hash(username),
 		Properties: analytics.NewProperties().
 			Set("user_id", userID).
-			Set("account_id", accountID),
+			Set("account_id", accountID).
+			Set("epoch_time", time.Now()),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
 				"groupId": accountID,
