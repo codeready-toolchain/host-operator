@@ -315,15 +315,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	// check that deployed version matches the latest commit from source code repository
 	// we also check when we called github api last time, in order to avoid rate limit issues.
 	if isProdEnvironment(r.toolchainConfig) && okToIssueGitHubRequest(r.LastGitHubAPICallForHost) {
-		githubClient, errGithubClient := r.GetGithubClientFunc(r.toolchainConfig.GitHubSecret().AccessTokenKey())
-		if errGithubClient != nil {
-			errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
-				fmt.Sprintf("%s: %s", "error while creating github client", errGithubClient.Error()))
-			operatorStatus.Conditions = []toolchainv1alpha1.Condition{*errCondition}
-			toolchainStatus.Status.HostOperator = operatorStatus
-			reqLogger.Error(errGithubClient, "error while creating github client")
-			return false // we can return
-		}
+		githubClient := r.GetGithubClientFunc(r.toolchainConfig.GitHubSecret().AccessTokenKey())
 		versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
 		// let's update last time we called the github api
 		r.LastGitHubAPICallForHost = time.Now()
@@ -887,11 +879,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	// if we are running in production we also
 	// check that deployed version matches source code repository commit
 	if isProdEnvironment(s.toolchainConfig) && okToIssueGitHubRequest(s.lastGitHubAPICallForRegSer) {
-		githubClient, errGithubClient := s.getGithubClientFunc(s.toolchainConfig.GitHubSecret().AccessTokenKey())
-		if errGithubClient != nil {
-			reqLogger.Error(errGithubClient, "error while creating github client")
-			return false // we can return
-		}
+		githubClient := s.getGithubClientFunc(s.toolchainConfig.GitHubSecret().AccessTokenKey())
 		versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
 		// let's update last time we called github api for reg service
 		s.lastGitHubAPICallForRegSer = time.Now()
