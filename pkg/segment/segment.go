@@ -50,7 +50,7 @@ func (c *Client) TrackAccountActivation(username, userID, accountID string) {
 		Properties: analytics.NewProperties().
 			Set("user_id", userID).
 			Set("account_id", accountID).
-			Set("epoch_time", time.Now()),
+			Set("epoch_time", time.Now().UnixMilli()),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
 				"groupId": accountID,
