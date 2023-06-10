@@ -131,6 +131,14 @@ objects:
           - list
           - watch
       - apiGroups:
+          - appstudio.redhat.com
+        resources:
+          - remotesecrets
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
           - ''
         resources:
           - configmaps

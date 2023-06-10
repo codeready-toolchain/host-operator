@@ -18,7 +18,7 @@ func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *
 func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, accountID string, event string) {
 	require.IsType(t, &MockClient{}, cl.Client())
 	require.Len(t, cl.Client().(*MockClient).Queue, 1)
-	assert.Equal(t, analytics.Track{
+	expectedTrackEvent := analytics.Track{
 		UserId: segment.Hash(username),
 		Event:  event,
 		Properties: analytics.Properties{
@@ -30,7 +30,16 @@ func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, acc
 				"groupId": accountID,
 			},
 		},
-	}, cl.Client().(*MockClient).Queue[0])
+	}
+	actualMessage := cl.Client().(*MockClient).Queue[0]
+	actualTrackEvent, ok := actualMessage.(analytics.Track)
+	require.True(t, ok)
+	assert.Equal(t, expectedTrackEvent.UserId, actualTrackEvent.UserId)
+	assert.Equal(t, expectedTrackEvent.Event, actualTrackEvent.Event)
+	assert.Equal(t, expectedTrackEvent.Context, actualTrackEvent.Context)
+	assert.Equal(t, expectedTrackEvent.Properties["user_id"], actualTrackEvent.Properties["user_id"])
+	assert.Equal(t, expectedTrackEvent.Properties["account_id"], actualTrackEvent.Properties["account_id"])
+	assert.NotEmpty(t, actualTrackEvent.Properties["epoch_time"]) // not comparing the timestamp in test
 }
 
 func AssertNoMessageQueued(t *testing.T, cl *segment.Client) {
