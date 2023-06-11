@@ -35,7 +35,6 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	authv1 "k8s.io/api/authentication/v1"

@@ -125,9 +125,8 @@ type Reconciler struct {
 	HTTPClientImpl             HTTPClient
 	Namespace                  string
 	GetGithubClientFunc        client.GetGitHubClientFunc
-	LastGitHubAPICallForHost   time.Time
-	LastGitHubAPICallForRegSer time.Time
-	toolchainConfig            toolchainconfig.ToolchainConfig
+	lastGitHubAPICallForHost   time.Time
+	lastGitHubAPICallForRegSer time.Time
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses,verbs=get;list;watch;create;update;patch;delete
@@ -140,7 +139,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	reqLogger.Info("Reconciling ToolchainStatus")
 
 	toolchainConfig, err := toolchainconfig.GetToolchainConfig(r.Client)
-	r.toolchainConfig = toolchainConfig
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -310,28 +308,50 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		reqLogger.Error(errDeploy, "host operator deployment is not ready")
 		return false
 	}
+	operatorStatus.Conditions = deploymentConditions
 
 	// if we are running in production we also
-	// check that deployed version matches the latest commit from source code repository
-	// we also check when we called github api last time, in order to avoid rate limit issues.
-	if isProdEnvironment(r.toolchainConfig) && okToIssueGitHubRequest(r.LastGitHubAPICallForHost) {
-		githubClient := r.GetGithubClientFunc(r.toolchainConfig.GitHubSecret().AccessTokenKey())
-		versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
-		// let's update last time we called the github api
-		r.LastGitHubAPICallForHost = time.Now()
-		errVersionCheck := status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
-		if errVersionCheck != nil {
-			// let's set the Ready condition to false
-			operatorStatus.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
-			toolchainStatus.Status.HostOperator = operatorStatus
-			reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
-			return false // we can return
-		}
+	// check that deployed version matches the latest commit from source code repository.
+	// we also need to check when we called GitHub api last time, in order to avoid rate limiting issues.
+	toolchainConfig, errToolchainConfig := toolchainconfig.GetToolchainConfig(r.Client)
+	if errToolchainConfig != nil {
+		reqLogger.Error(errToolchainConfig, status.ErrMsgCannotGetDeployment)
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
+			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()))
+		operatorStatus.Conditions = append(operatorStatus.Conditions, *errCondition)
+		toolchainStatus.Status.HostOperator = operatorStatus
+		return false
+	}
+	if !isProdEnvironment(toolchainConfig) {
+		// version check is disabled
+		deploymentVersionSkippedCondition := status.NewDeploymentVersionCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
+		operatorStatus.Conditions = append(operatorStatus.Conditions, *deploymentVersionSkippedCondition)
+		toolchainStatus.Status.HostOperator = operatorStatus
+		return true
 	}
 
-	// if we reach this point we can
-	// set the deployment condition to ready
-	operatorStatus.Conditions = deploymentConditions
+	if !client.CanIssueGitHubRequest(r.lastGitHubAPICallForHost) {
+		// we need to wait until delay is over before calling again GitHub API
+		toolchainStatus.Status.HostOperator = operatorStatus
+		return true
+	}
+
+	// verify deployment version
+	githubClient := r.GetGithubClientFunc(toolchainConfig.GitHubSecret().AccessTokenKey())
+	versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
+	// let's update last time we called the GitHub api
+	r.lastGitHubAPICallForHost = time.Now()
+	errVersionCheck := status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+	if errVersionCheck != nil {
+		// let's set deployment is not up-to-date reason
+		operatorStatus.Conditions = append(operatorStatus.Conditions, *versionCondition)
+		toolchainStatus.Status.HostOperator = operatorStatus
+		reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
+		return false
+	}
+	// deployment is up-to-date
+	operatorStatus.Conditions = append(operatorStatus.Conditions, *versionCondition)
+	// update host operator status with condition ready and condition deployment up-to-date/skipped
 	toolchainStatus.Status.HostOperator = operatorStatus
 	return true
 }
@@ -339,11 +359,6 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 // check if we are running in a production environment
 func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
 	return toolchainConfig.Environment() == "prod" && toolchainConfig.GitHubSecret().AccessTokenKey() != ""
-}
-
-// we check if we already called the GitHub api and if the preconfigured threshold time expired.
-func okToIssueGitHubRequest(lastGitHubAPICall time.Time) bool {
-	return lastGitHubAPICall.IsZero() || time.Now().After(lastGitHubAPICall.Add(client.GitHubAPICallDelay))
 }
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
@@ -354,8 +369,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 		controllerClient:           r.Client,
 		httpClientImpl:             r.HTTPClientImpl,
 		getGithubClientFunc:        r.GetGithubClientFunc,
-		lastGitHubAPICallForRegSer: r.LastGitHubAPICallForRegSer,
-		toolchainConfig:            r.toolchainConfig,
+		lastGitHubAPICallForRegSer: r.lastGitHubAPICallForRegSer,
 	}
 
 	// gather the functions for handling registration service status eg. deployment, health endpoint
@@ -801,11 +815,10 @@ type regServiceSubstatusHandler struct {
 	controllerClient           runtimeclient.Client
 	getGithubClientFunc        client.GetGitHubClientFunc
 	lastGitHubAPICallForRegSer time.Time
-	toolchainConfig            toolchainconfig.ToolchainConfig
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
-func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	deploymentConditions := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
 	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
@@ -820,7 +833,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLo
 }
 
 // addRegistrationServiceHealthStatus handles the RegistrationService.Health part of the toolchainstatus
-func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (s *regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get the JSON payload from the health endpoint
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
 	if err != nil {
@@ -876,24 +889,48 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 		return false
 	}
 
-	// if we are running in production we also
-	// check that deployed version matches source code repository commit
-	if isProdEnvironment(s.toolchainConfig) && okToIssueGitHubRequest(s.lastGitHubAPICallForRegSer) {
-		githubClient := s.getGithubClientFunc(s.toolchainConfig.GitHubSecret().AccessTokenKey())
-		versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
-		// let's update last time we called github api for reg service
-		s.lastGitHubAPICallForRegSer = time.Now()
-		err = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
-		if err != nil {
-			toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
-			reqLogger.Error(err, "registration service deployment is not up to date")
-			return false
-		}
-	}
-
-	// if we get here it means we can set the ready condition health component
+	// we can set component ready condition to true
 	componentReadyCondition := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason)
 	toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*componentReadyCondition}
+
+	// if we are running in production we also
+	// check that deployed version matches source code repository commit
+	toolchainConfig, errToolchainConfig := toolchainconfig.GetToolchainConfig(s.controllerClient)
+	if errToolchainConfig != nil {
+		reqLogger.Error(errToolchainConfig, status.ErrMsgCannotGetDeployment)
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
+			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()))
+		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *errCondition)
+		return false
+	}
+	if !isProdEnvironment(toolchainConfig) {
+		// version check is disabled
+		deploymentVersionSkippedCondition := status.NewDeploymentVersionCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
+		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *deploymentVersionSkippedCondition)
+		return true
+	}
+
+	if !client.CanIssueGitHubRequest(s.lastGitHubAPICallForRegSer) {
+		// skip version check until delay is over
+		return true
+	}
+
+	// validate deployed version
+	githubClient := s.getGithubClientFunc(toolchainConfig.GitHubSecret().AccessTokenKey())
+	versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
+	// let's update last time we called GitHub api for reg service
+	s.lastGitHubAPICallForRegSer = time.Now()
+	err = status.ValidateDeploymentVersionCondition([]toolchainv1alpha1.Condition{*versionCondition}...)
+	if err != nil {
+		// add version is not up-to-date condition
+		reqLogger.Error(err, "registration service deployment is not up to date")
+		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *versionCondition)
+		return false
+	}
+	// add version is up-to-date condition
+	toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *versionCondition)
+
+	// if we get here it means that component health is ok
 	return true
 }
 
