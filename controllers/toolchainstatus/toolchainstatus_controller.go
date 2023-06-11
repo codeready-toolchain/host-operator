@@ -220,27 +220,33 @@ func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainSt
 
 func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// If the current ToolchainStatus:
-	// a) Is currently not ready,
+	// a) Is currently not ready or the deployments versions are not up-to-date,
 	// b) has not been ready for longer than the configured threshold, and
 	// c) no notification has been already sent, then
 	// send a notification to the admin mailing list
-	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && c.Status == corev1.ConditionFalse {
-		threshold := time.Now().Add(-durationAfterUnready)
-		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
-			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
-				if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
-					reqLogger.Error(err, "Failed to create toolchain status unready notification")
+	conditionTypesToCheck := []toolchainv1alpha1.ConditionType{
+		toolchainv1alpha1.ConditionReady,
+		toolchainv1alpha1.ConditionDeploymentVersion,
+	}
+	for _, conditionType := range conditionTypesToCheck {
+		c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, conditionType)
+		if found && c.Status == corev1.ConditionFalse {
+			threshold := time.Now().Add(-durationAfterUnready)
+			if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
+				if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
+					if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
+						reqLogger.Error(err, "Failed to create toolchain status unready notification")
 
-					// set the failed to create notification status condition
-					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
-						r.setStatusUnreadyNotificationCreationFailed, err,
-						"Failed to create toolchain status unready notification")
-				}
+						// set the failed to create notification status condition
+						return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+							r.setStatusUnreadyNotificationCreationFailed, err,
+							"Failed to create toolchain status unready notification")
+					}
 
-				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
-					reqLogger.Error(err, "Failed to update notification created status")
-					return err
+					if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
+						reqLogger.Error(err, "Failed to update notification created status")
+						return err
+					}
 				}
 			}
 		}
