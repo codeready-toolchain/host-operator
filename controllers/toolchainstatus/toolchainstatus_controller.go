@@ -226,7 +226,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 	// send a notification to the admin mailing list
 	conditionTypesToCheck := []toolchainv1alpha1.ConditionType{
 		toolchainv1alpha1.ConditionReady,
-		toolchainv1alpha1.ConditionDeploymentVersion,
+		toolchainv1alpha1.ConditionDeploymentVersionUpToDate,
 	}
 	for _, conditionType := range conditionTypesToCheck {
 		c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, conditionType)
@@ -322,15 +322,15 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	toolchainConfig, errToolchainConfig := toolchainconfig.GetToolchainConfig(r.Client)
 	if errToolchainConfig != nil {
 		reqLogger.Error(errToolchainConfig, status.ErrMsgCannotGetDeployment)
-		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
-			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()))
+		errCondition := status.NewDeploymentVersionUpToDateErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckOperatorErrorReason,
+			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()), corev1.ConditionUnknown)
 		operatorStatus.Conditions = append(operatorStatus.Conditions, *errCondition)
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return false
 	}
 	if !isProdEnvironment(toolchainConfig) {
 		// version check is disabled
-		deploymentVersionSkippedCondition := status.NewDeploymentVersionCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
+		deploymentVersionSkippedCondition := status.NewDeploymentVersionUpToDateCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
 		operatorStatus.Conditions = append(operatorStatus.Conditions, *deploymentVersionSkippedCondition)
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return true
@@ -347,7 +347,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
 	// let's update last time we called the GitHub api
 	r.lastGitHubAPICallForHost = time.Now()
-	errVersionCheck := status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+	errVersionCheck := status.ValidateDeploymentVersionUpToDateCondition([]toolchainv1alpha1.Condition{*versionCondition}...)
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
 		operatorStatus.Conditions = append(operatorStatus.Conditions, *versionCondition)
@@ -911,7 +911,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogge
 	}
 	if !isProdEnvironment(toolchainConfig) {
 		// version check is disabled
-		deploymentVersionSkippedCondition := status.NewDeploymentVersionCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
+		deploymentVersionSkippedCondition := status.NewDeploymentVersionUpToDateCondition(toolchainv1alpha1.ToolchainStatusDeploymentVersionCheckDisabledReason)
 		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *deploymentVersionSkippedCondition)
 		return true
 	}
@@ -926,7 +926,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogge
 	versionCondition := status.CheckDeployedVersionIsUpToDate(githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
 	// let's update last time we called GitHub api for reg service
 	s.lastGitHubAPICallForRegSer = time.Now()
-	err = status.ValidateDeploymentVersionCondition([]toolchainv1alpha1.Condition{*versionCondition}...)
+	err = status.ValidateDeploymentVersionUpToDateCondition([]toolchainv1alpha1.Condition{*versionCondition}...)
 	if err != nil {
 		// add version is not up-to-date condition
 		reqLogger.Error(err, "registration service deployment is not up to date")
