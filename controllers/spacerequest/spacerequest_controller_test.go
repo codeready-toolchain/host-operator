@@ -374,9 +374,9 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "unable to get namespace: namespaces \"jane-tenant\" not found")
 		})
 
-		t.Run("unable to find owner label in spaceRequest namespace", func(t *testing.T) {
+		t.Run("unable to find space label in spaceRequest namespace", func(t *testing.T) {
 			// given
-			srNamespace := newNamespace("noowner")
+			srNamespace := newNamespace("nospace")
 			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
@@ -389,7 +389,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "unable to find owner label toolchain.dev.openshift.com/owner on namespace noowner-tenant")
+			require.EqualError(t, err, "unable to find space label toolchain.dev.openshift.com/space on namespace nospace-tenant")
 		})
 
 		t.Run("unable to update space since it's being deleted", func(t *testing.T) {
@@ -995,17 +995,17 @@ func requestFor(s *toolchainv1alpha1.SpaceRequest) reconcile.Request {
 	}
 }
 
-func newNamespace(owner string) *corev1.Namespace {
+func newNamespace(spacename string) *corev1.Namespace {
 	labels := map[string]string{
-		"toolchain.dev.openshift.com/type":     "tenant",
-		"toolchain.dev.openshift.com/provider": "codeready-toolchain",
+		toolchainv1alpha1.TypeLabelKey:     "tenant",
+		toolchainv1alpha1.ProviderLabelKey: toolchainv1alpha1.ProviderLabelValue,
 	}
-	if owner != "noowner" {
-		labels["toolchain.dev.openshift.com/owner"] = owner
+	if spacename != "nospace" {
+		labels[toolchainv1alpha1.SpaceLabelKey] = spacename
 	}
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf("%s-tenant", owner),
+			Name:   fmt.Sprintf("%s-tenant", spacename),
 			Labels: labels,
 		},
 		Status: corev1.NamespaceStatus{Phase: corev1.NamespaceActive},

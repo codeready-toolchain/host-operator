@@ -303,10 +303,10 @@ func (r *Reconciler) getParentSpace(memberCluster cluster.Cluster, spaceRequest 
 	if err != nil {
 		return nil, errs.Wrap(err, "unable to get namespace")
 	}
-	// get owner name which is equal to NSTemplateSet name and Space name
-	parentSpaceName, found := namespace.Labels[toolchainv1alpha1.OwnerLabelKey]
+	// get the Space name from the namespace resource
+	parentSpaceName, found := namespace.Labels[toolchainv1alpha1.SpaceLabelKey]
 	if !found || parentSpaceName == "" {
-		return nil, errs.Errorf("unable to find owner label %s on namespace %s", toolchainv1alpha1.OwnerLabelKey, namespace.GetName())
+		return nil, errs.Errorf("unable to find space label %s on namespace %s", toolchainv1alpha1.SpaceLabelKey, namespace.GetName())
 	}
 
 	// check that parentSpace object still exists
