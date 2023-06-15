@@ -14,9 +14,9 @@ objects:
         count/deploymentconfigs.apps: "30"
         count/pods: "50"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
