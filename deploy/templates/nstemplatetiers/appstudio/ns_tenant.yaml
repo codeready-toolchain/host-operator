@@ -9,7 +9,6 @@ objects:
     annotations:
       openshift.io/description: ${SPACE_NAME}
       openshift.io/display-name: ${SPACE_NAME}
-      openshift.io/requester: ${SPACE_NAME}
     labels:
       name: ${SPACE_NAME}-tenant
       argocd.argoproj.io/managed-by: gitops-service-argocd
