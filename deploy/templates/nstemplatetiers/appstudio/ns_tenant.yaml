@@ -12,7 +12,6 @@ objects:
       openshift.io/requester: ${SPACE_NAME}
     labels:
       name: ${SPACE_NAME}-tenant
-      toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
       argocd.argoproj.io/managed-by: gitops-service-argocd
       #billing labels ref: https://github.com/redhat-appstudio/book/blob/main/ADR/0010-namespace-metadata.md
       appstudio.redhat.com/workspace_name: ${SPACE_NAME}
