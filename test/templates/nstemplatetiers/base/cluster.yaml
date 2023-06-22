@@ -19,7 +19,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 parameters:
 - name: SPACE_NAME
   required: true

@@ -21,7 +21,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -35,7 +36,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -48,7 +50,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -61,7 +64,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -76,7 +80,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -88,7 +93,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -100,7 +106,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -112,7 +119,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -124,7 +132,8 @@ objects:
     selector:
       annotations: null
       labels:
-        toolchain.dev.openshift.com/space: ${SPACE_NAME}
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
