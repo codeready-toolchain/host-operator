@@ -198,6 +198,8 @@ objects:
       labels:
         provider: codeready-toolchain
         run: registration-service
+      annotations:
+        haproxy.router.openshift.io/timeout: 24h
       name: api
       namespace: ${NAMESPACE}
     spec:
