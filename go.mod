@@ -7,7 +7,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
-	github.com/gofrs/uuid v3.3.0+incompatible
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/mailgun/mailgun-go/v4 v4.8.1
 	// using latest commit from 'github.com/openshift/api branch release-4.12'
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556

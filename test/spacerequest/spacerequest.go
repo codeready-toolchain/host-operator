@@ -4,7 +4,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -16,7 +16,7 @@ func NewSpaceRequest(name, namespace string, options ...Option) *toolchainv1alph
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			UID:       types.UID(uuid.NewString()),
+			UID:       types.UID(uuid.Must(uuid.NewV4()).String()),
 		},
 	}
 	for _, apply := range options {
