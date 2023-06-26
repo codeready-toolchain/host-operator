@@ -36,9 +36,9 @@ objects:
   - apiGroups:
     - ""
     resources:
-    - role
-    - persistentvolume
-    - ingressclass
+    - roles
+    - persistentvolumes
+    - ingressclasses
     verbs:
     - view
     - list
