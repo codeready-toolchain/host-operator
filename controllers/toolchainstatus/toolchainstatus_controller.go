@@ -53,7 +53,7 @@ const (
 
 	hostOperatorRepoName              = "host-operator"
 	registrationServiceRepoName       = "registration-service"
-	hostOperatorRepoBranchName        = "head"
+	hostOperatorRepoBranchName        = "HEAD"
 	registrationServiceRepoBranchName = hostOperatorRepoBranchName
 )
 
@@ -350,7 +350,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 
 // check if we are running in a production environment
 func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
-	return toolchainConfig.Environment() == "prod" && toolchainConfig.GitHubSecret().AccessTokenKey() != ""
+	return toolchainConfig.Environment() == "prod"
 }
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
