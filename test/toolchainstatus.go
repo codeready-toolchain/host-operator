@@ -43,6 +43,7 @@ func WithRegistrationService(options ...RegistrationServiceToolchainStatusOption
 			Deployment:                   toolchainv1alpha1.RegistrationServiceDeploymentStatus{},
 			RegistrationServiceResources: toolchainv1alpha1.RegistrationServiceResourcesStatus{},
 			Health:                       toolchainv1alpha1.RegistrationServiceHealth{},
+			RevisionCheck:                toolchainv1alpha1.RevisionCheck{},
 		}
 		for _, modify := range options {
 			modify(regService)

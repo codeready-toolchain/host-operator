@@ -35,6 +35,7 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	authv1 "k8s.io/api/authentication/v1"
@@ -262,7 +263,7 @@ func main() { // nolint:gocyclo
 		Client:              mgr.GetClient(),
 		Scheme:              mgr.GetScheme(),
 		HTTPClientImpl:      &http.Client{},
-		GetGithubClientFunc: commonclient.NewGitHubClient,
+		VersionCheckManager: status.VersionCheckManager{GetGithubClientFunc: commonclient.NewGitHubClient},
 		GetMembersFunc:      commoncluster.GetMemberClusters,
 		Namespace:           namespace,
 	}).SetupWithManager(mgr); err != nil {
