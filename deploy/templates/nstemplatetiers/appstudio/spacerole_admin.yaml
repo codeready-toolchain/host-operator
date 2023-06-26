@@ -107,6 +107,18 @@ objects:
     - configmaps
     verbs:
     - "*"
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - buildpipelineselectors
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   # Allow to manage pipeline ServiceAccount for linking secrets used for repositories
   - apiGroups:
     - ""
