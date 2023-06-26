@@ -337,7 +337,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 
 	// verify deployment version
 	versionCondition := r.VersionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, githubRepo)
-	errVersionCheck := status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+	errVersionCheck := status.ValidateComponentConditionReady(*versionCondition)
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
 		reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
@@ -905,7 +905,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 		DeployedCommitSHA: version.Commit,
 	}
 	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
-	err = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+	err = status.ValidateComponentConditionReady(*versionCondition)
 	if err != nil {
 		// add version is not up-to-date condition
 		reqLogger.Error(err, "registration service deployment is not up to date")
