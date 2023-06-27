@@ -14,9 +14,10 @@ objects:
         count/deploymentconfigs.apps: "30"
         count/pods: "150"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -27,9 +28,10 @@ objects:
         count/replicasets.apps: "30"
         count/replicationcontrollers: "30"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -40,9 +42,10 @@ objects:
         count/ingresses.extensions: "30"
         count/routes.route.openshift.io: "30"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -55,9 +58,10 @@ objects:
         count/cronjobs.batch: "30"
         count/statefulsets.apps: "30"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -67,9 +71,10 @@ objects:
       hard:
         count/services: "30"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -79,9 +84,10 @@ objects:
       hard:
         count/buildconfigs.build.openshift.io: "30"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -91,9 +97,10 @@ objects:
       hard:
         count/secrets: "100"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
@@ -103,9 +110,10 @@ objects:
       hard:
         count/configmaps: "100"
     selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
