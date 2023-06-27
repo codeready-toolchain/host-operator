@@ -183,7 +183,6 @@ spec:
                 - buildTimestamp
                 - deploymentName
                 - revision
-                - revisionCheck
                 - version
                 type: object
               hostRoutes:
@@ -513,7 +512,6 @@ spec:
                           - buildTimestamp
                           - deploymentName
                           - revision
-                          - revisionCheck
                           - version
                           type: object
                         resourceUsage:
@@ -799,7 +797,6 @@ spec:
                 - deployment
                 - health
                 - registrationServiceResources
-                - revisionCheck
                 type: object
             type: object
         type: object

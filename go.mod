@@ -31,7 +31,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-require github.com/google/uuid v1.3.0
+require github.com/google/uuid v1.3.0 // indirect
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
@@ -115,6 +115,6 @@ require (
 
 go 1.19
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230626074537-eeee22595194
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230627154208-c0d6626d152c
 
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230615150733-e9a7da38ff82
+replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230627154056-b468b48f6293

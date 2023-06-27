@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 	"text/template"
 	"time"
@@ -53,7 +52,7 @@ const (
 
 	hostOperatorRepoName              = "host-operator"
 	registrationServiceRepoName       = "registration-service"
-	hostOperatorRepoBranchName        = "HEAD"
+	hostOperatorRepoBranchName        = "master"
 	registrationServiceRepoBranchName = hostOperatorRepoBranchName
 )
 
@@ -281,7 +280,7 @@ func (r *Reconciler) synchronizeWithCounter(reqLogger logr.Logger, toolchainStat
 // if the deployment is not determined to be ready
 func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// ensure host operator status is set
-	if reflect.ValueOf(toolchainStatus.Status.HostOperator).IsZero() {
+	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
 
@@ -305,13 +304,13 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// save host operator deployment check status in this flag, it will be returned in case no errors are found by the following checks.
-	noError := true
+	allOK := true
 	// check host operator deployment status
 	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
 	errDeploy = status.ValidateComponentConditionReady(deploymentConditions...)
 	if errDeploy != nil {
 		reqLogger.Error(errDeploy, "host operator deployment is not ready")
-		noError = false
+		allOK = false
 	}
 	operatorStatus.Conditions = deploymentConditions
 
@@ -341,11 +340,11 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
 		reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
-		noError = false
+		allOK = false
 	}
 	operatorStatus.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
 	toolchainStatus.Status.HostOperator = operatorStatus
-	return noError
+	return allOK
 }
 
 // check if we are running in a production environment
@@ -370,7 +369,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 	}
 
 	// ensure the registrationservice part of the status is created
-	if reflect.ValueOf(toolchainStatus.Status.RegistrationService).IsZero() {
+	if toolchainStatus.Status.RegistrationService == nil {
 		toolchainStatus.Status.RegistrationService = &toolchainv1alpha1.HostRegistrationServiceStatus{}
 	}
 
@@ -902,7 +901,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 		Org:               toolchainv1alpha1.ProviderLabelValue,
 		Name:              registrationServiceRepoName,
 		Branch:            registrationServiceRepoBranchName,
-		DeployedCommitSHA: version.Commit,
+		DeployedCommitSHA: healthValues.Revision,
 	}
 	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
 	err = status.ValidateComponentConditionReady(*versionCondition)
