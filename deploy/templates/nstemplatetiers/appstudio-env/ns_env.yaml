@@ -33,16 +33,31 @@ objects:
     name: additional-argocd-read
     namespace: ${SPACE_NAME}-env
   rules:
-  - apiGroups:
-    - ""
-    resources:
-    - roles
-    - persistentvolumes
-    - ingressclasses
-    verbs:
-    - view
-    - list
-    - watch
+    - apiGroups:
+        - authorization.openshift.io
+        - rbac.authorization.k8s.io
+      resources:
+        - roles
+      verbs:
+        - view
+        - list
+        - watch
+    - apiGroups:
+        - networking.k8s.io
+      resources:
+        - ingressclasses
+      verbs:
+        - view
+        - list
+        - watch
+    - apiGroups:
+        - ""
+      resources:
+        - persistentvolumes
+      verbs:
+        - view
+        - list
+        - watch
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
