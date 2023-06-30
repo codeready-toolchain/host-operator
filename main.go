@@ -32,9 +32,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-
+	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	authv1 "k8s.io/api/authentication/v1"
@@ -257,12 +258,14 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 		os.Exit(1)
 	}
+
 	if err := (&toolchainstatus.Reconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		HTTPClientImpl: &http.Client{},
-		GetMembersFunc: commoncluster.GetMemberClusters,
-		Namespace:      namespace,
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		HTTPClientImpl:      &http.Client{},
+		VersionCheckManager: status.VersionCheckManager{GetGithubClientFunc: commonclient.NewGitHubClient},
+		GetMembersFunc:      commoncluster.GetMemberClusters,
+		Namespace:           namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
 		os.Exit(1)
