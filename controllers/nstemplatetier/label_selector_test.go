@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,8 +55,8 @@ func TestComputeHash(t *testing.T) {
 			},
 		}
 		// when
-		hash1, err1 := tierutil.ComputeHashForNSTemplateTier(nsTemplateTier)
-		hash2, err2 := tierutil.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
+		hash1, err1 := hash.ComputeHashForNSTemplateTier(nsTemplateTier)
+		hash2, err2 := hash.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
 		// then
 		require.NoError(t, err1)
 		require.NoError(t, err2)
@@ -111,8 +111,8 @@ func TestComputeHash(t *testing.T) {
 			},
 		}
 		// when
-		hash1, err1 := tierutil.ComputeHashForNSTemplateTier(nsTemplateTier)
-		hash2, err2 := tierutil.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
+		hash1, err1 := hash.ComputeHashForNSTemplateTier(nsTemplateTier)
+		hash2, err2 := hash.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
 		// then
 		require.NoError(t, err1)
 		require.NoError(t, err2)
@@ -161,8 +161,8 @@ func TestComputeHash(t *testing.T) {
 			},
 		}
 		// when
-		hash1, err1 := tierutil.ComputeHashForNSTemplateTier(nsTemplateTier)
-		hash2, err2 := tierutil.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
+		hash1, err1 := hash.ComputeHashForNSTemplateTier(nsTemplateTier)
+		hash2, err2 := hash.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
 		// then
 		require.NoError(t, err1)
 		require.NoError(t, err2)
@@ -217,8 +217,8 @@ func TestComputeHash(t *testing.T) {
 			},
 		}
 		// when
-		hash1, err1 := tierutil.ComputeHashForNSTemplateTier(nsTemplateTier)
-		hash2, err2 := tierutil.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
+		hash1, err1 := hash.ComputeHashForNSTemplateTier(nsTemplateTier)
+		hash2, err2 := hash.ComputeHashForNSTemplateSetSpec(nsTemplateSet.Spec)
 		// then
 		require.NoError(t, err1)
 		require.NoError(t, err2)

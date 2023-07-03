@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/require"
@@ -134,7 +134,7 @@ func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, 
 		},
 		Spec: spec,
 	}
-	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
+	hash, err := hash.ComputeHashForNSTemplateTier(tier)
 	require.NoError(t, err)
 	tier.Labels = map[string]string{
 		"toolchain.dev.openshift.com/" + tier.Name + "-tier-hash": hash,
@@ -179,7 +179,7 @@ func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) Tie
 // WithCurrentUpdate appends an entry in the `status.updates` for the current tier
 func WithCurrentUpdate() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier)
+		hash, _ := hash.ComputeHashForNSTemplateTier(tier)
 		if tier.Status.Updates == nil {
 			tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{}
 		}

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,14 +32,14 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 	nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	otherSpace1 := spacetest.NewSpace("other-space-1", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
 	otherSpace2 := spacetest.NewSpace("other-tier-space",
-		spacetest.WithLabel(tierutil.TemplateTierHashLabelKey("other-tier"), "123abc"))
+		spacetest.WithLabel(hash.TemplateTierHashLabelKey("other-tier"), "123abc"))
 	otherSpace3 := spacetest.NewSpace("no-label-space")
 
 	t.Run("single match", func(t *testing.T) {
 		// given
 		outdatedSpace := spacetest.NewSpace("oddity",
 			spacetest.WithTierName(nsTmplTier.Name),
-			spacetest.WithLabel(tierutil.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
+			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
 		hostClient := test.NewFakeClient(t, nsTmplTier, outdatedSpace, otherSpace1, otherSpace2, otherSpace3)
 		mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
@@ -62,11 +62,11 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 		outdatedSpace1 := spacetest.NewSpace("oddity1",
 			spacetest.WithTierName(nsTmplTier.Name),
-			spacetest.WithLabel(tierutil.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
+			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
 		outdatedSpace2 := spacetest.NewSpace("oddity2",
 			spacetest.WithTierName(nsTmplTier.Name),
-			spacetest.WithLabel(tierutil.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated-too"), // label must exist, but with an outdated value compared to the current NSTemplateTier
+			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated-too"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
 		hostClient := test.NewFakeClient(t, nsTmplTier, outdatedSpace1, outdatedSpace2, otherSpace1, otherSpace2, otherSpace3)
 		mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)

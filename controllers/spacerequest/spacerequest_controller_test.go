@@ -12,11 +12,11 @@ import (
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"

@@ -8,19 +8,19 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -916,8 +916,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasSpecTargetCluster("member-1").
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Updating()).
-			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet, since NSTemplateSet must be updated first
-			HasMatchingTierLabelForTier(basicTier)                               // old label not removed yet, since NSTemplateSet must be updated first
+			DoesNotHaveLabel(hash.TemplateTierHashLabelKey(otherTier.Name)). // not set yet, since NSTemplateSet must be updated first
+			HasMatchingTierLabelForTier(basicTier)                           // old label not removed yet, since NSTemplateSet must be updated first
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(otherTier.Name).
@@ -948,7 +948,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Updating()).
-				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
+				DoesNotHaveLabel(hash.TemplateTierHashLabelKey(otherTier.Name)).
 				HasMatchingTierLabelForTier(basicTier)
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1).
@@ -975,8 +975,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Updating()).
-					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet
-					HasMatchingTierLabelForTier(basicTier).                              // old label not removed yet, since NSTemplateSet not ready for more than 1s
+					DoesNotHaveLabel(hash.TemplateTierHashLabelKey(otherTier.Name)). // not set yet
+					HasMatchingTierLabelForTier(basicTier).                          // old label not removed yet, since NSTemplateSet not ready for more than 1s
 					HasFinalizer().
 					Get()
 				AssertThatCountersAndMetrics(t).
@@ -1002,8 +1002,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Ready()).
-						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)). // old label removed
-						HasMatchingTierLabelForTier(otherTier).                              // new label matching updated tier
+						DoesNotHaveLabel(hash.TemplateTierHashLabelKey(basicTier.Name)). // old label removed
+						HasMatchingTierLabelForTier(otherTier).                          // new label matching updated tier
 						HasFinalizer()
 					AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 1).
@@ -1065,7 +1065,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
 			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
 			Get()
-		require.True(t, tierutil.TierHashMatches(basicTier, nsTmplSet.Spec))
+		require.True(t, hash.TierHashMatches(basicTier, nsTmplSet.Spec))
 		AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 
@@ -1144,7 +1144,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				Get()
-			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
+			require.True(t, hash.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
@@ -1174,7 +1174,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				Get()
-			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
+			require.True(t, hash.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
@@ -1317,7 +1317,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
 			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-				if _, ok := obj.(*toolchainv1alpha1.Space); ok && obj.GetLabels()[tierutil.TemplateTierHashLabelKey(basicTier.Name)] != "" {
+				if _, ok := obj.(*toolchainv1alpha1.Space); ok && obj.GetLabels()[hash.TemplateTierHashLabelKey(basicTier.Name)] != "" {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Update(ctx, obj, opts...)
@@ -1392,7 +1392,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToUpdateNSTemplateSet("mock error")).
-				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
+				DoesNotHaveLabel(hash.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				HasTierName(basicTier.Name).

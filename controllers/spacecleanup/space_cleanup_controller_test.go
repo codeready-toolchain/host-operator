@@ -10,9 +10,9 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

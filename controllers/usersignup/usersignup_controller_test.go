@@ -22,7 +22,6 @@ import (
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	segmenttest "github.com/codeready-toolchain/host-operator/test/segment"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -34,6 +33,7 @@ import (
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	testsocialevent "github.com/codeready-toolchain/toolchain-common/pkg/test/socialevent"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/gofrs/uuid"

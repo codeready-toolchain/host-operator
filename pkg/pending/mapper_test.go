@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	. "github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"

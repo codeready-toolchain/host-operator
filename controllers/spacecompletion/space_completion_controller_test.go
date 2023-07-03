@@ -12,10 +12,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"

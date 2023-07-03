@@ -3,7 +3,7 @@ package spacebindingcleanup
 import (
 	"testing"
 
-	"github.com/codeready-toolchain/host-operator/test/space"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )

@@ -5,8 +5,8 @@ import (
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"

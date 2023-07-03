@@ -10,7 +10,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 )
