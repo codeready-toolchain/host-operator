@@ -43,7 +43,7 @@ func TestCreateSpace(t *testing.T) {
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	t.Run("success", func(t *testing.T) {
 		// given
-		s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("member-1"))
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithSpecTargetCluster("member-1"))
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -163,7 +163,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unspecified target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity")
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -188,7 +188,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unspecified tierName", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", spacetest.WithTierName(""))
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithTierName(""))
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -212,7 +212,7 @@ func TestCreateSpace(t *testing.T) {
 		})
 		t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace("subSpace",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"),
@@ -240,7 +240,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("without parentSpace spec field", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace("myspace",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "myspace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"))
@@ -290,7 +290,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting space", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity")
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
 			hostClient := test.NewFakeClient(t, s)
 			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -317,7 +317,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while adding finalizer", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity")
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
 			hostClient := test.NewFakeClient(t, s)
 			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -344,7 +344,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unknown target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("unknown"))
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithSpecTargetCluster("unknown"))
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -369,7 +369,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateTier on host cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s)
@@ -401,7 +401,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -434,7 +434,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while creating NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -467,7 +467,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while updating status after creating NSTemplateSet", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -499,7 +499,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while setting provisioned namespace list", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("john",
+			s := spacetest.NewSpace(test.HostOperatorNs, "john",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -551,7 +551,7 @@ func TestDeleteSpace(t *testing.T) {
 	t.Run("after space was successfully provisioned", func(t *testing.T) {
 
 		// given a space that is being deleted
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithDeletionTimestamp(), // deletion was requested
 			spacetest.WithFinalizer(),
 			spacetest.WithSpecTargetCluster("member-1"),
@@ -620,7 +620,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("when using status target cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
 				spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
 				spacetest.WithFinalizer(),
@@ -653,7 +653,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("without spec and status target cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -679,7 +679,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("when nstemplateset is gone, then it should remove the finalizer and the client automatically delete the Space", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("delete-space",
+			s := spacetest.NewSpace(test.HostOperatorNs, "delete-space",
 				spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
 				spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
 				spacetest.WithDeletionTimestamp(),
@@ -713,7 +713,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("because of missing target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithoutSpecTargetCluster(),
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp(),
@@ -743,7 +743,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("because of unknown target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-3"),
 				spacetest.WithStatusTargetCluster("member-3"), // assume that Space was provisioned on a cluster which is now missing
 				spacetest.WithFinalizer(),
@@ -781,7 +781,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithDeletionTimestamp(), // deletion was requested
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"),
@@ -820,7 +820,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("error when NSTemplateSet is stuck in deletion", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithDeletionTimestamp(), // deletion was requested
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"),
@@ -876,7 +876,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
 		// given that Space is promoted from `basic` to `other` tier and corresponding NSTemplateSet is not up-to-date
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(otherTier.Name),    // tier changed to other tier
 			spacetest.WithTierHashLabelFor(basicTier), // still has the old tier hash label
 			spacetest.WithSpecTargetCluster("member-1"),
@@ -1018,7 +1018,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// get an older basic tier (with outdated references) that the nstemplateset can be referenced to for setup
 		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 		// given that Space is set to the same tier that has been updated and the corresponding NSTemplateSet is not up-to-date
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -1100,7 +1100,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 	t.Run("update with postpone", func(t *testing.T) {
 		// given a space set to the older version of the tier
-		s := spacetest.NewSpace("oddity1",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity1",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
@@ -1182,7 +1182,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 	t.Run("update not needed when already up-to-date", func(t *testing.T) {
 		// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithTierHashLabelFor(olderBasicTier), // tier hash label not updated yet
 			spacetest.WithCondition(spacetest.Ready()),
@@ -1224,7 +1224,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 	})
 
 	t.Run("update needed even when Space not ready", func(t *testing.T) {
-		notReadySpace := spacetest.NewSpace("oddity1",
+		notReadySpace := spacetest.NewSpace(test.HostOperatorNs, "oddity1",
 			spacetest.WithTierNameAndHashLabelFor(basicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
@@ -1265,7 +1265,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 	})
 
 	t.Run("update needed even when NStemplateSet not ready", func(t *testing.T) {
-		notReadySpace := spacetest.NewSpace("oddity1",
+		notReadySpace := spacetest.NewSpace(test.HostOperatorNs, "oddity1",
 			spacetest.WithTierNameAndHashLabelFor(basicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
@@ -1309,7 +1309,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 		t.Run("when updating space with new templatetierhash label", func(t *testing.T) {
 			// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierHashLabelFor(otherTier), // assume that at this point, the `TemplateTierHash` label still has the old value
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -1355,7 +1355,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 		t.Run("when NSTemplateSet update failed", func(t *testing.T) {
 			// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName(otherTier.Name),
 				spacetest.WithTierHashLabelFor(basicTier),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -1420,7 +1420,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 	t.Run("add user with admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -1482,7 +1482,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// except if a SpaceBinding resource is not created by the UserSignupController  ¯\_(ツ)_/¯
 
 		// given a MUR, a Space and its NSTemplateSet resource...
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -1541,7 +1541,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 	t.Run("remove user with admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -1598,7 +1598,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 	t.Run("update user from viewer to admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -1666,7 +1666,7 @@ func TestRetargetSpace(t *testing.T) {
 
 	t.Run("to empty target cluster", func(t *testing.T) {
 		// given
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithFinalizer(),
 			spacetest.WithoutSpecTargetCluster(), // assume that field was reset by a client (admin, appstudio console, etc.)
 			spacetest.WithStatusTargetCluster("member-1"))
@@ -1720,7 +1720,7 @@ func TestRetargetSpace(t *testing.T) {
 
 	t.Run("to another target cluster", func(t *testing.T) {
 		// given
-		s := spacetest.NewSpace("oddity",
+		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithFinalizer(),
 			spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
 			spacetest.WithStatusTargetCluster("member-1"))
@@ -1777,7 +1777,7 @@ func TestRetargetSpace(t *testing.T) {
 
 		t.Run("unable to delete NSTemplateSet", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
 				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
 				spacetest.WithStatusTargetCluster("member-1"))
@@ -1818,7 +1818,7 @@ func TestRetargetSpace(t *testing.T) {
 
 		t.Run("unable to update status", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity",
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
 				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
 				spacetest.WithStatusTargetCluster("member-1"))
@@ -1869,13 +1869,13 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
 			// given a parentSpace...
-			parentSpace := spacetest.NewSpace("parentSpace")
+			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 			sb2 := spacebindingtest.NewSpaceBinding("parentSpaceViewer", parentSpace.Name, "viewer", "signupViewer")
 
 			// ...now create a subSpace
-			subSpace := spacetest.NewSpace("subSpace",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),     // already provisioned on a target cluster
 				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
@@ -1906,12 +1906,12 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
 			// given a parentSpace...
-			parentSpace := spacetest.NewSpace("parentSpace")
+			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 
 			// ...now create a subSpace
-			subSpace := spacetest.NewSpace("subSpace",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),     // already provisioned on a target cluster
 				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
@@ -1948,13 +1948,13 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
 			// given a parentSpace...
-			parentSpace := spacetest.NewSpace("parentSpace")
+			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
 			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "viewer", "signupJane")
 
 			// ...now create a subSpace
-			subSpace := spacetest.NewSpace("subSpace",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
@@ -2059,7 +2059,7 @@ func TestNewNSTemplateSetSpec(t *testing.T) {
 
 	// given
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
-	s := spacetest.NewSpace("spacejohn",
+	s := spacetest.NewSpace(test.HostOperatorNs, "spacejohn",
 		spacetest.WithTierName(nsTemplateTier.Name),
 		spacetest.WithSpecTargetCluster("member-1"))
 	bindings := []toolchainv1alpha1.SpaceBinding{

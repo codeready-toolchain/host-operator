@@ -9,7 +9,7 @@ import (
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,8 +24,8 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	sbJoeCompView := sb.NewSpaceBinding("joe", "comp", "view", "signupB")
 	sbLaraOtherEdit := sb.NewSpaceBinding("lara", "other", "edit", "signupC")
 
-	compSpace := space.NewSpace("comp")
-	orphanSpace := space.NewSpace("orphan")
+	compSpace := spacetest.NewSpace(test.HostOperatorNs, "comp")
+	orphanSpace := spacetest.NewSpace(test.HostOperatorNs, "orphan")
 
 	laraMur := masteruserrecord.NewMasterUserRecord(t, "lara")
 	joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")

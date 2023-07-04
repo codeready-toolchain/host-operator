@@ -2114,7 +2114,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		space := spacetest.NewSpace(mur.Name,
+		space := spacetest.NewSpace(test.HostOperatorNs, mur.Name,
 			spacetest.WithCreatorLabel(userSignup.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -2646,7 +2646,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
 	}
 
-	space := spacetest.NewSpace("edward-jones",
+	space := spacetest.NewSpace(test.HostOperatorNs, "edward-jones",
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
@@ -3114,7 +3114,7 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-	space := spacetest.NewSpace(mur.Name,
+	space := spacetest.NewSpace(test.HostOperatorNs, mur.Name,
 		spacetest.WithCreatorLabel(userSignup.Name),
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -3286,7 +3286,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "alice-mayweather", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		space := spacetest.NewSpace("alice-mayweather",
+		space := spacetest.NewSpace(test.HostOperatorNs, "alice-mayweather",
 			spacetest.WithCreatorLabel(userSignup.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -4297,7 +4297,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 
 	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-	space := spacetest.NewSpace("foo",
+	space := spacetest.NewSpace(test.HostOperatorNs, "foo",
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
@@ -4389,7 +4389,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
 	}
 
-	space := spacetest.NewSpace("john-doe",
+	space := spacetest.NewSpace(test.HostOperatorNs, "john-doe",
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer(),

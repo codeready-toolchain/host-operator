@@ -39,7 +39,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
 	srNamespace := newNamespace("jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
-	parentSpace := spacetest.NewSpace("jane")
+	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	t.Run("success", func(t *testing.T) {
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 			spacerequesttest.WithTierName("appstudio"),
@@ -71,7 +71,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("subSpace exists but is not ready yet", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -108,7 +108,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env",
 			})
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -158,7 +158,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				},
 			)
 			// this space has multiple namespaces provisioned
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -223,7 +223,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 		t.Run("spacerequest has empty target cluster roles", func(t *testing.T) {
 			// when
-			parentSpaceWithTarget := spacetest.NewSpace("jane", spacetest.WithSpecTargetCluster("member-2"))
+			parentSpaceWithTarget := spacetest.NewSpace(test.HostOperatorNs, "jane", spacetest.WithSpecTargetCluster("member-2"))
 			spaceRequest := spacerequesttest.NewSpaceRequest("noroles", srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
@@ -269,7 +269,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				},
 			)
 			// this space has multiple namespaces provisioned
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -395,7 +395,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("unable to update space since it's being deleted", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithDeletionTimestamp(),                                                       // space is being deleted ...
@@ -488,7 +488,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 		})
 		t.Run("parent space is being deleted", func(t *testing.T) {
 			// given
-			parentSpace := spacetest.NewSpace("jane",
+			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane",
 				spacetest.WithCondition(spacetest.Terminating()),
 				spacetest.WithDeletionTimestamp()) // parent space for some reason is being deleted
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
@@ -533,7 +533,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
@@ -607,7 +607,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 	require.NoError(t, err)
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
 	srNamespace := newNamespace("jane")
-	parentSpace := spacetest.NewSpace("jane")
+	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 
 	t.Run("success", func(t *testing.T) {
@@ -619,7 +619,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTierName(newTier.Name), // space request uses new tier
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -656,7 +656,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(updatedSRClusterRoles), // add a new cluster role label to check if it's reflected on the subSpace
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -696,7 +696,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 					SecretRef: "jane-qwerty", // secret doesn't exist and name of the secret will change when it will be created
 				}),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -738,7 +738,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -771,7 +771,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
 				spacerequesttest.WithStatusTargetClusterURL(""), // target cluster URL is empty
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithStatusTargetCluster("invalid"),                                            // let's force an invalid name in the subSpace
@@ -800,7 +800,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
 	srNamespace := newNamespace("jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
-	parentSpace := spacetest.NewSpace("jane")
+	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	sr := spacerequesttest.NewSpaceRequest("jane",
 		srNamespace.GetName(),
 		spacerequesttest.WithTierName("appstudio"),
@@ -810,7 +810,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Run("spaceRequest should be in terminating while subSpace is deleted", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -874,7 +874,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		t.Run("unable to set status terminating", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
@@ -918,7 +918,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 
 		t.Run("unable to delete subSpace", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))

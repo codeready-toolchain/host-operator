@@ -3,7 +3,9 @@ package spacebindingcleanup
 import (
 	"testing"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
@@ -11,7 +13,7 @@ import (
 func TestOnlyDeletionAndGenericPredicate(t *testing.T) {
 	// given
 	predicate := &OnlyDeleteAndGenericPredicate{}
-	sp := space.NewSpace("space")
+	sp := spacetest.NewSpace(test.HostOperatorNs, "space")
 
 	t.Run("for create", func(t *testing.T) {
 		for _, ev := range []event.CreateEvent{{}, {Object: sp}} {

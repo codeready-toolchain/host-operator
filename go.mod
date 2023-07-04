@@ -31,7 +31,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20230703150600-a4eeebc1733a
+replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20230704070102-e014b01bbae9
 
 require github.com/google/uuid v1.3.0 // indirect
 

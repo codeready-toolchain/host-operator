@@ -30,14 +30,14 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 	require.NoError(t, err)
 
 	nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-	otherSpace1 := spacetest.NewSpace("other-space-1", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
-	otherSpace2 := spacetest.NewSpace("other-tier-space",
+	otherSpace1 := spacetest.NewSpace(test.HostOperatorNs, "other-space-1", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
+	otherSpace2 := spacetest.NewSpace(test.HostOperatorNs, "other-tier-space",
 		spacetest.WithLabel(hash.TemplateTierHashLabelKey("other-tier"), "123abc"))
-	otherSpace3 := spacetest.NewSpace("no-label-space")
+	otherSpace3 := spacetest.NewSpace(test.HostOperatorNs, "no-label-space")
 
 	t.Run("single match", func(t *testing.T) {
 		// given
-		outdatedSpace := spacetest.NewSpace("oddity",
+		outdatedSpace := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithTierName(nsTmplTier.Name),
 			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
@@ -60,11 +60,11 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 	t.Run("multiple matches", func(t *testing.T) {
 		// given
 		nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-		outdatedSpace1 := spacetest.NewSpace("oddity1",
+		outdatedSpace1 := spacetest.NewSpace(test.HostOperatorNs, "oddity1",
 			spacetest.WithTierName(nsTmplTier.Name),
 			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
-		outdatedSpace2 := spacetest.NewSpace("oddity2",
+		outdatedSpace2 := spacetest.NewSpace(test.HostOperatorNs, "oddity2",
 			spacetest.WithTierName(nsTmplTier.Name),
 			spacetest.WithLabel(hash.TemplateTierHashLabelKey(nsTmplTier.Name), "outdated-too"), // label must exist, but with an outdated value compared to the current NSTemplateTier
 		)
@@ -126,7 +126,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 			mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 
 			// when
-			result := mapFrom(spacetest.NewSpace("oddity")) // wrong type of resource as arg
+			result := mapFrom(spacetest.NewSpace(test.HostOperatorNs, "oddity")) // wrong type of resource as arg
 
 			// then
 			assert.Empty(t, result)

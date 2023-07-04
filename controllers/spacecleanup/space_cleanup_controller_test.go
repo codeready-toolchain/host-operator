@@ -27,7 +27,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("without any SpaceBinding and created more than 30 seconds ago", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-31*time.Second)))
+		space := spacetest.NewSpace(test.HostOperatorNs, "without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-31*time.Second)))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -42,7 +42,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("without any SpaceBinding and created less than 30 seconds ago- Space shouldn't be deleted, just requeued", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-29*time.Second)))
+		space := spacetest.NewSpace(test.HostOperatorNs, "without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-29*time.Second)))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -58,7 +58,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("with SpaceBinding - Space shouldn't be deleted", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("with-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
+		space := spacetest.NewSpace(test.HostOperatorNs, "with-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
 		spaceBinding := spacebinding.NewSpaceBinding("johny", space.Name, "admin", "a-creator")
 		r, req, cl := prepareReconcile(t, space, spaceBinding)
 
@@ -74,7 +74,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("when is already being deleted", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("being-deleted", spacetest.WithDeletionTimestamp())
+		space := spacetest.NewSpace(test.HostOperatorNs, "being-deleted", spacetest.WithDeletionTimestamp())
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -89,7 +89,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("when the space is not there, then just skip it", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("not-found") // will be disregarded, only included for call to prepareReconcile func
+		space := spacetest.NewSpace(test.HostOperatorNs, "not-found") // will be disregarded, only included for call to prepareReconcile func
 		r, req, _ := prepareReconcile(t, space)
 		empty := test.NewFakeClient(t) // with space disregarded
 		empty.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
@@ -107,11 +107,11 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("with ParentSpace - Space shouldn't be deleted", func(t *testing.T) {
 		// given
-		parentSpace := spacetest.NewSpace("parentSpace",
+		parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 		)
 		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
-		subSpace := spacetest.NewSpace("with-parentSpace",
+		subSpace := spacetest.NewSpace(test.HostOperatorNs, "with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
@@ -129,12 +129,12 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("with terminating ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
-		parentSpace := spacetest.NewSpace("parentSpace",
+		parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithDeletionTimestamp(),
 		)
 		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
-		subSpace := spacetest.NewSpace("with-parentSpace",
+		subSpace := spacetest.NewSpace(test.HostOperatorNs, "with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
@@ -152,7 +152,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("with deleted ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
-		subSpace := spacetest.NewSpace("with-parentSpace",
+		subSpace := spacetest.NewSpace(test.HostOperatorNs, "with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace("parentSpace"),
 		)
@@ -172,7 +172,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		t.Run("when getting space fails", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("get-fails")
+			space := spacetest.NewSpace(test.HostOperatorNs, "get-fails")
 			r, req, cl := prepareReconcile(t, space)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
@@ -191,7 +191,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		t.Run("when list SpaceBindings fails", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("list-fails")
+			space := spacetest.NewSpace(test.HostOperatorNs, "list-fails")
 			r, req, cl := prepareReconcile(t, space)
 			cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				return fmt.Errorf("some error")
@@ -209,7 +209,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		t.Run("when delete Space fails", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("delete-fails", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
+			space := spacetest.NewSpace(test.HostOperatorNs, "delete-fails", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
 			r, req, cl := prepareReconcile(t, space)
 			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				return fmt.Errorf("some error")
