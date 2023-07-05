@@ -18,18 +18,18 @@ func TestComputeHash(t *testing.T) {
 		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
-				Name:      "basic",
+				Name:      "base1ns",
 			},
 			Spec: toolchainv1alpha1.NSTemplateTierSpec{
 				Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 			},
@@ -40,16 +40,16 @@ func TestComputeHash(t *testing.T) {
 				Name:      "foo",
 			},
 			Spec: toolchainv1alpha1.NSTemplateSetSpec{
-				TierName: "basic",
+				TierName: "base1ns",
 				Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 			},
@@ -68,22 +68,22 @@ func TestComputeHash(t *testing.T) {
 		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
-				Name:      "basic",
+				Name:      "base1ns",
 			},
 			Spec: toolchainv1alpha1.NSTemplateTierSpec{
 				Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 				ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-					TemplateRef: "basic-clusterresources-123456a",
+					TemplateRef: "base1ns-clusterresources-123456a",
 				},
 			},
 		}
@@ -93,20 +93,20 @@ func TestComputeHash(t *testing.T) {
 				Name:      "foo",
 			},
 			Spec: toolchainv1alpha1.NSTemplateSetSpec{
-				TierName: "basic",
+				TierName: "base1ns",
 				Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 				ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-					TemplateRef: "basic-clusterresources-123456a",
+					TemplateRef: "base1ns-clusterresources-123456a",
 				},
 			},
 		}
@@ -124,18 +124,18 @@ func TestComputeHash(t *testing.T) {
 		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
-				Name:      "basic",
+				Name:      "base1ns",
 			},
 			Spec: toolchainv1alpha1.NSTemplateTierSpec{
 				Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 					{
-						TemplateRef: "basic-code-123456new",
+						TemplateRef: "base1ns-code-123456new",
 					},
 					{
-						TemplateRef: "basic-dev-123456new",
+						TemplateRef: "base1ns-dev-123456new",
 					},
 					{
-						TemplateRef: "basic-stage-123456new",
+						TemplateRef: "base1ns-stage-123456new",
 					},
 				},
 			},
@@ -146,16 +146,16 @@ func TestComputeHash(t *testing.T) {
 				Name:      "foo",
 			},
 			Spec: toolchainv1alpha1.NSTemplateSetSpec{
-				TierName: "basic",
+				TierName: "base1ns",
 				Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 			},
@@ -174,22 +174,22 @@ func TestComputeHash(t *testing.T) {
 		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
-				Name:      "basic",
+				Name:      "base1ns",
 			},
 			Spec: toolchainv1alpha1.NSTemplateTierSpec{
 				Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 					{
-						TemplateRef: "basic-code-123456old", // same as `nsTemplateSet` var
+						TemplateRef: "base1ns-code-123456old", // same as `nsTemplateSet` var
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 				ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-					TemplateRef: "basic-clusterresources-123456new",
+					TemplateRef: "base1ns-clusterresources-123456new",
 				},
 			},
 		}
@@ -199,20 +199,20 @@ func TestComputeHash(t *testing.T) {
 				Name:      "foo",
 			},
 			Spec: toolchainv1alpha1.NSTemplateSetSpec{
-				TierName: "basic",
+				TierName: "base1ns",
 				Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 					{
-						TemplateRef: "basic-code-123456old",
+						TemplateRef: "base1ns-code-123456old",
 					},
 					{
-						TemplateRef: "basic-dev-123456old",
+						TemplateRef: "base1ns-dev-123456old",
 					},
 					{
-						TemplateRef: "basic-stage-123456old",
+						TemplateRef: "base1ns-stage-123456old",
 					},
 				},
 				ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-					TemplateRef: "basic-clusterresources-123456a",
+					TemplateRef: "base1ns-clusterresources-123456a",
 				},
 			},
 		}

@@ -133,7 +133,7 @@ type BasedOnTier struct {
 //
 //	based_on_tier.yaml
 //
-// basic/
+// base1ns/
 //
 //	cluster.yaml
 //	ns_dev.yaml
