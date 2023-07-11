@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/require"
@@ -44,54 +44,54 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 	}
 }
 
-// PreviousBasicTemplates previous templates for the "basic" tier
-var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+// PreviousBase1nsTemplates previous templates for the "base1ns" tier
+var PreviousBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
-			TemplateRef: "basic-code-123456old",
+			TemplateRef: "base1ns-code-123456old",
 		},
 		{
-			TemplateRef: "basic-dev-123456old",
+			TemplateRef: "base1ns-dev-123456old",
 		},
 		{
-			TemplateRef: "basic-stage-123456old",
+			TemplateRef: "base1ns-stage-123456old",
 		},
 	},
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-		TemplateRef: "basic-clusterresources-123456old",
+		TemplateRef: "base1ns-clusterresources-123456old",
 	},
 	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 		"admin": {
-			TemplateRef: "basic-admin-123456old",
+			TemplateRef: "base1ns-admin-123456old",
 		},
 		"viewer": {
-			TemplateRef: "basic-viewer-123456old",
+			TemplateRef: "base1ns-viewer-123456old",
 		},
 	},
 }
 
-// CurrentBasicTemplates current templates for the "basic" tier
-var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+// CurrentBase1nsTemplates current templates for the "base1ns" tier
+var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
-			TemplateRef: "basic-code-123456new",
+			TemplateRef: "base1ns-code-123456new",
 		},
 		{
-			TemplateRef: "basic-dev-123456new",
+			TemplateRef: "base1ns-dev-123456new",
 		},
 		{
-			TemplateRef: "basic-stage-123456new",
+			TemplateRef: "base1ns-stage-123456new",
 		},
 	},
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-		TemplateRef: "basic-clusterresources-123456new",
+		TemplateRef: "base1ns-clusterresources-123456new",
 	},
 	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 		"admin": {
-			TemplateRef: "basic-admin-123456new",
+			TemplateRef: "base1ns-admin-123456new",
 		},
 		"viewer": {
-			TemplateRef: "basic-viewer-123456new",
+			TemplateRef: "base1ns-viewer-123456new",
 		},
 	},
 }
@@ -116,9 +116,9 @@ var AppStudioTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
-// BasicTier returns a "basic" NSTemplateTier with template refs in the given spec
-func BasicTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
-	return Tier(t, "basic", spec, options...)
+// Base1nsTier returns a "base1ns" NSTemplateTier with template refs in the given spec
+func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return Tier(t, "base1ns", spec, options...)
 }
 
 // AppStudioTier returns an "appstudio" NSTemplateTier with template refs in the given spec
@@ -134,7 +134,7 @@ func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, 
 		},
 		Spec: spec,
 	}
-	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
+	hash, err := hash.ComputeHashForNSTemplateTier(tier)
 	require.NoError(t, err)
 	tier.Labels = map[string]string{
 		"toolchain.dev.openshift.com/" + tier.Name + "-tier-hash": hash,
@@ -153,10 +153,10 @@ func WithoutCodeNamespace() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
 		tier.Spec.Namespaces = []toolchainv1alpha1.NSTemplateTierNamespace{
 			{
-				TemplateRef: "basic-dev-123456new",
+				TemplateRef: "base1ns-dev-123456new",
 			},
 			{
-				TemplateRef: "basic-stage-123456new",
+				TemplateRef: "base1ns-stage-123456new",
 			},
 		}
 	}
@@ -179,7 +179,7 @@ func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) Tie
 // WithCurrentUpdate appends an entry in the `status.updates` for the current tier
 func WithCurrentUpdate() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier)
+		hash, _ := hash.ComputeHashForNSTemplateTier(tier)
 		if tier.Status.Updates == nil {
 			tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{}
 		}

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	. "github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
@@ -21,8 +21,8 @@ func TestMapperReturnsOldest(t *testing.T) {
 	approvedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
 	deactivatedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
 
-	pendingSpace := space.NewSpace("pending", space.WithStateLabel("pending"))
-	clusterAssignedSpace := space.NewSpace("cluster-assigned", space.WithStateLabel("cluster-assigned"))
+	pendingSpace := spacetest.NewSpace(test.HostOperatorNs, "pending", spacetest.WithStateLabel("pending"))
+	clusterAssignedSpace := spacetest.NewSpace(test.HostOperatorNs, "cluster-assigned", spacetest.WithStateLabel("cluster-assigned"))
 
 	cl := test.NewFakeClient(t, pendingSignup, approvedSignup, deactivatedSignup, pendingSpace, clusterAssignedSpace)
 

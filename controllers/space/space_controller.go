@@ -9,11 +9,11 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -232,12 +232,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		setParentSpaceLabel(space)
 
 		// add a tier hash label matching the current NSTemplateTier
-		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
+		h, err := hash.ComputeHashForNSTemplateTier(tmplTier)
 		if err != nil {
 			err = errs.Wrap(err, "error computing hash for NSTemplateTier")
 			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
-		space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
+		space.Labels[hash.TemplateTierHashLabelKey(space.Spec.TierName)] = h
 		if err := r.Client.Update(context.TODO(), space); err != nil {
 			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
@@ -369,7 +369,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
 		logger.Info("NSTemplateSet is not up-to-date")
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
-		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
+		if space.Labels[hash.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// postpone if needed, so we don't overflow the cluster with too many concurrent updates
 

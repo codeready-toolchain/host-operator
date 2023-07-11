@@ -129,7 +129,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 	memberUserAcc := toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				toolchainv1alpha1.TierLabelKey: "basic",
+				toolchainv1alpha1.TierLabelKey: "base1ns",
 			},
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
@@ -155,7 +155,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				recordSpecUserAcc,
 			},
-			TierName: "basic",
+			TierName: "base1ns",
 		},
 	}
 	return record, recordSpecUserAcc, memberUserAcc
