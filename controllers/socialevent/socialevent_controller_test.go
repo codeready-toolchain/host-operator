@@ -30,12 +30,12 @@ func TestReconcileSocialEvent(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	baseSpaceTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	baseSpaceTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 	baseUserTier := usertier.NewUserTier("deactivate30", 30)
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
-		event := socialeventtest.NewSocialEvent("deactivate30", "basic")
+		event := socialeventtest.NewSocialEvent("deactivate30", "base1ns")
 		hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 		ctrl := newReconciler(hostClient)
 
@@ -56,7 +56,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 	t.Run("with usersignups", func(t *testing.T) {
 		// given 2 approved users and 1 not yet approved
-		event := socialeventtest.NewSocialEvent("deactivate30", "basic")
+		event := socialeventtest.NewSocialEvent("deactivate30", "base1ns")
 		approvedUser1 := commonsignup.NewUserSignup(commonsignup.WithName("user1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name))
@@ -89,7 +89,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unable to get user tier", func(t *testing.T) {
 			// given
-			event := socialeventtest.NewSocialEvent("notfound", "basic")
+			event := socialeventtest.NewSocialEvent("notfound", "base1ns")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
@@ -117,7 +117,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unknown user tier", func(t *testing.T) {
 			// given
-			event := socialeventtest.NewSocialEvent("unknown", "basic")
+			event := socialeventtest.NewSocialEvent("unknown", "base1ns")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 

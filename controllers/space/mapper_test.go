@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,10 +25,10 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	sbOrphan := sb.NewSpaceBinding("orphan", "", "view", "signupC")
 
 	// parent and sub-space are linked using the v1alpha1.ParentSpaceLabelKey label
-	parentSpace := space.NewSpace("parentSpace")
-	subSpace := space.NewSpace("subSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
+	parentSpace := space.NewSpace(test.HostOperatorNs, "parentSpace")
+	subSpace := space.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
 	// following space has no sub-spaces
-	singleSpace := space.NewSpace("single")
+	singleSpace := space.NewSpace(test.HostOperatorNs, "single")
 
 	cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace)
 

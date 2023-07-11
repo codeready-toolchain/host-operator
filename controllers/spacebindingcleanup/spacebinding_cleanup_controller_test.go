@@ -7,10 +7,10 @@ import (
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +26,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view", "signupB")
 	sbLaraIbmEdit := sb.NewSpaceBinding("lara", "ibm", "edit", "signupC")
 
-	redhatSpace := space.NewSpace("redhat")
-	ibmSpace := space.NewSpace("ibm")
+	redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
+	ibmSpace := spacetest.NewSpace(test.HostOperatorNs, "ibm")
 
 	laraMur := masteruserrecord.NewMasterUserRecord(t, "lara")
 	joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")

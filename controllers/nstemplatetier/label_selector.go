@@ -2,7 +2,7 @@ package nstemplatetier
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -21,18 +21,18 @@ import (
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
 func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (runtimeclient.MatchingLabelsSelector, error) {
-	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
+	// compute the h of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+	h, err := hash.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector := labels.NewSelector()
-	tierLabel, err := labels.NewRequirement(tierutil.TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
+	tierLabel, err := labels.NewRequirement(hash.TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
 	if err != nil {
 		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector = selector.Add(*tierLabel)
-	templateHashLabel, err := labels.NewRequirement(tierutil.TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{hash})
+	templateHashLabel, err := labels.NewRequirement(hash.TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{h})
 	if err != nil {
 		return runtimeclient.MatchingLabelsSelector{}, err
 	}
