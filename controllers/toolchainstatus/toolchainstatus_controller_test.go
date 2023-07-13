@@ -172,12 +172,19 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		// we have a secret that contains the access token for GitHub authenticated APIs
+		githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
+			"accessToken": []byte("abcd1234"),
+		})
+		commitTimeStamp := time.Now().Add(-time.Hour * 1)
+		version.Commit = buildCommitSHA // let's set the build version to a constant value
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(buildCommitSHA, commitTimeStamp), []string{"member-1", "member-2"},
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -187,9 +194,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 		assert.Equal(t, requeueResult, res)
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
-			HasHostOperatorStatus(hostOperatorStatusReady()).
+			HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
+				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
+				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
+			)).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+			HasRegistrationServiceStatus(registrationServiceReady(
+				conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
+				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
+			)). // also regservice is not up-to-date since we return the same mocked github commit
 			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 	})
 
@@ -319,38 +332,6 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady(
 					conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
-				)). // also regservice is not up-to-date since we return the same mocked github commit
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
-		})
-
-		t.Run("Host operator and registration service deployments version are up to date", func(t *testing.T) {
-			// given
-			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-			// we have a secret that contains the access token for GitHub authenticated APIs
-			githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
-				"accessToken": []byte("abcd1234"),
-			})
-			commitTimeStamp := time.Now().Add(-time.Hour * 1)
-			version.Commit = buildCommitSHA                                                                                                                                                                                         // let's set the build version to a constant value
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(buildCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // build commit and latest github commit are the same
-				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
-
-			// when
-			res, err := reconciler.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			assert.Equal(t, requeueResult, res)
-			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
-				)).
-				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(
-					conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)). // also regservice is not up-to-date since we return the same mocked github commit
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
