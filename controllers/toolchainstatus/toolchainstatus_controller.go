@@ -593,8 +593,18 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "",
-				ComponentName: "Host Operator",
+				ComponentType: "Host Operator",
+				ComponentName: "Deployment",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+
+		cond, found = condition.FindConditionByType(instance.Status.HostOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, &ComponentNotReadyStatus{
+				ComponentType: "Host Operator",
+				ComponentName: "Revision Check",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -628,6 +638,18 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 					})
 				}
 			}
+
+			if member.MemberStatus.MemberOperator != nil {
+				cond, found = condition.FindConditionByType(member.MemberStatus.MemberOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
+				if found && cond.Status != corev1.ConditionTrue {
+					result = append(result, &ComponentNotReadyStatus{
+						ComponentType: "Member Revision Check",
+						ComponentName: member.ClusterName,
+						Reason:        cond.Reason,
+						Message:       cond.Message,
+					})
+				}
+			}
 		}
 	}
 
@@ -647,6 +669,16 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 			result = append(result, &ComponentNotReadyStatus{
 				ComponentType: "Registration service",
 				ComponentName: "health",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, &ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "Revision Check",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
