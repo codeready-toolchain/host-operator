@@ -288,7 +288,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		Version:        version.Version,
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
-		RevisionCheck:  toolchainv1alpha1.RevisionCheck{},
+		RevisionCheck:  toolchainStatus.Status.HostOperator.RevisionCheck, // let's copy the last revision check object if any
 	}
 	// look up name of the host operator deployment
 	hostOperatorName, errDeploy := commonconfig.GetOperatorName()
