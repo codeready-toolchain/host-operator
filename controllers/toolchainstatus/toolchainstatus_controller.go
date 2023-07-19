@@ -92,7 +92,7 @@ const (
 {{end}}
 
 {{range .components}}
-<h4>{{.ComponentType}} {{.ComponentName}} not ready</h4>
+<h4>{{.ComponentName}} {{.ComponentType}} not ready</h4>
 
 <div style="padding-left: 40px">
 <div><span style="font-weight:bold;padding-right:10px">Reason:</span>{{.Reason}}</div>
@@ -657,7 +657,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentName: "Registration service",
+				ComponentName: "Registration Service",
 				ComponentType: "Deployment",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
@@ -667,7 +667,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentName: "Registration service",
+				ComponentName: "Registration Service",
 				ComponentType: "Health",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
@@ -677,7 +677,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentName: "Registration service",
+				ComponentName: "Registration Service",
 				ComponentType: "Revision",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
