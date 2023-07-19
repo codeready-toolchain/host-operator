@@ -1655,7 +1655,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 				Message: "Deployed commit and GitHub commit are not matching",
 			})))
 
+		// when
 		meta := ExtractStatusMetadata(toolchainStatus)
+		
+		// then
 		require.Len(t, meta, 1)
 		require.Equal(t, "Registration service", meta[0].ComponentType)
 		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
