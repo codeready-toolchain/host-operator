@@ -593,8 +593,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "Host Operator",
-				ComponentName: "Deployment",
+				ComponentName: "Host Operator",
+				ComponentType: "Deployment",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -603,8 +603,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.HostOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "Host Operator",
-				ComponentName: "Revision Check",
+				ComponentName: "Host Operator",
+				ComponentType: "Revision",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -643,7 +643,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 				cond, found = condition.FindConditionByType(member.MemberStatus.MemberOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
 				if found && cond.Status != corev1.ConditionTrue {
 					result = append(result, &ComponentNotReadyStatus{
-						ComponentType: "Member Revision Check",
+						ComponentType: "Member Operator Revision",
 						ComponentName: member.ClusterName,
 						Reason:        cond.Reason,
 						Message:       cond.Message,
@@ -657,8 +657,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "Registration service",
-				ComponentName: "deployment",
+				ComponentName: "Registration service",
+				ComponentType: "Deployment",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -667,8 +667,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "Registration service",
-				ComponentName: "health",
+				ComponentName: "Registration service",
+				ComponentType: "Health",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -677,8 +677,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, &ComponentNotReadyStatus{
-				ComponentType: "Registration service",
-				ComponentName: "Revision Check",
+				ComponentName: "Registration service",
+				ComponentType: "Revision",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})

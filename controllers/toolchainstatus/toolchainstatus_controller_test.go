@@ -1503,10 +1503,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "Host Operator", meta[0].ComponentType)
+		require.Equal(t, "Host Operator", meta[0].ComponentName)
 		require.Equal(t, "HostNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Host error message", meta[0].Message)
-		require.Equal(t, "Deployment", meta[0].ComponentName)
+		require.Equal(t, "Deployment", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for host operator revision check not ready", func(t *testing.T) {
@@ -1522,13 +1522,13 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		// when
 		meta := ExtractStatusMetadata(toolchainStatus)
-		
+
 		// then
 		require.Len(t, meta, 1)
-		require.Equal(t, "Host Operator", meta[0].ComponentType)
+		require.Equal(t, "Host Operator", meta[0].ComponentName)
 		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
 		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
-		require.Equal(t, "Revision Check", meta[0].ComponentName)
+		require.Equal(t, "Revision", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for one of two members not ready", func(t *testing.T) {
@@ -1600,10 +1600,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		// when
 		meta := ExtractStatusMetadata(toolchainStatus)
-		
+
 		// then
 		require.Len(t, meta, 1)
-		require.Equal(t, "Member Revision Check", meta[0].ComponentType)
+		require.Equal(t, "Member Operator Revision", meta[0].ComponentType)
 		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
 		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
 		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
@@ -1621,10 +1621,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "Registration service", meta[0].ComponentName)
 		require.Equal(t, "DeploymentNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Deployment error message", meta[0].Message)
-		require.Equal(t, "deployment", meta[0].ComponentName)
+		require.Equal(t, "Deployment", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for registration service health not ready", func(t *testing.T) {
@@ -1639,10 +1639,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "Registration service", meta[0].ComponentName)
 		require.Equal(t, "HealthNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Health error message", meta[0].Message)
-		require.Equal(t, "health", meta[0].ComponentName)
+		require.Equal(t, "Health", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for registration service revision check not ready", func(t *testing.T) {
@@ -1657,13 +1657,13 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		// when
 		meta := ExtractStatusMetadata(toolchainStatus)
-		
+
 		// then
 		require.Len(t, meta, 1)
-		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "Registration service", meta[0].ComponentName)
 		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
 		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
-		require.Equal(t, "Revision Check", meta[0].ComponentName)
+		require.Equal(t, "Revision", meta[0].ComponentType)
 	})
 }
 
@@ -1708,7 +1708,11 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 		require.Len(t, meta, 4)
 		content, err := GenerateUnreadyNotificationContent(ClusterURLs(toolchainStatus), meta)
 		require.NoError(t, err)
-		require.Len(t, content, 1522)
+		require.NotEmpty(t, content)
+		assert.Contains(t, content, "<h4> ToolchainStatus not ready</h4>")
+		assert.Contains(t, content, "<h4>Deployment Host Operator not ready</h4>")
+		assert.Contains(t, content, "<h4>Member Routes member-sandbox.ccc.openshiftapps.com not ready</h4>")
+		assert.Contains(t, content, "<h4>Deployment Registration service not ready</h4>")
 	})
 }
 
