@@ -67,6 +67,12 @@ func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServ
 	}
 }
 
+func WithRevisionCheckCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
+		status.RevisionCheck.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.RevisionCheck.Conditions, condition)
+	}
+}
+
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		member := toolchainv1alpha1.Member{

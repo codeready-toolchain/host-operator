@@ -1503,10 +1503,32 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "", meta[0].ComponentType)
+		require.Equal(t, "Host Operator", meta[0].ComponentName)
 		require.Equal(t, "HostNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Host error message", meta[0].Message)
+		require.Equal(t, "Deployment", meta[0].ComponentType)
+	})
+
+	t.Run("test status metadata for host operator revision check not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithHost())
+		toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
+			toolchainStatus.Status.HostOperator.Conditions, toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
+				Message: "Deployed commit and GitHub commit are not matching",
+			})
+
+		// when
+		meta := ExtractStatusMetadata(toolchainStatus)
+
+		// then
+		require.Len(t, meta, 1)
 		require.Equal(t, "Host Operator", meta[0].ComponentName)
+		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
+		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
+		require.Equal(t, "Revision", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for one of two members not ready", func(t *testing.T) {
@@ -1564,6 +1586,29 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
 	})
 
+	t.Run("test status metadata for member revision check not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithMember("member-sandbox.ccc.openshiftapps.com"))
+		toolchainStatus.Status.Members[0].MemberStatus.MemberOperator = &toolchainv1alpha1.MemberOperatorStatus{}
+		toolchainStatus.Status.Members[0].MemberStatus.MemberOperator.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
+			toolchainStatus.Status.Members[0].MemberStatus.MemberOperator.RevisionCheck.Conditions, toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
+				Message: "Deployed commit and GitHub commit are not matching",
+			})
+
+		// when
+		meta := ExtractStatusMetadata(toolchainStatus)
+
+		// then
+		require.Len(t, meta, 1)
+		require.Equal(t, "Member Operator Revision", meta[0].ComponentType)
+		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
+		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
+		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
+	})
+
 	t.Run("test status metadata for registration service deployment not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(WithRegistrationService(WithDeploymentCondition(
@@ -1576,10 +1621,10 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "Registration Service", meta[0].ComponentName)
 		require.Equal(t, "DeploymentNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Deployment error message", meta[0].Message)
-		require.Equal(t, "deployment", meta[0].ComponentName)
+		require.Equal(t, "Deployment", meta[0].ComponentType)
 	})
 
 	t.Run("test status metadata for registration service health not ready", func(t *testing.T) {
@@ -1594,10 +1639,31 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "Registration Service", meta[0].ComponentName)
 		require.Equal(t, "HealthNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Health error message", meta[0].Message)
-		require.Equal(t, "health", meta[0].ComponentName)
+		require.Equal(t, "Health", meta[0].ComponentType)
+	})
+
+	t.Run("test status metadata for registration service revision check not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithRegistrationService(WithRevisionCheckCondition(
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
+				Message: "Deployed commit and GitHub commit are not matching",
+			})))
+
+		// when
+		meta := ExtractStatusMetadata(toolchainStatus)
+
+		// then
+		require.Len(t, meta, 1)
+		require.Equal(t, "Registration Service", meta[0].ComponentName)
+		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
+		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
+		require.Equal(t, "Revision", meta[0].ComponentType)
 	})
 }
 
@@ -1642,7 +1708,11 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 		require.Len(t, meta, 4)
 		content, err := GenerateUnreadyNotificationContent(ClusterURLs(toolchainStatus), meta)
 		require.NoError(t, err)
-		require.Len(t, content, 1512)
+		require.NotEmpty(t, content)
+		assert.Contains(t, content, "<h4>ToolchainStatus  not ready</h4>")
+		assert.Contains(t, content, "<h4>Host Operator Deployment not ready</h4>")
+		assert.Contains(t, content, "<h4>member-sandbox.ccc.openshiftapps.com Member Routes not ready</h4>")
+		assert.Contains(t, content, "<h4>Registration Service Deployment not ready</h4>")
 	})
 }
 
