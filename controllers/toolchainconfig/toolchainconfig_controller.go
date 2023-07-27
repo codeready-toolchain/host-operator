@@ -50,8 +50,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.ToolchainConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
-			handler.EnqueueRequestsFromMapFunc(MapSecretToToolchainConfig()),
-			builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
+			handler.EnqueueRequestsFromMapFunc(MapSecretToToolchainConfig())).
 		Complete(r)
 }
 
