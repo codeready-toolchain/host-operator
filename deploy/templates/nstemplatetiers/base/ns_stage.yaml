@@ -121,13 +121,13 @@ objects:
     namespace: ${SPACE_NAME}-stage
   spec:
     ingress:
-      - from:
-        - namespaceSelector:
-            matchLabels:
-              name: ${SPACE_NAME}-dev
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ${SPACE_NAME}-dev
     podSelector: {}
     policyTypes:
-      - Ingress
+    - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
@@ -135,13 +135,13 @@ objects:
     namespace: ${SPACE_NAME}-stage
   spec:
     ingress:
-      - from:
-          - namespaceSelector:
-              matchLabels:
-                network.openshift.io/policy-group: codeready-workspaces
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
-      - Ingress
+    - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
