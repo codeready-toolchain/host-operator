@@ -63,8 +63,8 @@ objects:
     name: crtadmin-users-view
 
 
-  # Quotas and default limits for not-terminating containers (regular long-running containers)
-  # and terminating (short-lived containers like build) containers
+# Quotas and default limits for not-terminating containers (regular long-running containers)
+# and terminating (short-lived containers like build) containers
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
@@ -72,7 +72,7 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     scopes:
-      - NotTerminating
+    - NotTerminating
     hard:
       limits.cpu: 20000m
       limits.memory: ${MEMORY_LIMIT}
@@ -85,7 +85,7 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     scopes:
-      - Terminating
+    - Terminating
     hard:
       limits.cpu: 20000m
       limits.memory: ${MEMORY_BUILD_LIMIT}
@@ -109,13 +109,13 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     limits:
-      - type: "Container"
-        default:
-          cpu: 1000m
-          memory: 1000Mi
-        defaultRequest:
-          cpu: 10m
-          memory: 64Mi
+    - type: "Container"
+      default:
+        cpu: 1000m
+        memory: 1000Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
 
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
@@ -162,13 +162,13 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
-      - from:
-        - namespaceSelector:
-            matchLabels:
-              network.openshift.io/policy-group: codeready-workspaces
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
-      - Ingress
+    - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
