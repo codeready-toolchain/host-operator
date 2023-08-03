@@ -107,6 +107,7 @@ func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.Names
 		kubeconfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
 		require.NoError(a.t, err)
 		require.NotNil(a.t, kubeconfig)
+		assert.Equal(a.t, a.spaceRequest.Status.TargetClusterURL, kubeconfig.Host) // check that kubeconfig was created with API URL of target cluster
 	}
 	return a
 }

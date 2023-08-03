@@ -139,11 +139,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // updateSpaceRequest updates conditions and target cluster url of the spaceRequest with the ones on the Space resource
 func (r *Reconciler) updateSpaceRequest(memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, subSpace *toolchainv1alpha1.Space) error {
 	// set target cluster URL to space request status
-	targetClusterURL, err := r.getTargetClusterURL(subSpace.Status.TargetCluster)
+	targetClusterURL, err := r.getTargetCluster(subSpace.Status.TargetCluster)
 	if err != nil {
 		return err
 	}
-	spaceRequest.Status.TargetClusterURL = targetClusterURL
+	spaceRequest.Status.TargetClusterURL = targetClusterURL.APIEndpoint
 	// reflect Ready condition from subSpace to spaceRequest object
 	if condition.IsTrue(subSpace.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// subSpace was provisioned so let's set Ready type condition to true on the space request
@@ -404,6 +404,10 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 		return nil
 	}
 	logger.Info("ensure secret for provisioned namespaces")
+	subSpaceTargetCluster, err := r.getTargetCluster(subSpace.Status.TargetCluster)
+	if err != nil {
+		return err
+	}
 
 	var namespaceAccess []toolchainv1alpha1.NamespaceAccess
 	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
@@ -422,7 +426,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 		switch {
 		case len(secretList.Items) == 0:
 			// create the secret for this namespace
-			clientConfig, err := r.generateKubeConfig(memberClusterWithSpaceRequest, namespace.Name)
+			clientConfig, err := r.generateKubeConfig(subSpaceTargetCluster, namespace.Name)
 			if err != nil {
 				return err
 			}
@@ -478,9 +482,9 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 	return nil
 }
 
-func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cluster, namespace string) (*api.Config, error) {
+func (r *Reconciler) generateKubeConfig(subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
 	// create a token request for the admin service account
-	token, err := restclient.CreateTokenRequest(memberClusterWithSpaceRequest.RESTClient, types.NamespacedName{
+	token, err := restclient.CreateTokenRequest(subSpaceTargetCluster.RESTClient, types.NamespacedName{
 		Namespace: namespace,
 		Name:      toolchainv1alpha1.AdminServiceAccountName,
 	}, TokenRequestExpirationSeconds)
@@ -491,8 +495,8 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 	// create apiConfig based on the secret content
 	clusters := make(map[string]*api.Cluster, 1)
 	clusters["default-cluster"] = &api.Cluster{
-		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
-		CertificateAuthorityData: memberClusterWithSpaceRequest.Config.RestConfig.CAData,
+		Server:                   subSpaceTargetCluster.Config.APIEndpoint,
+		CertificateAuthorityData: subSpaceTargetCluster.Config.RestConfig.CAData,
 	}
 	contexts := make(map[string]*api.Context, 1)
 	contexts["default-context"] = &api.Context{
@@ -580,11 +584,11 @@ func (r *Reconciler) updateStatus(spaceRequest *toolchainv1alpha1.SpaceRequest, 
 	return memberCluster.Client.Status().Update(context.TODO(), spaceRequest)
 }
 
-// getTargetClusterURL checks if the targetClusterName from the space exists and returns it's APIEndpoint.
-func (r *Reconciler) getTargetClusterURL(targetClusterName string) (string, error) {
+// getTargetCluster checks if the targetClusterName from the space exists and returns its client.
+func (r *Reconciler) getTargetCluster(targetClusterName string) (cluster.Cluster, error) {
 	targetCluster, found := r.MemberClusters[targetClusterName]
 	if !found {
-		return "", fmt.Errorf("unable to find target cluster with name: %s", targetClusterName)
+		return cluster.Cluster{}, fmt.Errorf("unable to find target cluster with name: %s", targetClusterName)
 	}
-	return targetCluster.APIEndpoint, nil
+	return targetCluster, nil
 }

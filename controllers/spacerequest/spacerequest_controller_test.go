@@ -249,10 +249,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("spacerequest has already an existing secret", func(t *testing.T) {
 			// given
 			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
-				"kubeconfig": []byte(fakeKubeConfigSecret()),
+				"kubeconfig": []byte(fakeKubeConfigSecret("member-1")),
 			})
 			kubeconfigSecret1.StringData = map[string]string{
-				"kubeconfig": fakeKubeConfigSecret(),
+				"kubeconfig": fakeKubeConfigSecret("member-1"),
 			}
 			kubeconfigSecret1.Labels = map[string]string{}
 			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
@@ -309,6 +309,60 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasConditions(spacetest.Ready()).
 				HasTier(sr.Spec.TierName).
 				HasParentSpace("jane") // the parent space is set as expected
+		})
+
+		t.Run("subSpace target cluster is different from spacerequest cluster", func(t *testing.T) {
+			// given
+			spaceRequest := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
+				spacerequesttest.WithTierName("appstudio"),
+				spacerequesttest.WithTargetClusterRoles([]string{"member-2"})) // the provisioned namespace is targeted for member-2
+			spaceRequestNamespace := newNamespace("jane")
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, spaceRequest, spaceRequestNamespace), "member-1", corev1.ConditionTrue) // spacerequest is created on member-1 but has target cluster member-2
+			// the provisioned namespace is on different cluster then the spacerequest resource
+			member2 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-2", corev1.ConditionTrue,
+				WithClusterRoleLabel(commoncluster.RoleLabel("member-2")),
+			)
+			commontest.SetupGockForServiceAccounts(t, member2.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env1",
+			},
+			)
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, spaceRequest),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles([]string{"member-2"}), // target cluster is member-2
+				spacetest.WithStatusTargetCluster(member2.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+				}),
+				spacetest.WithTierName(spaceRequest.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1, member2)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(spaceRequest))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, spaceRequestNamespace.Name, spaceRequest.GetName(), member1.Client).
+				HasSpecTargetClusterRoles([]string{"member-2"}). // target cluster is member-2
+				HasConditions(spacetest.Ready()).                // condition is reflected from space status
+				HasStatusTargetClusterURL(member2.APIEndpoint).  // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "jane-xyz1"}}).
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequest
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, spaceRequest), hostClient).
+				HasSpecTargetClusterRoles([]string{"member-2"}).
+				HasConditions(spacetest.Ready()).
+				HasTier(spaceRequest.Spec.TierName).
+				HasParentSpace("jane")
 		})
 	})
 
@@ -578,12 +632,12 @@ func TestCreateSpaceRequest(t *testing.T) {
 	})
 }
 
-func fakeKubeConfigSecret() string {
+func fakeKubeConfigSecret(memberName string) string {
 	return `apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: QVNEZjMzPT0=
-    server: https://api.member-cluster:6433
+    server: https://api.` + memberName + `:6433
   name: default-cluster
 contexts:
 - context:
