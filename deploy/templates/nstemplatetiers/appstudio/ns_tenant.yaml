@@ -13,7 +13,7 @@ objects:
     labels:
       name: ${SPACE_NAME}-tenant
       argocd.argoproj.io/managed-by: gitops-service-argocd
-      #billing labels ref: https://github.com/redhat-appstudio/book/blob/main/ADR/0010-namespace-metadata.md
+      # billing labels ref: https://github.com/redhat-appstudio/book/blob/main/ADR/0010-namespace-metadata.md
       appstudio.redhat.com/workspace_name: ${SPACE_NAME}
     name: ${SPACE_NAME}-tenant
 
@@ -73,7 +73,7 @@ objects:
     namespace: ${SPACE_NAME}-tenant
   spec:
     scopes:
-      - NotTerminating
+    - NotTerminating
     hard:
       limits.cpu: "20"
       limits.memory: ${MEMORY_LIMIT}
@@ -86,7 +86,7 @@ objects:
     namespace: ${SPACE_NAME}-tenant
   spec:
     scopes:
-      - Terminating
+    - Terminating
     hard:
       limits.cpu: "60"
       limits.memory: ${MEMORY_BUILD_LIMIT}
@@ -287,9 +287,9 @@ objects:
     kind: ClusterRole
     name: appstudio-pipelines-runner
   subjects:
-    - kind: ServiceAccount
-      namespace: ${SPACE_NAME}-tenant
-      name: appstudio-pipeline
+  - kind: ServiceAccount
+    namespace: ${SPACE_NAME}-tenant
+    name: appstudio-pipeline
 parameters:
 - name: SPACE_NAME
   required: true

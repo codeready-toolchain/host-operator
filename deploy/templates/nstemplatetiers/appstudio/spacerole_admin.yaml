@@ -29,38 +29,38 @@ objects:
     verbs:
     - "*"
   - apiGroups:
-      - appstudio.redhat.com
+    - appstudio.redhat.com
     resources:
-      - deploymenttargets
-      - deploymenttargetclaims
+    - deploymenttargets
+    - deploymenttargetclaims
     verbs:
-      - "*"
+    - "*"
   - apiGroups:
-      - managed-gitops.redhat.com
+    - managed-gitops.redhat.com
     resources:
-      - gitopsdeployments
-      - gitopsdeploymentmanagedenvironments
-      - gitopsdeploymentrepositorycredentials
-      - gitopsdeploymentsyncruns
+    - gitopsdeployments
+    - gitopsdeploymentmanagedenvironments
+    - gitopsdeploymentrepositorycredentials
+    - gitopsdeploymentsyncruns
     verbs:
-      - get
-      - list
-      - watch
+    - get
+    - list
+    - watch
   - apiGroups:
-      - tekton.dev
+    - tekton.dev
     resources:
-      - pipelineruns
+    - pipelineruns
     verbs:
-      - "*"
+    - "*"
   - apiGroups:
-      - results.tekton.dev
+    - results.tekton.dev
     resources:
-      - results
-      - records
-      - logs
+    - results
+    - records
+    - logs
     verbs:
-      - get
-      - list
+    - get
+    - list
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -73,12 +73,12 @@ objects:
     verbs:
     - "*"
   - apiGroups:
-      - jvmbuildservice.io
+    - jvmbuildservice.io
     resources:
-      - jbsconfigs
-      - artifactbuilds
+    - jbsconfigs
+    - artifactbuilds
     verbs:
-      - "*"
+    - "*"
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -123,9 +123,9 @@ objects:
   - apiGroups:
     - ""
     resources:
-    - serviceaccounts 
+    - serviceaccounts
     resourceNames:
-    - appstudio-pipeline  
+    - appstudio-pipeline
     verbs:
     - get
     - list

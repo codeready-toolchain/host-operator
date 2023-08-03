@@ -13,7 +13,7 @@ objects:
     labels:
       name: ${SPACE_NAME}-dev
       # For RHODS: Allow user namespace to be treated as a DSP to enable Model Serving on this NS
-      modelmesh-enabled: "true" 
+      modelmesh-enabled: "true"
       opendatahub.io/dashboard: "true"
     name: ${SPACE_NAME}-dev
 
@@ -121,13 +121,13 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
-      - from:
-        - namespaceSelector:
-            matchLabels:
-              name: ${SPACE_NAME}-stage
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ${SPACE_NAME}-stage
     podSelector: {}
     policyTypes:
-      - Ingress
+    - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
@@ -135,13 +135,13 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
-      - from:
-        - namespaceSelector:
-            matchLabels:
-              network.openshift.io/policy-group: codeready-workspaces
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
-      - Ingress
+    - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
