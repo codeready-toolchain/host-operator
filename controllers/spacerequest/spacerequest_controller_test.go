@@ -313,6 +313,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 		t.Run("subSpace target cluster is different from spacerequest cluster", func(t *testing.T) {
 			// given
+			parentSpaceWithTarget := spacetest.NewSpace(test.HostOperatorNs, "jane", spacetest.WithSpecTargetCluster("member-2"))
 			spaceRequest := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles([]string{"member-2"})) // the provisioned namespace is targeted for member-2
@@ -327,7 +328,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				Namespace: "jane-env1",
 			},
 			)
-			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, spaceRequest),
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpaceWithTarget, spaceRequest),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -342,7 +343,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 					},
 				}),
 				spacetest.WithTierName(spaceRequest.Spec.TierName))
-			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpaceWithTarget, subSpace)
 			ctrl := newReconciler(t, hostClient, member1, member2)
 
 			// when
@@ -358,7 +359,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "jane-xyz1"}}).
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, spaceRequest), hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpaceWithTarget, spaceRequest), hostClient).
 				HasSpecTargetClusterRoles([]string{"member-2"}).
 				HasConditions(spacetest.Ready()).
 				HasTier(spaceRequest.Spec.TierName).
