@@ -11,20 +11,20 @@ objects:
     namespace: ${NAMESPACE}
     name: rbac-edit
   rules:
-    - apiGroups:
-        - authorization.openshift.io
-        - rbac.authorization.k8s.io
-      resources:
-        - roles
-        - rolebindings
-      verbs:
-        - get
-        - list
-        - watch
-        - create
-        - update
-        - patch
-        - delete
+  - apiGroups:
+    - authorization.openshift.io
+    - rbac.authorization.k8s.io
+    resources:
+    - roles
+    - rolebindings
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
@@ -35,8 +35,8 @@ objects:
     kind: Role
     name: rbac-edit
   subjects:
-    - kind: User
-      name: ${USERNAME}
+  - kind: User
+    name: ${USERNAME}
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
