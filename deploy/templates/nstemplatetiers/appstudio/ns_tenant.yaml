@@ -28,42 +28,6 @@ objects:
     displayName: Development
     type: Non-POC
 
-# Role & RoleBinding that grant limited read permissions to all SAs in member-operator namespace.
-# This is needed to let Proxy read the ServiceAccounts and Secrets in this namespace.
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: toolchain-sa-read
-    namespace: ${SPACE_NAME}-tenant
-  rules:
-  - apiGroups:
-    - ""
-    resources:
-    - secrets
-    - serviceaccounts
-    verbs:
-    - get
-    - list
-  - apiGroups:
-    - ""
-    resources:
-    - serviceaccounts/token
-    verbs:
-    - create
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: member-operator-sa-read
-    namespace: ${SPACE_NAME}-tenant
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: toolchain-sa-read
-  subjects:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: Group
-    name: system:serviceaccounts:${MEMBER_OPERATOR_NAMESPACE}
-
 # Quotas and default limits for not-terminating containers (regular long-running containers)
 # and terminating (short-lived containers like build) containers
 - apiVersion: v1
@@ -293,8 +257,6 @@ objects:
 parameters:
 - name: SPACE_NAME
   required: true
-- name: MEMBER_OPERATOR_NAMESPACE
-  value: toolchain-member-operator
 - name: MEMORY_LIMIT
   value: "32Gi"
 - name: MEMORY_REQUEST
