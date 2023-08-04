@@ -313,7 +313,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 		t.Run("subSpace target cluster is different from spacerequest cluster", func(t *testing.T) {
 			// given
-			parentSpaceWithTarget := spacetest.NewSpace(test.HostOperatorNs, "jane", spacetest.WithSpecTargetCluster("member-2"))
+			parentSpaceWithTarget := spacetest.NewSpace(test.HostOperatorNs, "jane", spacetest.WithSpecTargetCluster("member-1"))
 			spaceRequest := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles([]string{"member-2"})) // the provisioned namespace is targeted for member-2
