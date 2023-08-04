@@ -3,12 +3,6 @@ kind: Template
 metadata:
   name: appstudio-spacerole-maintainer # name is used in e2e tests
 objects:
-# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
-- apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    namespace: ${NAMESPACE}
-    name: appstudio-${USERNAME}
 
 # RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
 # Role(s) and RoleBinding(s) that grant limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
