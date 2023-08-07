@@ -2026,7 +2026,7 @@ func TestSubSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			//... as well as to subSubSpace as admin
+			// user is admin of the subSubSpace
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subSubNStmplSet.Name, member1Client).
 				HasSpaceRoles(
 					nstemplatetsettest.SpaceRole("base1ns-admin-123456new", "john"),
