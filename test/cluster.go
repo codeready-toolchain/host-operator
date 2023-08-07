@@ -80,7 +80,7 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 			cachedCluster := &cluster.CachedToolchainCluster{
 				Config: &cluster.Config{
 					Name:              name,
-					APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
+					APIEndpoint:       fmt.Sprintf("https://api.%s:6433", name),
 					Type:              cluster.Member,
 					OperatorNamespace: test.MemberOperatorNs,
 					OwnerClusterName:  test.HostClusterName,
