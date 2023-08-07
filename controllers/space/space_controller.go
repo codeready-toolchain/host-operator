@@ -257,65 +257,83 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 // listSpaceBindings searches all the SpaceBindings of a given Space,
 // it will use the name of the parentSpace for the research if there is one.
-func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchainv1alpha1.SpaceBindingList, error) {
-	// list SpaceBindings bound to the space
-	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
+func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, childBindings toolchainv1alpha1.SpaceBindingList) (toolchainv1alpha1.SpaceBindingList, error) {
+	parentBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
-		&spaceBindings,
+		&parentBindings,
 		runtimeclient.InNamespace(space.Namespace),
 		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name, // use current space name for the search
 		},
 	); err != nil {
-		// return the error in case of read issues
-		return spaceBindings, err
+		// return child bindings and the error in case of read issues
+		return childBindings, err
 	}
 
-	// if there's no parentSpace set let's return the SpaceBindings from above
+	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
+	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
+	if len(childBindings.Items) == 0 {
+		// no initial spaceBindings, it means this is a leaf, and we should consider then ones just retrieved as our starting point
+		spaceBindings = parentBindings
+	} else {
+		// merge parent bindings into child bindings ,child roles with same username will override those from parent list.
+		spaceBindings.Items = mergeSpaceBindings(childBindings, parentBindings)
+	}
+
+	// no parent space,
+	// let's return list of bindings accumulated since here ...
 	if space.Spec.ParentSpace == "" {
-		return spaceBindings, nil
+		return toolchainv1alpha1.SpaceBindingList{
+			TypeMeta: spaceBindings.TypeMeta,
+			ListMeta: spaceBindings.ListMeta,
+			Items:    spaceBindings.Items,
+		}, nil
 	}
 
-	// list SpaceBindings bound to the parentSpace
-	parentSpaceBindings := toolchainv1alpha1.SpaceBindingList{}
-	if err := r.Client.List(context.TODO(),
-		&parentSpaceBindings,
-		runtimeclient.InNamespace(space.Namespace),
-		runtimeclient.MatchingLabels{
-			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Spec.ParentSpace, // use parentSpace name for the search
-		},
-	); err != nil {
-		// return the error and SpaceBindings from above in case read issues
-		return parentSpaceBindings, err
+	// fetch parent space and recursively keep going ...
+	parentSpace := &toolchainv1alpha1.Space{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: r.Namespace,
+		Name:      space.Spec.ParentSpace,
+	}, parentSpace)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// parent space not found,
+			// let's return list of bindings accumulated since here ...
+			return toolchainv1alpha1.SpaceBindingList{
+				TypeMeta: spaceBindings.TypeMeta,
+				ListMeta: spaceBindings.ListMeta,
+				Items:    spaceBindings.Items,
+			}, nil
+		}
+		// Error reading the object
+		return toolchainv1alpha1.SpaceBindingList{
+			TypeMeta: spaceBindings.TypeMeta,
+			ListMeta: spaceBindings.ListMeta,
+			Items:    spaceBindings.Items,
+		}, errs.Wrap(err, "unable to get parent-space")
 	}
 
-	// if no parentSpaceBindings found
-	// let's return the spaceBindings found using the Space.Name
-	if len(parentSpaceBindings.Items) == 0 {
-		return spaceBindings, nil
-	}
+	return r.listSpaceBindings(parentSpace, spaceBindings)
+}
 
+func mergeSpaceBindings(childBindings toolchainv1alpha1.SpaceBindingList, parentBindings toolchainv1alpha1.SpaceBindingList) []toolchainv1alpha1.SpaceBinding {
 	// if both list are not empty, we have to merge them.
 	// roles for the same username on SpaceBindings will override those on parentSpaceBindings,
 	// so let's remove them from parentSpaceBinding before merging the two lists.
-	for _, spaceBinding := range spaceBindings.Items {
+	for _, spaceBinding := range childBindings.Items {
 		// iterate from back to front so you don't have to worry about indexes that are deleted.
-		for i := len(parentSpaceBindings.Items) - 1; i >= 0; i-- {
-			if parentSpaceBindings.Items[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
-				parentSpaceBindings.Items = append(parentSpaceBindings.Items[:i], parentSpaceBindings.Items[i+1:]...)
+		for i := len(parentBindings.Items) - 1; i >= 0; i-- {
+			if parentBindings.Items[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
+				parentBindings.Items = append(parentBindings.Items[:i], parentBindings.Items[i+1:]...)
 				break
 			}
 		}
 	}
-
-	// merge lists now that there are duplicates
+	// merge lists now that there are no duplicates
 	// and just use the TypeMeta and ListMeta objects from the spaceBinding list
 	// since only the Items field is relevant from this object
-	return toolchainv1alpha1.SpaceBindingList{
-		TypeMeta: spaceBindings.TypeMeta,
-		ListMeta: spaceBindings.ListMeta,
-		Items:    append(spaceBindings.Items, parentSpaceBindings.Items...),
-	}, nil
+	return append(childBindings.Items, parentBindings.Items...)
 }
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
@@ -325,7 +343,8 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
 	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
 	space.Status.TargetCluster = space.Spec.TargetCluster
-	spaceBindings, err := r.listSpaceBindings(space)
+	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
+	spaceBindings, err := r.listSpaceBindings(space, spaceBindings)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
 	}

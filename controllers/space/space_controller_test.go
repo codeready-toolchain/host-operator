@@ -1988,6 +1988,52 @@ func TestSubSpace(t *testing.T) {
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
 
+		t.Run("create multi level bindings tree", func(t *testing.T) {
+			// given a parentSpace...
+			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
+			// ...and their corresponding space bindings
+			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
+
+			// ...now create a subSpace
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
+				spacetest.WithTierName(base1nsTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+				spacetest.WithSpecParentSpace(parentSpace.Name),
+				spacetest.WithFinalizer())
+			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
+				nstemplatetsettest.WithReadyCondition(),
+			)
+
+			// ... and now create a subSubSpace
+			subSubSpace := spacetest.NewSpace(test.HostOperatorNs, "subSubSpace",
+				spacetest.WithTierName(base1nsTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+				spacetest.WithSpecParentSpace(subSpace.Name),
+				spacetest.WithFinalizer())
+			subSubNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSubSpace.Name,
+				nstemplatetsettest.WithReadyCondition(),
+			)
+
+			hostClient := test.NewFakeClient(t, parentSpace, sb1, base1nsTier, subSpace, subSubSpace)
+			member1Client := test.NewFakeClient(t, subNStmplSet, subSubNStmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSubSpace))
+
+			// then
+			require.NoError(t, err)
+			//... as well as to subSubSpace as admin
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subSubNStmplSet.Name, member1Client).
+				HasSpaceRoles(
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new", "john"),
+				).
+				HasConditions(nstemplatetsettest.Provisioned())
+		})
+
 	})
 }
 
