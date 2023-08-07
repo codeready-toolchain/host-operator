@@ -126,4 +126,3 @@ parameters:
 - name: IDLER_TIMEOUT_SECONDS
   # 12 hours
   value: "43200"
-
