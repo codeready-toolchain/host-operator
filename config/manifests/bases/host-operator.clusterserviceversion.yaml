@@ -91,6 +91,11 @@ spec:
       kind: SpaceRequest
       name: spacerequests.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: SpaceBindingRequest allows to request creation of a SpaceBinding
+      displayName: SpaceBindingRequest
+      kind: SpaceBindingRequest
+      name: spacebindingrequests.toolchain.dev.openshift.com
+      version: v1alpha1
   description: Toolchain Host Operator
   displayName: Toolchain Host Operator
   icon:
