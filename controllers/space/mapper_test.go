@@ -27,10 +27,12 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	// parent and sub-space are linked using the v1alpha1.ParentSpaceLabelKey label
 	parentSpace := space.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := space.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
+	// following is a sub-subSpace
+	subSubSpace := space.NewSpace(test.HostOperatorNs, "subSubSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "subSpace"))
 	// following space has no sub-spaces
 	singleSpace := space.NewSpace(test.HostOperatorNs, "single")
 
-	cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace)
+	cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace, subSubSpace)
 
 	t.Run("should return one Space when has no sub-spaces", func(t *testing.T) {
 		// when
@@ -41,12 +43,12 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 		assert.Contains(t, requests, newRequest(singleSpace.Name))
 	})
 
-	t.Run("should return two Spaces when there is a sub-space", func(t *testing.T) {
+	t.Run("should return 3 Spaces when there is a sub-subSpace", func(t *testing.T) {
 		// when
 		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceWithSubspaces)
 
 		// then
-		require.Len(t, requests, 2)
+		require.Len(t, requests, 3)
 		assert.Contains(t, requests, newRequest(parentSpace.Name))
 		assert.Contains(t, requests, newRequest(subSpace.Name))
 	})
