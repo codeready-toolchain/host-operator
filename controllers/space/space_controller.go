@@ -272,13 +272,7 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, childBind
 
 	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
 	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
-	if len(childBindings.Items) == 0 {
-		// no initial spaceBindings, it means this is a leaf, and we should consider then ones just retrieved as our starting point
-		spaceBindings = parentBindings
-	} else {
-		// merge parent bindings into child bindings ,child roles with same username will override those from parent list.
-		spaceBindings.Items = mergeSpaceBindings(childBindings, parentBindings)
-	}
+	spaceBindings.Items = mergeSpaceBindings(childBindings, parentBindings)
 
 	// no parent space,
 	// let's return list of bindings accumulated since here ...
