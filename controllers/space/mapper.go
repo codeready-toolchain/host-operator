@@ -79,10 +79,6 @@ func listSubSpaces(ns string, cl runtimeclient.Client, subSpaces toolchainv1alph
 	if err != nil {
 		return subSpaces, err
 	}
-	// no more subspaces let's return
-	if len(subSpacesFound.Items) == 0 {
-		return subSpaces, nil
-	}
 
 	// merge found spaces into existing ones
 	subSpaces.Items = append(subSpaces.Items, subSpacesFound.Items...)
