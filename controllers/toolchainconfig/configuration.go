@@ -146,6 +146,10 @@ func (s SpaceConfig) SpaceRequestIsEnabled() bool {
 	return commonconfig.GetBool(s.spaceConfig.SpaceRequestEnabled, false)
 }
 
+func (s SpaceConfig) SpaceBindingRequestIsEnabled() bool {
+	return commonconfig.GetBool(s.spaceConfig.SpaceBindingRequestEnabled, false)
+}
+
 type CapacityThresholdsConfig struct {
 	capacityThresholds toolchainv1alpha1.CapacityThresholds
 }
