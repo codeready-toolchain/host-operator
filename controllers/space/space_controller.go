@@ -271,8 +271,7 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBind
 	}
 
 	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
-	var spaceBindings []toolchainv1alpha1.SpaceBinding
-	spaceBindings = mergeSpaceBindings(foundBindings, parentBindings.Items)
+	spaceBindings := mergeSpaceBindings(foundBindings, parentBindings.Items)
 
 	// no parent space,
 	// let's return list of bindings accumulated since here ...
