@@ -12,7 +12,6 @@ objects:
       openshift.io/requester: ${SPACE_NAME}
     labels:
       name: ${SPACE_NAME}-env
-      argocd.argoproj.io/managed-by: gitops-service-argocd
       # billing labels ref: https://github.com/redhat-appstudio/book/blob/main/ADR/0010-namespace-metadata.md
       appstudio.redhat.com/workspace_name: ${SPACE_NAME}
     # The ${SPACE_NAME} here is actually the space (aka workspace) name that is going to be provisioned as environment sub-space (aka sub-workspace).
