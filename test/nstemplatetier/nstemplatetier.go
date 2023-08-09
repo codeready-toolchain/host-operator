@@ -90,6 +90,9 @@ var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 		"admin": {
 			TemplateRef: "base1ns-admin-123456new",
 		},
+		"edit": {
+			TemplateRef: "base1ns-edit-123456new",
+		},
 		"viewer": {
 			TemplateRef: "base1ns-viewer-123456new",
 		},

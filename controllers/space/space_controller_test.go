@@ -1993,6 +1993,9 @@ func TestSubSpace(t *testing.T) {
 			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
+			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "edit", "signupJane")
+			sb3 := spacebindingtest.NewSpaceBinding("bob", parentSpace.Name, "view", "signupBob")
+			sb4 := spacebindingtest.NewSpaceBinding("lara", parentSpace.Name, "view", "signupLara")
 
 			// ...now create a subSpace
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
@@ -2004,6 +2007,8 @@ func TestSubSpace(t *testing.T) {
 			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
 				nstemplatetsettest.WithReadyCondition(),
 			)
+			sb5 := spacebindingtest.NewSpaceBinding("jane", subSpace.Name, "admin", "signupJane")
+			sb6 := spacebindingtest.NewSpaceBinding("lara", subSpace.Name, "edit", "signupLara")
 
 			// ... and now create a subSubSpace
 			subSubSpace := spacetest.NewSpace(test.HostOperatorNs, "subSubSpace",
@@ -2015,8 +2020,10 @@ func TestSubSpace(t *testing.T) {
 			subSubNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSubSpace.Name,
 				nstemplatetsettest.WithReadyCondition(),
 			)
+			sb7 := spacebindingtest.NewSpaceBinding("bob", subSubSpace.Name, "edit", "signupBob")
+			sb8 := spacebindingtest.NewSpaceBinding("lara", subSubSpace.Name, "admin", "signupLara")
 
-			hostClient := test.NewFakeClient(t, parentSpace, sb1, base1nsTier, subSpace, subSubSpace)
+			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, sb3, sb4, sb5, sb6, sb7, sb8, base1nsTier, subSpace, subSubSpace)
 			member1Client := test.NewFakeClient(t, subNStmplSet, subSubNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
@@ -2029,7 +2036,8 @@ func TestSubSpace(t *testing.T) {
 			// user is admin of the subSubSpace
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subSubNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("base1ns-admin-123456new", "john"),
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new", "jane", "john", "lara"),
+					nstemplatetsettest.SpaceRole("base1ns-edit-123456new", "bob"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})

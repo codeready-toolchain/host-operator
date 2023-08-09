@@ -257,7 +257,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 // listSpaceBindings searches all the SpaceBindings of a given Space,
 // it will use the name of the parentSpace for the research if there is one.
-func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, childBindings toolchainv1alpha1.SpaceBindingList) (toolchainv1alpha1.SpaceBindingList, error) {
+func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBindings []toolchainv1alpha1.SpaceBinding) ([]toolchainv1alpha1.SpaceBinding, error) {
 	parentBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
 		&parentBindings,
@@ -267,21 +267,17 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, childBind
 		},
 	); err != nil {
 		// return child bindings and the error in case of read issues
-		return childBindings, err
+		return foundBindings, err
 	}
 
 	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
-	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
-	spaceBindings.Items = mergeSpaceBindings(childBindings, parentBindings)
+	var spaceBindings []toolchainv1alpha1.SpaceBinding
+	spaceBindings = mergeSpaceBindings(foundBindings, parentBindings.Items)
 
 	// no parent space,
 	// let's return list of bindings accumulated since here ...
 	if space.Spec.ParentSpace == "" {
-		return toolchainv1alpha1.SpaceBindingList{
-			TypeMeta: spaceBindings.TypeMeta,
-			ListMeta: spaceBindings.ListMeta,
-			Items:    spaceBindings.Items,
-		}, nil
+		return spaceBindings, nil
 	}
 
 	// fetch parent space and recursively keep going ...
@@ -291,35 +287,23 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, childBind
 		Name:      space.Spec.ParentSpace,
 	}, parentSpace)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// parent space not found,
-			// let's return list of bindings accumulated since here ...
-			return toolchainv1alpha1.SpaceBindingList{
-				TypeMeta: spaceBindings.TypeMeta,
-				ListMeta: spaceBindings.ListMeta,
-				Items:    spaceBindings.Items,
-			}, nil
-		}
 		// Error reading the object
-		return toolchainv1alpha1.SpaceBindingList{
-			TypeMeta: spaceBindings.TypeMeta,
-			ListMeta: spaceBindings.ListMeta,
-			Items:    spaceBindings.Items,
-		}, errs.Wrap(err, "unable to get parent-space")
+		return spaceBindings,
+			errs.Wrap(err, "unable to get parent-space")
 	}
 
 	return r.listSpaceBindings(parentSpace, spaceBindings)
 }
 
-func mergeSpaceBindings(childBindings toolchainv1alpha1.SpaceBindingList, parentBindings toolchainv1alpha1.SpaceBindingList) []toolchainv1alpha1.SpaceBinding {
+func mergeSpaceBindings(foundBindings []toolchainv1alpha1.SpaceBinding, parentBindings []toolchainv1alpha1.SpaceBinding) []toolchainv1alpha1.SpaceBinding {
 	// if both list are not empty, we have to merge them.
 	// roles for the same username on SpaceBindings will override those on parentSpaceBindings,
 	// so let's remove them from parentSpaceBinding before merging the two lists.
-	for _, spaceBinding := range childBindings.Items {
-		// iterate from back to front so you don't have to worry about indexes that are deleted.
-		for i := len(parentBindings.Items) - 1; i >= 0; i-- {
-			if parentBindings.Items[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
-				parentBindings.Items = append(parentBindings.Items[:i], parentBindings.Items[i+1:]...)
+	for _, spaceBinding := range foundBindings {
+		// iterate from back to front, so you don't have to worry about indexes that are deleted.
+		for i := len(parentBindings) - 1; i >= 0; i-- {
+			if parentBindings[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
+				parentBindings = append(parentBindings[:i], parentBindings[i+1:]...)
 				break
 			}
 		}
@@ -327,7 +311,7 @@ func mergeSpaceBindings(childBindings toolchainv1alpha1.SpaceBindingList, parent
 	// merge lists now that there are no duplicates
 	// and just use the TypeMeta and ListMeta objects from the spaceBinding list
 	// since only the Items field is relevant from this object
-	return append(childBindings.Items, parentBindings.Items...)
+	return append(foundBindings, parentBindings...)
 }
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
@@ -337,7 +321,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
 	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
 	space.Status.TargetCluster = space.Spec.TargetCluster
-	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
+	var spaceBindings []toolchainv1alpha1.SpaceBinding
 	spaceBindings, err := r.listSpaceBindings(space, spaceBindings)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
@@ -353,7 +337,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
+			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// requeue, there's probably a race condition between the host client cache and the member cluster state
@@ -378,7 +362,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 
 	// update the NSTemplateSet if needed (including in case of missing space roles)
-	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings.Items, tmplTier)
+	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
 	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
 		logger.Info("NSTemplateSet is not up-to-date")
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
