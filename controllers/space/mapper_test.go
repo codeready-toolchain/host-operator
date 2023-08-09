@@ -27,8 +27,10 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	// parent and sub-space are linked using the v1alpha1.ParentSpaceLabelKey label
 	parentSpace := space.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := space.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
-	// following is a sub-subSpace
+	subSpace2 := space.NewSpace(test.HostOperatorNs, "subSpace2", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
+	// following are sub-subSpaces
 	subSubSpace := space.NewSpace(test.HostOperatorNs, "subSubSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "subSpace"))
+	subSubSpace2 := space.NewSpace(test.HostOperatorNs, "subSubSpace2", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "subSpace"))
 	// following space has no sub-spaces
 	singleSpace := space.NewSpace(test.HostOperatorNs, "single")
 
