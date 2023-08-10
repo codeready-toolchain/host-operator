@@ -320,8 +320,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
 	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
 	space.Status.TargetCluster = space.Spec.TargetCluster
-	var spaceBindings []toolchainv1alpha1.SpaceBinding
-	spaceBindings, err := r.listSpaceBindings(space, spaceBindings)
+	spaceBindings, err := r.listSpaceBindings(space, []toolchainv1alpha1.SpaceBinding{})
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
 	}
