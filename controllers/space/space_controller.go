@@ -287,8 +287,7 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBind
 	}, parentSpace)
 	if err != nil {
 		// Error reading the object
-		return spaceBindings,
-			errs.Wrap(err, "unable to get parent-space")
+		return spaceBindings, errs.Wrap(err, "unable to get parent-space")
 	}
 
 	return r.listSpaceBindings(parentSpace, spaceBindings)
