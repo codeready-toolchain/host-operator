@@ -271,12 +271,12 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBind
 	}
 
 	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
-	spaceBindings := mergeSpaceBindings(foundBindings, parentBindings.Items)
+	foundBindings = mergeSpaceBindings(foundBindings, parentBindings.Items)
 
 	// no parent space,
 	// let's return list of bindings accumulated since here ...
 	if space.Spec.ParentSpace == "" {
-		return spaceBindings, nil
+		return foundBindings, nil
 	}
 
 	// fetch parent space and recursively keep going ...
@@ -287,10 +287,10 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBind
 	}, parentSpace)
 	if err != nil {
 		// Error reading the object
-		return spaceBindings, errs.Wrap(err, "unable to get parent-space")
+		return foundBindings, errs.Wrap(err, "unable to get parent-space")
 	}
 
-	return r.listSpaceBindings(parentSpace, spaceBindings)
+	return r.listSpaceBindings(parentSpace, foundBindings)
 }
 
 func mergeSpaceBindings(foundBindings []toolchainv1alpha1.SpaceBinding, parentBindings []toolchainv1alpha1.SpaceBinding) []toolchainv1alpha1.SpaceBinding {
