@@ -92,24 +92,13 @@ func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...
 
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
-		restClient, err := commontest.NewRESTClient("fake_secret", c.APIEndpoint)
-		restClient.Client.Transport = gock.DefaultTransport // make sure that the underlying client's request are intercepted by Gock
-		require.NoError(t, err)
 		clusters[c.Name] = cluster.Cluster{
 			Config: &commoncluster.Config{
 				Type:              commoncluster.Member,
-				APIEndpoint:       c.APIEndpoint,
 				OperatorNamespace: c.OperatorNamespace,
 				OwnerClusterName:  test.MemberClusterName,
-				RestConfig: &rest.Config{
-					Host: c.APIEndpoint,
-					TLSClientConfig: rest.TLSClientConfig{
-						CAData: []byte("ASDf33=="),
-					},
-				},
 			},
-			RESTClient: restClient,
-			Client:     c.Client,
+			Client: c.Client,
 		}
 	}
 	return &spacebindingrequest.Reconciler{
