@@ -15,6 +15,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
+	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequest"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
@@ -289,20 +290,39 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 		os.Exit(1)
 	}
-	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() ||
+		crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
+		// init cluster scoped member cluster clients
 		clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
 		if err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
-		if err = (&spacerequest.Reconciler{
-			Client:         mgr.GetClient(),
-			Namespace:      namespace,
-			MemberClusters: clusterScopedMemberClusters,
-			Scheme:         mgr.GetScheme(),
-		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
-			os.Exit(1)
+
+		// enable space request
+		if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+			if err = (&spacerequest.Reconciler{
+				Client:         mgr.GetClient(),
+				Namespace:      namespace,
+				MemberClusters: clusterScopedMemberClusters,
+				Scheme:         mgr.GetScheme(),
+			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
+				os.Exit(1)
+			}
+		}
+
+		// enable space binding request
+		if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
+			if err = (&spacebindingrequest.Reconciler{
+				Client:         mgr.GetClient(),
+				Namespace:      namespace,
+				MemberClusters: clusterScopedMemberClusters,
+				Scheme:         mgr.GetScheme(),
+			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
+				os.Exit(1)
+			}
 		}
 	}
 	if err = (&space.Reconciler{
@@ -414,7 +434,7 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 
 		memberCluster, err := runtimecluster.New(memberConfig.RestConfig, func(options *runtimecluster.Options) {
 			options.Scheme = scheme
-			// for some resources like SpaceRequest we need the cache to be clustered scoped
+			// for some resources like SpaceRequest/SpaceBindingRequest we need the cache to be clustered scoped
 			// because those resources are in user namespaces and not member operator namespace.
 			if namespacedCache {
 				options.Namespace = memberConfig.OperatorNamespace
