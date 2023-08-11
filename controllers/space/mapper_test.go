@@ -27,10 +27,14 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	// parent and sub-space are linked using the v1alpha1.ParentSpaceLabelKey label
 	parentSpace := space.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := space.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
+	subSpace2 := space.NewSpace(test.HostOperatorNs, "subSpace2", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "parentSpace"))
+	// following are sub-subSpaces
+	subSubSpace := space.NewSpace(test.HostOperatorNs, "subSubSpace", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "subSpace"))
+	subSubSpace2 := space.NewSpace(test.HostOperatorNs, "subSubSpace2", space.WithLabel(v1alpha1.ParentSpaceLabelKey, "subSpace"))
 	// following space has no sub-spaces
 	singleSpace := space.NewSpace(test.HostOperatorNs, "single")
 
-	cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace)
+	cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace, subSubSpace, subSpace2, subSubSpace2)
 
 	t.Run("should return one Space when has no sub-spaces", func(t *testing.T) {
 		// when
@@ -41,14 +45,17 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 		assert.Contains(t, requests, newRequest(singleSpace.Name))
 	})
 
-	t.Run("should return two Spaces when there is a sub-space", func(t *testing.T) {
+	t.Run("should return 5 Spaces when there is a sub-subSpace", func(t *testing.T) {
 		// when
 		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceWithSubspaces)
 
 		// then
-		require.Len(t, requests, 2)
+		require.Len(t, requests, 5)
 		assert.Contains(t, requests, newRequest(parentSpace.Name))
 		assert.Contains(t, requests, newRequest(subSpace.Name))
+		assert.Contains(t, requests, newRequest(subSpace2.Name))
+		assert.Contains(t, requests, newRequest(subSubSpace.Name))
+		assert.Contains(t, requests, newRequest(subSubSpace2.Name))
 	})
 
 	t.Run("should not return any Space request when there is no for the given SpaceBinding", func(t *testing.T) {
