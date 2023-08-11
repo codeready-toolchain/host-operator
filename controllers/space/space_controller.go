@@ -257,65 +257,59 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 // listSpaceBindings searches all the SpaceBindings of a given Space,
 // it will use the name of the parentSpace for the research if there is one.
-func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchainv1alpha1.SpaceBindingList, error) {
-	// list SpaceBindings bound to the space
-	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
+func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space, foundBindings []toolchainv1alpha1.SpaceBinding) ([]toolchainv1alpha1.SpaceBinding, error) {
+	parentBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
-		&spaceBindings,
+		&parentBindings,
 		runtimeclient.InNamespace(space.Namespace),
 		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name, // use current space name for the search
 		},
 	); err != nil {
-		// return the error in case of read issues
-		return spaceBindings, err
+		// return child bindings and the error in case of read issues
+		return foundBindings, err
 	}
 
-	// if there's no parentSpace set let's return the SpaceBindings from above
+	// spaceBindings is the list that will be returned, it will contain either parent and child merged or just the "parent" ones retrieved above.
+	foundBindings = mergeSpaceBindings(foundBindings, parentBindings.Items)
+
+	// no parent space,
+	// let's return list of bindings accumulated since here ...
 	if space.Spec.ParentSpace == "" {
-		return spaceBindings, nil
+		return foundBindings, nil
 	}
 
-	// list SpaceBindings bound to the parentSpace
-	parentSpaceBindings := toolchainv1alpha1.SpaceBindingList{}
-	if err := r.Client.List(context.TODO(),
-		&parentSpaceBindings,
-		runtimeclient.InNamespace(space.Namespace),
-		runtimeclient.MatchingLabels{
-			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Spec.ParentSpace, // use parentSpace name for the search
-		},
-	); err != nil {
-		// return the error and SpaceBindings from above in case read issues
-		return parentSpaceBindings, err
+	// fetch parent space and recursively keep going ...
+	parentSpace := &toolchainv1alpha1.Space{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: r.Namespace,
+		Name:      space.Spec.ParentSpace,
+	}, parentSpace)
+	if err != nil {
+		// Error reading the object
+		return foundBindings, errs.Wrap(err, "unable to get parent-space")
 	}
 
-	// if no parentSpaceBindings found
-	// let's return the spaceBindings found using the Space.Name
-	if len(parentSpaceBindings.Items) == 0 {
-		return spaceBindings, nil
-	}
+	return r.listSpaceBindings(parentSpace, foundBindings)
+}
 
+func mergeSpaceBindings(foundBindings []toolchainv1alpha1.SpaceBinding, parentBindings []toolchainv1alpha1.SpaceBinding) []toolchainv1alpha1.SpaceBinding {
 	// if both list are not empty, we have to merge them.
 	// roles for the same username on SpaceBindings will override those on parentSpaceBindings,
 	// so let's remove them from parentSpaceBinding before merging the two lists.
-	for _, spaceBinding := range spaceBindings.Items {
-		// iterate from back to front so you don't have to worry about indexes that are deleted.
-		for i := len(parentSpaceBindings.Items) - 1; i >= 0; i-- {
-			if parentSpaceBindings.Items[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
-				parentSpaceBindings.Items = append(parentSpaceBindings.Items[:i], parentSpaceBindings.Items[i+1:]...)
+	for _, spaceBinding := range foundBindings {
+		// iterate from back to front, so you don't have to worry about indexes that are deleted.
+		for i := len(parentBindings) - 1; i >= 0; i-- {
+			if parentBindings[i].Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord {
+				parentBindings = append(parentBindings[:i], parentBindings[i+1:]...)
 				break
 			}
 		}
 	}
-
-	// merge lists now that there are duplicates
+	// merge lists now that there are no duplicates
 	// and just use the TypeMeta and ListMeta objects from the spaceBinding list
 	// since only the Items field is relevant from this object
-	return toolchainv1alpha1.SpaceBindingList{
-		TypeMeta: spaceBindings.TypeMeta,
-		ListMeta: spaceBindings.ListMeta,
-		Items:    append(spaceBindings.Items, parentSpaceBindings.Items...),
-	}, nil
+	return append(foundBindings, parentBindings...)
 }
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
@@ -325,7 +319,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
 	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
 	space.Status.TargetCluster = space.Spec.TargetCluster
-	spaceBindings, err := r.listSpaceBindings(space)
+	spaceBindings, err := r.listSpaceBindings(space, []toolchainv1alpha1.SpaceBinding{})
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
 	}
@@ -340,7 +334,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
+			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// requeue, there's probably a race condition between the host client cache and the member cluster state
@@ -365,7 +359,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 
 	// update the NSTemplateSet if needed (including in case of missing space roles)
-	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings.Items, tmplTier)
+	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
 	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
 		logger.Info("NSTemplateSet is not up-to-date")
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)

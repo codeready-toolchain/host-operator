@@ -4,7 +4,6 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,12 +47,8 @@ func MapSpaceBindingToParentAndSubSpaces(cl runtimeclient.Client) func(object ru
 			return []reconcile.Request{}
 		}
 
-		// list sub-spaces of given parent-space
-		// by setting the label value that each sub-space should have.
-		subSpaces := &toolchainv1alpha1.SpaceList{}
-		err := cl.List(context.TODO(), subSpaces,
-			runtimeclient.InNamespace(obj.GetNamespace()),
-			runtimeclient.MatchingLabels{toolchainv1alpha1.ParentSpaceLabelKey: parentSpaceName})
+		subSpaces := toolchainv1alpha1.SpaceList{}
+		subSpaces, err := listSubSpaces(obj.GetNamespace(), cl, subSpaces, parentSpaceName)
 		if err != nil {
 			logger.Error(err, "unable to get sub-spaces for an object")
 			return []reconcile.Request{}
@@ -73,4 +68,24 @@ func MapSpaceBindingToParentAndSubSpaces(cl runtimeclient.Client) func(object ru
 		}
 		return reconcileRequestObj
 	}
+}
+
+// listSubSpaces start from a parentSpace name and recursively searches for subspaces.
+func listSubSpaces(ns string, cl runtimeclient.Client, subSpaces toolchainv1alpha1.SpaceList, parentSpaceName string) (toolchainv1alpha1.SpaceList, error) {
+	subSpacesFound := &toolchainv1alpha1.SpaceList{}
+	err := cl.List(context.TODO(), subSpacesFound,
+		runtimeclient.InNamespace(ns),
+		runtimeclient.MatchingLabels{toolchainv1alpha1.ParentSpaceLabelKey: parentSpaceName})
+	if err != nil {
+		return subSpaces, err
+	}
+
+	// merge found spaces into existing ones
+	subSpaces.Items = append(subSpaces.Items, subSpacesFound.Items...)
+
+	// keep searching for subspaces
+	for _, space := range subSpacesFound.Items {
+		return listSubSpaces(space.Namespace, cl, subSpaces, space.Name)
+	}
+	return subSpaces, nil
 }
