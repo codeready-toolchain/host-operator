@@ -5,6 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -37,8 +38,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconciler reconciles a SpaceBinding object
 type Reconciler struct {
 	runtimeclient.Client
-	Scheme    *runtime.Scheme
-	Namespace string
+	Scheme         *runtime.Scheme
+	Namespace      string
+	MemberClusters map[string]cluster.Cluster
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch;create;update;patch;delete
@@ -94,8 +96,57 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	logger.Info("deleting the SpaceBinding")
+
+	// check if spaceBinding was created from SpaceBindingRequest,
+	// in that case we must delete the SBR and will take care of deleting the SpaceBinding as well
+	sbrName, sbrNameFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
+	sbrNamespace, sbrNamespaceFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
+	if sbrNameFound && sbrNamespaceFound {
+		return r.deleteSpaceBindingRequest(logger, sbrNamespace, sbrName)
+	}
+
+	// otherwise delete the SpaceBinding resource directly ...
 	if err := r.Delete(context.TODO(), spaceBinding); err != nil {
 		return errs.Wrapf(err, "unable to delete the SpaceBinding")
+	}
+	return nil
+}
+
+func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrNamespace, sbrName string) error {
+	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
+	var memberClusterWithSpaceBindingRequest cluster.Cluster
+	var err error
+	for _, memberCluster := range r.MemberClusters {
+		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: sbrNamespace,
+			Name:      sbrName,
+		}, spaceBindingRequest)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				// Error reading the object - requeue the request.
+				logger.Error(err, "unable to get the current SpaceBindingRequest", "SpaceBindingRequest.Name", sbrName, "SpaceBindingRequest.Namespace", sbrNamespace)
+				return err
+			}
+
+			//  spacebindingrequest CR not found on current membercluster
+			continue
+		}
+
+		// save the member cluster on which the SpaceBindingRequest CR was found
+		memberClusterWithSpaceBindingRequest = memberCluster
+		break // exit once found
+	}
+	// if we exited with a notFound error
+	// it means that we couldn't find the spacebindingrequest object on any of the given member clusters
+	if err != nil && errors.IsNotFound(err) {
+		// let's just log the info
+		logger.Info("unable to find SpaceBindingRequest", "SpaceBindingRequest.Name", sbrName, "SpaceBindingRequest.Namespace", sbrNamespace)
+		return nil
+	}
+
+	// delete the SBR
+	if err := memberClusterWithSpaceBindingRequest.Client.Delete(context.TODO(), spaceBindingRequest); err != nil {
+		return errs.Wrapf(err, "unable to delete the SpaceBindingRequest")
 	}
 	return nil
 }
