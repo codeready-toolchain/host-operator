@@ -114,3 +114,5 @@ require (
 )
 
 go 1.19
+
+replace github.com/codeready-toolchain/api => /Users/fmuntean/go/src/github.com/codeready-toolchain/api
