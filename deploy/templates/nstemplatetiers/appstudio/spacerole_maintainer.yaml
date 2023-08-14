@@ -78,7 +78,13 @@ objects:
     resources:
     - integrationtestscenarios
     verbs:
-    - '*'
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -94,13 +100,25 @@ objects:
     - releasestrategies
     - releaseplans
     verbs:
-    - '*'
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
     - releaseplanadmissions
     verbs:
-    - '*'
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - jvmbuildservice.io
     resources:
