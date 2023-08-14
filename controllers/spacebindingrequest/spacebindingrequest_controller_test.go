@@ -413,13 +413,13 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 	janeSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	janeMur := masteruserrecord.NewMasterUserRecord(t, "jane")
 	sbrNamespace := spacerequesttest.NewNamespace("jane")
-	sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
-		spacebindingrequesttest.WithMUR("jane"),
-		spacebindingrequesttest.WithSpaceRole("admin"))
 	t.Run("success", func(t *testing.T) {
 
 		t.Run("update SpaceRole", func(t *testing.T) {
 			// given
+			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR("jane"),
+				spacebindingrequesttest.WithSpaceRole("admin"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
 			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "maintainer", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr)) // jane has maintainer, but SBR has admin
 			hostClient := test.NewFakeClient(t, base1nsTier, spaceBinding, janeSpace, janeMur)
@@ -443,6 +443,9 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 
 		t.Run("update MasterUserRecord", func(t *testing.T) {
 			// given
+			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR("jane"),
+				spacebindingrequesttest.WithSpaceRole("admin"))
 			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr)) // jane is still the MUR on the spacebinding
 			lanaMur := masteruserrecord.NewMasterUserRecord(t, "lana")                                                                                       // we have a new MUR we want to replace the previous one
 			sbr.Spec.MasterUserRecord = lanaMur.GetName()                                                                                                    // update MUR on SBR
@@ -469,6 +472,9 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 
 	t.Run("failure", func(t *testing.T) {
 		t.Run("unable to update SpaceBinding", func(t *testing.T) {
+			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR("jane"),
+				spacebindingrequesttest.WithSpaceRole("admin"))
 			// given
 			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "oldrole", sbr.GetName(), spacebindingtest.WithSpaceBindingRequest(sbr)) // spacebinding role needs to be updated
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
