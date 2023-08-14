@@ -99,33 +99,35 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 
 	// check if spaceBinding was created from SpaceBindingRequest,
 	// in that case we must delete the SBR and will take care of deleting the SpaceBinding as well
-	sbrName, sbrNameFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
-	sbrNamespace, sbrNamespaceFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
-	if sbrNameFound && sbrNamespaceFound {
-		return r.deleteSpaceBindingRequest(logger, sbrNamespace, sbrName)
+	spaceBindingReqeuestAssociated := checkSpaceBindingRequestAssociated(spaceBinding)
+	if spaceBindingReqeuestAssociated.found {
+		return r.deleteSpaceBindingRequest(logger, spaceBindingReqeuestAssociated)
 	}
 
 	// otherwise delete the SpaceBinding resource directly ...
+	return r.DeleteSpaceBinding(spaceBinding)
+}
+
+func (r *Reconciler) DeleteSpaceBinding(spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	if err := r.Delete(context.TODO(), spaceBinding); err != nil {
 		return errs.Wrapf(err, "unable to delete the SpaceBinding")
 	}
 	return nil
 }
 
-func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrNamespace, sbrName string) error {
+func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated *SpaceBindingRequestAssociated) error {
 	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
 	var memberClusterWithSpaceBindingRequest cluster.Cluster
 	var err error
 	for _, memberCluster := range r.MemberClusters {
 		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: sbrNamespace,
-			Name:      sbrName,
+			Namespace: sbrAssociated.namespace,
+			Name:      sbrAssociated.name,
 		}, spaceBindingRequest)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				// Error reading the object - requeue the request.
-				logger.Error(err, "unable to get the current SpaceBindingRequest", "SpaceBindingRequest.Name", sbrName, "SpaceBindingRequest.Namespace", sbrNamespace)
-				return err
+				return errs.Wrap(err, "unable to get the current SpaceBindingRequest")
 			}
 
 			//  spacebindingrequest CR not found on current membercluster
@@ -140,8 +142,9 @@ func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrNamespace,
 	// it means that we couldn't find the spacebindingrequest object on any of the given member clusters
 	if err != nil && errors.IsNotFound(err) {
 		// let's just log the info
-		logger.Info("unable to find SpaceBindingRequest", "SpaceBindingRequest.Name", sbrName, "SpaceBindingRequest.Namespace", sbrNamespace)
-		return nil
+		logger.Info("unable to find SpaceBindingRequest", "SpaceBindingRequest.Name", sbrAssociated.name, "SpaceBindingRequest.Namespace", sbrAssociated.namespace)
+		// try and delete the SpaceBinding since SBR was not found
+		return r.DeleteSpaceBinding(sbrAssociated.spaceBinding)
 	}
 
 	// delete the SBR
@@ -149,4 +152,27 @@ func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrNamespace,
 		return errs.Wrapf(err, "unable to delete the SpaceBindingRequest")
 	}
 	return nil
+}
+
+// SpaceBindingRequestAssociated is a wrapper that holds details regarding SB, and it's SBR if there is any associated.
+type SpaceBindingRequestAssociated struct {
+	// name and namespace of the SpaceBindingRequest
+	name, namespace string
+	// found is true if there is a SpaceBindingRequest associated with the SB
+	found bool
+	// spaceBinding is the resource that is being reconciled
+	spaceBinding *toolchainv1alpha1.SpaceBinding
+}
+
+func checkSpaceBindingRequestAssociated(spaceBinding *toolchainv1alpha1.SpaceBinding) *SpaceBindingRequestAssociated {
+	sbrName, sbrNameFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
+	sbrNamespace, sbrNamespaceFound := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
+	// if both are found then there is a SBR associated with this spacebinding
+	hasSpaceBinding := sbrNamespaceFound && sbrNameFound
+	return &SpaceBindingRequestAssociated{
+		name:         sbrName,
+		namespace:    sbrNamespace,
+		found:        hasSpaceBinding,
+		spaceBinding: spaceBinding,
+	}
 }
