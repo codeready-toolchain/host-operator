@@ -104,6 +104,21 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
+              tokenClaims:
+                description: TokenClaims contains as-is claim values extracted from
+                  the user's access token
+                properties:
+                  accountID:
+                    description: AccountID contains the value of the 'account_id'
+                      claim
+                    type: string
+                  sub:
+                    description: Sub contains the value of the 'sub' claim
+                    type: string
+                  userID:
+                    description: UserID contains the value of the 'user_id' claim
+                    type: string
+                type: object
               userid:
                 description: The user's user ID, obtained from the identity provider
                   from the 'sub' (subject) claim
