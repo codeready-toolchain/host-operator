@@ -88,6 +88,32 @@ spec:
               givenName:
                 description: The user's first name, obtained from the identity provider.
                 type: string
+              identitytokenClaims:
+                description: IdentityClaims contains as-is claim values extracted
+                  from the user's access token
+                properties:
+                  accountID:
+                    description: AccountID contains the value of the 'account_id'
+                      claim
+                    type: string
+                  company:
+                    description: Company contains the value of the 'company' claim
+                    type: string
+                  familyName:
+                    description: FamilyName contains the value of the 'family_name'
+                      claim
+                    type: string
+                  givenName:
+                    description: GivenName contains the value of the 'given_name'
+                      claim
+                    type: string
+                  sub:
+                    description: Sub contains the value of the 'sub' claim
+                    type: string
+                  userID:
+                    description: UserID contains the value of the 'user_id' claim
+                    type: string
+                type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
                   for the purpose of migrating the users to a new IdP provider client,
@@ -104,21 +130,6 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
-              tokenClaims:
-                description: TokenClaims contains as-is claim values extracted from
-                  the user's access token
-                properties:
-                  accountID:
-                    description: AccountID contains the value of the 'account_id'
-                      claim
-                    type: string
-                  sub:
-                    description: Sub contains the value of the 'sub' claim
-                    type: string
-                  userID:
-                    description: UserID contains the value of the 'user_id' claim
-                    type: string
-                type: object
               userid:
                 description: The user's user ID, obtained from the identity provider
                   from the 'sub' (subject) claim
