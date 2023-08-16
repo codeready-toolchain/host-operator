@@ -108,11 +108,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	createdOrUpdated, err := r.ensureSpaceBinding(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
-	// if there was an error or if spaceBinding was just created or updated,
-	// let's just return.
-	if err != nil || createdOrUpdated {
-		return ctrl.Result{}, err
+	// create spacebinding if not found for given spaceBindingRequest
+	spaceBinding, err := r.getSpaceBinding(spaceBindingRequest)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.ensureSpaceBinding(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, spaceBinding)
+	if err != nil {
+		if errStatus := r.setStatusFailedToCreateSpaceBinding(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err); errStatus != nil {
+			logger.Error(errStatus, "error updating SpaceBindingRequest status")
+		}
+		return reconcile.Result{}, err
 	}
 
 	// set ready condition on spaceBindingRequest
@@ -212,46 +218,41 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, memberCluster cluster.Clus
 	return nil
 }
 
-func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (bool, error) {
+func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	logger.Info("ensuring spacebinding")
 
 	// find space from namespace labels
 	space, err := r.getSpace(memberCluster, spaceBindingRequest)
 	if err != nil {
-		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, err)
+		return err
 	}
 	// space is being deleted
 	if util.IsBeingDeleted(space) {
-		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, errs.New("space is being deleted"))
+		return errs.New("space is being deleted")
 	}
 
 	// validate MUR
 	mur, err := r.getMUR(spaceBindingRequest)
 	if err != nil {
-		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, err)
+		return err
 	}
 	// mur is being deleted
 	if util.IsBeingDeleted(mur) {
-		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, errs.New("mur is being deleted"))
+		return errs.New("mur is being deleted")
 	}
 
 	// validate Role
 	if err := r.validateRole(spaceBindingRequest, space); err != nil {
-		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, err)
+		return err
 	}
 
-	// create spacebinding if not found for given spaceBindingRequest
-	spaceBinding, err := r.getSpaceBinding(spaceBindingRequest)
-	if err != nil {
-		return false, err
-	}
 	// spacebinding not found, creating it
 	if spaceBinding == nil {
 		if err = r.createNewSpaceBinding(logger, memberCluster, spaceBindingRequest, mur, space); err != nil {
 			// failed to create spacebinding
-			return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, err)
+			return err
 		}
-		return true, nil
+		return nil
 	}
 
 	logger.Info("SpaceBinding already exists")
@@ -262,10 +263,10 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 // returns true/nil if the spacebinding was updated
 // returns false/nil if the spacebinding was already up-to-date
 // returns false/err if something went wrong or the spacebinding is being deleted
-func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, spaceBinding *toolchainv1alpha1.SpaceBinding) (bool, error) {
+func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	// check if spacebinding is being deleted
 	if util.IsBeingDeleted(spaceBinding) {
-		return false, fmt.Errorf("cannot update SpaceBinding because it is currently being deleted")
+		return errs.New("cannot update SpaceBinding because it is currently being deleted")
 	}
 	return r.updateSpaceBinding(logger, spaceBinding, spaceBindingRequest)
 }
@@ -275,12 +276,12 @@ func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBinding
 // returns false/nil if everything is up-to-date
 // returns true/nil if spacebinding was updated
 // returns false/err if something went wrong
-func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (bool, error) {
+func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
 	logger.Info("update spaceBinding")
 	if spaceBindingRequest.Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord &&
 		spaceBindingRequest.Spec.SpaceRole == spaceBinding.Spec.SpaceRole {
 		// everything is up-to-date let's return
-		return false, nil
+		return nil
 	}
 
 	// update SpaceRole and MUR
@@ -291,11 +292,11 @@ func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	spaceBinding.Labels[toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey] = spaceBindingRequest.Spec.MasterUserRecord
 	err := r.Client.Update(context.TODO(), spaceBinding)
 	if err != nil {
-		return false, errs.Wrap(err, "unable to update SpaceRole and MasterUserRecord fields")
+		return errs.Wrap(err, "unable to update SpaceRole and MasterUserRecord fields")
 	}
 
 	logger.Info("spaceBinding updated", "spaceBinding.name", spaceBinding.Name, "spaceBinding.Spec.Space", spaceBinding.Spec.Space, "spaceBinding.Spec.SpaceRole", spaceBinding.Spec.SpaceRole, "spaceBinding.Spec.MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
-	return true, nil
+	return nil
 }
 
 func (r *Reconciler) createNewSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {

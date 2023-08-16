@@ -60,7 +60,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 				HasSpecSpaceRole("admin").
 				HasSpecMasterUserRecord(janeMur.Name).
-				HasConditions(spacebindingrequesttestcommon.Provisioning()).
+				HasConditions(spacebindingrequesttestcommon.Ready()).
 				HasFinalizer()
 			// there should be 1 spacebinding that was created from the SpaceBindingRequest
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
@@ -415,7 +415,11 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
 
 			// then
-			require.EqualError(t, err, "cannot update SpaceBinding because it is currently being deleted")
+			cause := "cannot update SpaceBinding because it is currently being deleted"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
 		})
 
 	})
@@ -508,7 +512,11 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
 
 			// then
-			require.EqualError(t, err, "unable to update SpaceRole and MasterUserRecord fields: mock error")
+			cause := "unable to update SpaceRole and MasterUserRecord fields: mock error"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
 		})
 	})
 }
