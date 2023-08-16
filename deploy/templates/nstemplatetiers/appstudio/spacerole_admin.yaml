@@ -25,6 +25,7 @@ objects:
     - update
     - patch
     - delete
+    - deletecollection
   - apiGroups:
     - appstudio.redhat.com
     resources:
