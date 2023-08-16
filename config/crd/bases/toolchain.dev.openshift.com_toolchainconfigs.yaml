@@ -256,7 +256,7 @@ spec:
                               send, either `Promotional` or `Transactional` See https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
                               for details
                             type: string
-                          awsSenderId:
+                          awsSenderID:
                             description: AWSSenderID the Alphanumeric Sender ID to
                               use, e.g. "DevSandbox"
                             type: string
@@ -362,25 +362,49 @@ spec:
                                   verification messages
                                 type: string
                             type: object
+                          twilioSenderConfigs:
+                            description: TwilioSenderConfigs is an array of TwilioSenderConfig
+                              objects
+                            items:
+                              description: "TwilioSenderConfig is used to associate
+                                a particular sender ID (a sender ID is a text value
+                                that appears instead of a phone number when receiving
+                                an SMS message), for example \"RED HAT\", with an
+                                array of country code values for which the Sender
+                                ID value will be set via the Twilio API when sending
+                                a verification code to a user in any of the country
+                                codes specified. \n Since some countries are starting
+                                to block long form phone numbers (i.e. SMS messages
+                                from international phone numbers) the Sender ID may
+                                be an acceptable alternative to requiring the verification
+                                message to be sent from a local phone number."
+                              properties:
+                                countryCodes:
+                                  description: CountryCodes
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: set
+                                senderID:
+                                  description: SenderID
+                                  type: string
+                              required:
+                              - senderID
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
                         type: object
                     type: object
                   spaceConfig:
                     description: Keeps parameters necessary for configuring Space
                       provisioning functionality
                     properties:
-                      spaceBindingRequestEnabled:
-                        description: SpaceBindingRequestEnabled specifies whether
-                          the SpaceBindingRequest controller should start or not.
-                          This is specifically useful in order to enable/disable this
-                          functionality from configuration (e.g. disabled by default
-                          in Sandbox and enabled only for AppStudio stage/prod ...).
-                        type: boolean
                       spaceRequestEnabled:
                         description: SpaceRequestEnabled specifies whether the SpaceRequest
                           controller should start or not. This is specifically useful
                           in order to enable/disable this functionality from configuration
                           (e.g. disabled by default in Sandbox and enabled only for
-                          AppStudio stage/prod ...).
+                          StoneSoup stage/prod ...).
                         type: boolean
                     type: object
                   tiers:
