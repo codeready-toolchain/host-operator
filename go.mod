@@ -116,3 +116,5 @@ require (
 go 1.19
 
 replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230816100836-fac7152b505d
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230816123918-46ac43731884
