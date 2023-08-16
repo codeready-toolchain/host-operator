@@ -138,10 +138,7 @@ func (r *Reconciler) ensureSpaceBindingDeletion(logger logr.Logger, memberCluste
 	if isBeingDeleted, err := r.deleteSpaceBinding(logger, spaceBinding); err != nil {
 		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
 	} else if isBeingDeleted {
-		if err := r.setStatusTerminating(memberClusterWithSpaceBindingRequest, spaceBindingRequest); err != nil {
-			return errs.Wrap(err, "error updating status")
-		}
-		return nil
+		return r.setStatusTerminating(memberClusterWithSpaceBindingRequest, spaceBindingRequest)
 	}
 
 	// Remove finalizer from SpaceBindingRequest
@@ -225,7 +222,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 	}
 	// space is being deleted
 	if util.IsBeingDeleted(space) {
-		return false, errs.New("space is being deleted")
+		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, errs.New("space is being deleted"))
 	}
 
 	// validate MUR
@@ -235,7 +232,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 	}
 	// mur is being deleted
 	if util.IsBeingDeleted(mur) {
-		return false, errs.New("mur is being deleted")
+		return false, r.setStatusFailedToCreateSpaceBinding(logger, memberCluster, spaceBindingRequest, errs.New("mur is being deleted"))
 	}
 
 	// validate Role
@@ -380,17 +377,12 @@ func (r *Reconciler) validateRole(spaceBindingRequest *toolchainv1alpha1.SpaceBi
 	}
 
 	// search for the role
-	isRoleValid := false
 	for actual := range nsTemplTier.Spec.SpaceRoles {
 		if spaceBindingRequest.Spec.SpaceRole == actual {
-			isRoleValid = true
+			return nil
 		}
 	}
-	if !isRoleValid {
-		return fmt.Errorf("invalid role '%s' for space '%s'", spaceBindingRequest.Spec.SpaceRole, space.Name)
-	}
-
-	return nil
+	return fmt.Errorf("invalid role '%s' for space '%s'", spaceBindingRequest.Spec.SpaceRole, space.Name)
 }
 
 func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {

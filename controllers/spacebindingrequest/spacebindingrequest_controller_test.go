@@ -138,11 +138,13 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 			// then
 			// an error should be returned
-			require.EqualError(t, err, "MasterUserRecord cannot be blank")
+			cause := "MasterUserRecord cannot be blank"
+			require.EqualError(t, err, cause)
 			// spaceBindingRequest exists with config and finalizer
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, badSBR.GetNamespace(), badSBR.GetName(), member1.Client).
 				HasSpecSpaceRole("admin").
 				HasSpecMasterUserRecord(""). // empty
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
 				HasFinalizer()
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).DoesNotExist() // there is no spacebinding created
 		})
@@ -161,11 +163,13 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 			// then
 			// an error should be returned
-			require.EqualError(t, err, "SpaceRole cannot be blank")
+			cause := "SpaceRole cannot be blank"
+			require.EqualError(t, err, cause)
 			// spaceBindingRequest exists with config and finalizer
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, badSBR.GetNamespace(), badSBR.GetName(), member1.Client).
 				HasSpecSpaceRole(""). // empty
 				HasSpecMasterUserRecord(janeMur.Name).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
 				HasFinalizer()
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).DoesNotExist() // there is no spacebinding created
 		})
@@ -290,7 +294,13 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
 
 			// then
-			require.EqualError(t, err, "space is being deleted")
+			cause := "space is being deleted"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasSpecSpaceRole(sbr.Spec.SpaceRole).
+				HasSpecMasterUserRecord(sbr.Spec.MasterUserRecord).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
 		})
 
 		t.Run("unable to get MUR", func(t *testing.T) {
@@ -329,7 +339,13 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
 
 			// then
-			require.EqualError(t, err, "mur is being deleted")
+			cause := "mur is being deleted"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasSpecSpaceRole(sbr.Spec.SpaceRole).
+				HasSpecMasterUserRecord(sbr.Spec.MasterUserRecord).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
 		})
 
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
@@ -566,7 +582,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		t.Run("SpaceBinding resource is already being deleted", func(t *testing.T) {
+		t.Run("SpaceBinding resource is already being deleted for more than 2 minutes", func(t *testing.T) {
 			// given
 			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", sbrNamespace.GetName(),
 				spacebindingrequesttest.WithDeletionTimestamp(),
