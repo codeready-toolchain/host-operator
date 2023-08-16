@@ -55,7 +55,7 @@ func Provisioning() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.SpaceBindingProvisioningReason,
+		Reason: toolchainv1alpha1.SpaceBindingRequestProvisioningReason,
 	}
 }
 
@@ -63,7 +63,7 @@ func Ready() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.SpaceBindingProvisionedReason,
+		Reason: toolchainv1alpha1.SpaceBindingRequestProvisionedReason,
 	}
 }
 
@@ -71,7 +71,7 @@ func Terminating() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.SpaceBindingTerminatingReason,
+		Reason: toolchainv1alpha1.SpaceBindingRequestTerminatingReason,
 	}
 }
 
@@ -79,7 +79,7 @@ func TerminatingFailed(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.SpaceBindingTerminatingFailedReason,
+		Reason:  toolchainv1alpha1.SpaceBindingRequestTerminatingFailedReason,
 		Message: msg,
 	}
 }
@@ -88,7 +88,7 @@ func ProvisioningFailed(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.SpaceBindingProvisioningFailedReason,
+		Reason:  toolchainv1alpha1.SpaceBindingRequestUnableToCreateSpaceBindingReason,
 		Message: msg,
 	}
 }

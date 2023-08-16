@@ -119,7 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.updateStatus(spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.SpaceBindingProvisionedReason,
+		Reason: toolchainv1alpha1.SpaceBindingRequestProvisionedReason,
 	})
 
 	return ctrl.Result{}, err
@@ -400,7 +400,7 @@ func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceBi
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceBindingTerminatingReason,
+			Reason: toolchainv1alpha1.SpaceBindingRequestTerminatingReason,
 		})
 }
 
@@ -411,7 +411,7 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, memberCluste
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.SpaceBindingTerminatingFailedReason,
+			Reason:  toolchainv1alpha1.SpaceBindingRequestTerminatingFailedReason,
 			Message: cause.Error(),
 		}); err != nil {
 		logger.Error(cause, "unable to terminate SpaceBinding")
@@ -427,7 +427,7 @@ func (r *Reconciler) setStatusFailedToCreateSpaceBinding(logger logr.Logger, mem
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.SpaceBindingProvisioningFailedReason,
+			Reason:  toolchainv1alpha1.SpaceBindingRequestUnableToCreateSpaceBindingReason,
 			Message: cause.Error(),
 		}); err != nil {
 		logger.Error(err, "unable to create SpaceBinding")
@@ -443,7 +443,7 @@ func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceB
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceBindingProvisioningReason,
+			Reason: toolchainv1alpha1.SpaceBindingRequestProvisioningReason,
 		})
 }
 
