@@ -248,11 +248,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 
 	// spacebinding not found, creating it
 	if spaceBinding == nil {
-		if err = r.createNewSpaceBinding(logger, memberCluster, spaceBindingRequest, mur, space); err != nil {
-			// failed to create spacebinding
-			return err
-		}
-		return nil
+		return r.createNewSpaceBinding(logger, memberCluster, spaceBindingRequest, mur, space)
 	}
 
 	logger.Info("SpaceBinding already exists")
