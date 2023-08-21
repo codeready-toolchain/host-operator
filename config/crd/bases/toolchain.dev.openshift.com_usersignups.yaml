@@ -107,6 +107,11 @@ spec:
                     description: GivenName contains the value of the 'given_name'
                       claim
                     type: string
+                  originalSub:
+                    description: OriginalSub is an optional property temporarily introduced
+                      for the purpose of migrating the users to a new IdP provider
+                      client, and contains the user's "original-sub" claim
+                    type: string
                   sub:
                     description: Sub contains the value of the 'sub' claim
                     type: string
