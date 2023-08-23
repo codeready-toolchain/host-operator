@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -37,7 +36,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
-	srNamespace := newNamespace("jane")
+	srNamespace := spacerequesttest.NewNamespace("jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	t.Run("success", func(t *testing.T) {
@@ -317,7 +316,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spaceRequest := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles([]string{"member-2"})) // the provisioned namespace is targeted for member-2
-			spaceRequestNamespace := newNamespace("jane")
+			spaceRequestNamespace := spacerequesttest.NewNamespace("jane")
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, spaceRequest, spaceRequestNamespace), "member-1", corev1.ConditionTrue) // spacerequest is created on member-1 but has target cluster member-2
 			// the provisioned namespace is on different cluster then the spacerequest resource
 			member2 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-2", corev1.ConditionTrue,
@@ -431,7 +430,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 		t.Run("unable to find space label in spaceRequest namespace", func(t *testing.T) {
 			// given
-			srNamespace := newNamespace("nospace")
+			srNamespace := spacerequesttest.NewNamespace("nospace")
 			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
@@ -661,7 +660,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
-	srNamespace := newNamespace("jane")
+	srNamespace := spacerequesttest.NewNamespace("jane")
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 
@@ -853,7 +852,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
-	srNamespace := newNamespace("jane")
+	srNamespace := spacerequesttest.NewNamespace("jane")
 	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane")
 	sr := spacerequesttest.NewSpaceRequest("jane",
@@ -921,8 +920,8 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			// then
 			// space request is gone
 			require.NoError(t, err)
-			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, "jane-tenant", member1.Client).
-				DoesNotExist()
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasNoFinalizers()
 		})
 	})
 
@@ -1048,24 +1047,6 @@ func requestFor(s *toolchainv1alpha1.SpaceRequest) reconcile.Request {
 			Name:      "unknown",
 		},
 	}
-}
-
-func newNamespace(spacename string) *corev1.Namespace {
-	labels := map[string]string{
-		toolchainv1alpha1.TypeLabelKey:     "tenant",
-		toolchainv1alpha1.ProviderLabelKey: toolchainv1alpha1.ProviderLabelValue,
-	}
-	if spacename != "nospace" {
-		labels[toolchainv1alpha1.SpaceLabelKey] = spacename
-	}
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf("%s-tenant", spacename),
-			Labels: labels,
-		},
-		Status: corev1.NamespaceStatus{Phase: corev1.NamespaceActive},
-	}
-	return ns
 }
 
 func mockGetSpaceRequestFail(cl runtimeclient.Client) func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {

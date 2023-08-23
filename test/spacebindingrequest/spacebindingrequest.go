@@ -1,6 +1,8 @@
 package spacebindingrequest
 
 import (
+	"time"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/gofrs/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,5 +34,18 @@ func WithMUR(mur string) Option {
 func WithSpaceRole(spaceRole string) Option {
 	return func(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) {
 		spaceBindingRequest.Spec.SpaceRole = spaceRole
+	}
+}
+
+func WithDeletionTimestamp() Option {
+	return func(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) {
+		now := metav1.NewTime(time.Now())
+		spaceBindingRequest.DeletionTimestamp = &now
+	}
+}
+
+func WithFinalizer() Option {
+	return func(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) {
+		spaceBindingRequest.Finalizers = append(spaceBindingRequest.Finalizers, toolchainv1alpha1.FinalizerName)
 	}
 }
