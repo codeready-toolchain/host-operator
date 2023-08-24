@@ -193,6 +193,13 @@ objects:
     - watch
     - update
     - patch
+  # Allow to exec (rsh) to pods
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
 
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
