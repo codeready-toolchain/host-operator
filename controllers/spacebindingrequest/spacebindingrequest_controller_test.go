@@ -92,6 +92,34 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasLabelWithValue(toolchainv1alpha1.SpaceBindingRequestLabelKey, sbr.GetName()). // check expected labels are there
 				HasLabelWithValue(toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey, sbr.GetNamespace())
 		})
+
+		t.Run("member1 GET request fails, member2 GET returns not found but SpaceBindingRequest is on member3", func(t *testing.T) {
+			// given
+			member1Client := test.NewFakeClient(t)
+			member1Client.MockGet = mockGetSpaceBindingRequestFail(member1Client)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-2", corev1.ConditionTrue)
+			member3 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-3", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, janeSpace, janeMur, base1nsTier)
+			ctrl := newReconciler(t, hostClient, member1, member2, member3)
+
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbr))
+
+			// then
+			require.NoError(t, err)
+			// spaceBindingRequest exists with config and finalizer
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member3.Client).
+				HasSpecSpaceRole("admin").
+				HasSpecMasterUserRecord(janeMur.Name).
+				HasConditions(spacebindingrequesttestcommon.Ready()).
+				HasFinalizer()
+			// there should be 1 spacebinding that was created from the SpaceBindingRequest
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
+				Exists().
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingRequestLabelKey, sbr.GetName()). // check expected labels are there
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey, sbr.GetNamespace())
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {

@@ -80,31 +80,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Fetch the SpaceRequest
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
-	var memberClusterWithSpaceRequest cluster.Cluster
-	var err error
-	for _, memberCluster := range r.MemberClusters {
-		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: request.Namespace,
-			Name:      request.Name,
-		}, spaceRequest)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				// Error reading the object - requeue the request.
-				return reconcile.Result{}, errs.Wrap(err, "unable to get the current SpaceRequest")
-			}
-
-			//  spacerequest CR not found on current membercluster
-			continue
-		}
-
-		// save the member cluster on which the SpaceRequest CR was found
-		memberClusterWithSpaceRequest = memberCluster
-		break // exit once found
-	}
-	// if we exited with a notFound error
-	// it means that we couldn't find the spacerequest object on any of the given member clusters
-	if err != nil && errors.IsNotFound(err) {
-		// let's just log the info
+	memberClusterWithSpaceRequest, found, err := cluster.LookupMember(r.MemberClusters, request, spaceRequest)
+	if err != nil && !found {
+		// got error while searching for SpaceRequest CR
+		return reconcile.Result{}, err
+	} else if !found {
 		logger.Info("unable to find SpaceRequest")
 		return reconcile.Result{}, nil
 	}
