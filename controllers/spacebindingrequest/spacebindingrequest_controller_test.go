@@ -149,7 +149,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 			// then
 			// space binding request should not be there
-			require.EqualError(t, err, "unable to get the current SpaceBindingRequest: mock error")
+			require.EqualError(t, err, "unable to get the current *v1alpha1.SpaceBindingRequest: mock error")
 		})
 
 		t.Run("MasterUserRecord cannot be blank", func(t *testing.T) {

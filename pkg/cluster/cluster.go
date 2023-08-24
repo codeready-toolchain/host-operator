@@ -23,7 +23,7 @@ type Cluster struct {
 	Cache      cache.Cache
 }
 
-// LookupMember takes in a list of member cluster and Request and searches for the member cluster that triggered the request.
+// LookupMember takes in a list of member clusters and a Request, it then searches for the member cluster that triggered the request.
 // returns memberCluster/true/nil in case the Object was found on one of the given member clusters
 // returns nil/false/nil in case the Object was NOT found on any of the given member clusters
 // returns nil/false/error in case the Object was NOT found on any of the given member clusters and there was an error while trying to read one or more of the memberclusters
@@ -39,22 +39,22 @@ func LookupMember(MemberClusters map[string]Cluster, request ctrl.Request, objec
 		}, object)
 		if err != nil {
 			if !errors.IsNotFound(err) {
-				// Error reading the object - requeue the request.
-				getError = err // save the error and return it only later in case the CR was not found on any of the cluster
+				// Error reading the object
+				getError = err // save the error and return it only later in case the Object was not found on any of the clusters
 			}
 
-			//  Object not found on current membercluster
+			//  Object not found on current member cluster
 			continue
 		}
 
-		// save the member cluster on which the SpaceRequest CR was found
+		// save the member cluster on which the Object was found
 		memberClusterWithObject = memberCluster
 		break // exit once found
 	}
 
-	// if we haven't found the Object the memberCluster is an empty struct,
-	// we can't do the same check on the Object since for some reason it has the TypeMeta field on it
-	// and the check would fail.
+	// if we haven't found the Object, the memberCluster is an empty struct,
+	// we can't do the same check on the runtimeclient.Object since for some reason it has the TypeMeta field on it
+	// and the check fails.
 	if reflect.ValueOf(memberClusterWithObject).IsZero() {
 		if getError != nil {
 			// if we haven't found the Object, and we got an error while trying to retrieve it
@@ -63,10 +63,10 @@ func LookupMember(MemberClusters map[string]Cluster, request ctrl.Request, objec
 		} else if err != nil && errors.IsNotFound(err) {
 			// if we exited with a notFound error
 			// it means that we couldn't find the Object on any of the given member clusters
-			// let's just return not found and no error
+			// let's just return false (as not found) and no error
 			return memberClusterWithObject, false, nil
 		}
 	}
-	// Object found return the member cluster that has it
+	// Object found, return the member cluster that has it
 	return memberClusterWithObject, true, nil
 }
