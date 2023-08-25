@@ -81,9 +81,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
 	memberClusterWithSpaceRequest, found, err := cluster.LookupMember(r.MemberClusters, request, spaceRequest)
-	if err != nil && !found {
-		// got error while searching for SpaceRequest CR
-		return reconcile.Result{}, err
+	if err != nil {
+		if !found {
+			// got error while searching for SpaceRequest CR
+			return reconcile.Result{}, err
+		}
+		// Just log the error but proceed because we did find the member anyway
+		logger.Error(err, "error while searching for SpaceRequest")
 	} else if !found {
 		logger.Info("unable to find SpaceRequest")
 		return reconcile.Result{}, nil
