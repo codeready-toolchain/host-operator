@@ -25,8 +25,8 @@ type Cluster struct {
 // LookupMember takes in a list of member clusters and a Request, it then searches for the member cluster that triggered the request.
 // returns memberCluster/true/nil in case the Object was found on one of the given member clusters
 // returns memberCluster/true/error in case the Object was found on one of the given member clusters but there was also an error while searching it
-// returns nil/false/nil in case the Object was NOT found on any of the given member clusters
-// returns nil/false/error in case the Object was NOT found on any of the given member clusters and there was an error while trying to read one or more of the memberclusters
+// returns memberCluster/false/nil in case the Object was NOT found on any of the given member clusters
+// returns memberCluster/false/error in case the Object was NOT found on any of the given member clusters and there was an error while trying to read one or more of the memberclusters
 //
 // CAVEAT: if the object was not found and there is an error reading from more than one member cluster, only the last read error will be returned.
 func LookupMember(memberClusters map[string]Cluster, request ctrl.Request, object runtimeclient.Object) (Cluster, bool, error) {
