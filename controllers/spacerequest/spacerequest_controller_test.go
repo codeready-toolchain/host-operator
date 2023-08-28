@@ -629,6 +629,49 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to get parentSpace: mock error")
 		})
+
+		t.Run("error creating secret for provisioned namespace", func(t *testing.T) {
+			// given
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1Client.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				if _, ok := obj.(*corev1.Secret); ok {
+					return fmt.Errorf("mock error")
+				}
+				return member1Client.Client.Create(ctx, obj, opts...)
+			}
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
+			})
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace(parentSpace.Name),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			cause := "error while creating secret: mock error"
+			require.EqualError(t, err, cause)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.ProvisioningFailed(cause)). // condition is set to unable to provision Space
+				HasFinalizer()
+		})
 	})
 }
 
