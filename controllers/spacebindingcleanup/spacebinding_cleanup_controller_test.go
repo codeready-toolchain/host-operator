@@ -188,7 +188,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
-		require.EqualError(t, err, "unable to get the current SpaceBindingRequest: mock error")
+		require.EqualError(t, err, "unable to get the current *v1alpha1.SpaceBindingRequest: mock error")
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).Exists() // the spacebinding is not deleted yet
 	})
 

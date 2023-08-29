@@ -117,30 +117,18 @@ func (r *Reconciler) DeleteSpaceBinding(spaceBinding *toolchainv1alpha1.SpaceBin
 
 func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated *SpaceBindingRequestAssociated) error {
 	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
-	var memberClusterWithSpaceBindingRequest cluster.Cluster
-	var err error
-	for _, memberCluster := range r.MemberClusters {
-		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: sbrAssociated.namespace,
-			Name:      sbrAssociated.name,
-		}, spaceBindingRequest)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				// Error reading the object - requeue the request.
-				return errs.Wrap(err, "unable to get the current SpaceBindingRequest")
-			}
-
-			//  spacebindingrequest CR not found on current membercluster
-			continue
+	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(r.MemberClusters, types.NamespacedName{
+		Namespace: sbrAssociated.namespace,
+		Name:      sbrAssociated.name,
+	}, spaceBindingRequest)
+	if err != nil {
+		if !found {
+			// got error while searching for SpaceBindingRequest CR
+			return err
 		}
-
-		// save the member cluster on which the SpaceBindingRequest CR was found
-		memberClusterWithSpaceBindingRequest = memberCluster
-		break // exit once found
-	}
-	// if we exited with a notFound error
-	// it means that we couldn't find the spacebindingrequest object on any of the given member clusters
-	if err != nil && errors.IsNotFound(err) {
+		// Just log the error but proceed because we did find the member anyway
+		logger.Error(err, "error while searching for SpaceBindingRequest")
+	} else if !found {
 		// let's just log the info
 		logger.Info("unable to find SpaceBindingRequest", "SpaceBindingRequest.Name", sbrAssociated.name, "SpaceBindingRequest.Namespace", sbrAssociated.namespace)
 		// try and delete the SpaceBinding since SBR was not found
