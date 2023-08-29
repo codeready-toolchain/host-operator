@@ -111,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// ensure there is a secret that provides admin access to each provisioned namespaces of the subSpace
 	if err := r.ensureSecretForProvisionedNamespaces(logger, memberClusterWithSpaceRequest, spaceRequest, subSpace); err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.setStatusFailedToCreateSubSpace(logger, memberClusterWithSpaceRequest, spaceRequest, err)
 	}
 
 	// update spaceRequest conditions and target cluster url
@@ -433,7 +433,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 				return errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
 			}
 			if err := memberClusterWithSpaceRequest.Client.Create(context.TODO(), kubeConfigSecret); err != nil {
-				return err
+				return errs.Wrap(err, "error while creating secret")
 			}
 			logger.Info("Created Secret", "Name", kubeConfigSecret.Name)
 
