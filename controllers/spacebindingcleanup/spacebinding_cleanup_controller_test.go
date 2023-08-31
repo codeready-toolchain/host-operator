@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -43,9 +44,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
+		require.False(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
@@ -58,9 +61,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbJoeRedhatView))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbJoeRedhatView))
 
 		// then
+		require.False(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).DoesNotExist()
@@ -75,9 +80,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
+		require.False(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
@@ -90,9 +97,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
+		require.False(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
@@ -150,9 +159,11 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient, member1)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
+		require.True(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 10*time.Second)
 		require.NoError(t, err)
 		spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
 	})
@@ -164,9 +175,11 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		reconciler := prepareReconciler(t, fakeClient, member1)
 
 		// when
-		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
+		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
+		require.False(t, res.Requeue)
+		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).DoesNotExist() // the spacebinding is deleted
 	})
@@ -212,7 +225,6 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		require.EqualError(t, err, "unable to delete the SpaceBindingRequest: mock error")
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).Exists() // the spacebinding is not deleted yet
 	})
-
 }
 
 func prepareReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *Reconciler {

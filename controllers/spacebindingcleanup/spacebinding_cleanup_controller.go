@@ -2,6 +2,7 @@ package spacebindingcleanup
 
 import (
 	"context"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -20,6 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const norequeue = 0 * time.Second
+const requeueDelay = 10 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -75,9 +79,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err := r.Client.Get(context.TODO(), spaceName, space); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("the Space was not found", "Space", spaceBinding.Spec.Space)
-			return ctrl.Result{}, r.deleteSpaceBinding(logger, spaceBinding)
-
+			if requeueAfter, err := r.deleteSpaceBinding(logger, spaceBinding); err != nil {
+				return ctrl.Result{}, err
+			} else if requeueAfter > 0 {
+				return ctrl.Result{
+					Requeue:      true,
+					RequeueAfter: requeueAfter,
+				}, nil
+			}
+			// spacebinding deleted and no reconcile needed
+			return ctrl.Result{}, nil
 		}
+		// error while reading space
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
 	}
 
@@ -86,15 +99,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("the MUR was not found", "MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
-			return ctrl.Result{}, r.deleteSpaceBinding(logger, spaceBinding)
+			if requeueAfter, err := r.deleteSpaceBinding(logger, spaceBinding); err != nil {
+				return ctrl.Result{}, err
+			} else if requeueAfter > 0 {
+				return ctrl.Result{
+					Requeue:      true,
+					RequeueAfter: requeueAfter,
+				}, nil
+			}
+			// spacebinding deleted and no reconcile needed
+			return ctrl.Result{}, nil
 		}
+		// error while reading MUR
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound MUR")
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
+func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding) (time.Duration, error) {
 	logger.Info("deleting the SpaceBinding")
 
 	// check if spaceBinding was created from SpaceBindingRequest,
@@ -105,17 +128,17 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	}
 
 	// otherwise delete the SpaceBinding resource directly ...
-	return r.DeleteSpaceBinding(spaceBinding)
+	return norequeue, r.deleteSpaceBindingResource(spaceBinding)
 }
 
-func (r *Reconciler) DeleteSpaceBinding(spaceBinding *toolchainv1alpha1.SpaceBinding) error {
+func (r *Reconciler) deleteSpaceBindingResource(spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	if err := r.Delete(context.TODO(), spaceBinding); err != nil {
 		return errs.Wrapf(err, "unable to delete the SpaceBinding")
 	}
 	return nil
 }
 
-func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated *SpaceBindingRequestAssociated) error {
+func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated *SpaceBindingRequestAssociated) (time.Duration, error) {
 	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
 	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(r.MemberClusters, types.NamespacedName{
 		Namespace: sbrAssociated.namespace,
@@ -124,7 +147,7 @@ func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated
 	if err != nil {
 		if !found {
 			// got error while searching for SpaceBindingRequest CR
-			return err
+			return norequeue, err
 		}
 		// Just log the error but proceed because we did find the member anyway
 		logger.Error(err, "error while searching for SpaceBindingRequest")
@@ -132,14 +155,14 @@ func (r *Reconciler) deleteSpaceBindingRequest(logger logr.Logger, sbrAssociated
 		// let's just log the info
 		logger.Info("unable to find SpaceBindingRequest", "SpaceBindingRequest.Name", sbrAssociated.name, "SpaceBindingRequest.Namespace", sbrAssociated.namespace)
 		// try and delete the SpaceBinding since SBR was not found
-		return r.DeleteSpaceBinding(sbrAssociated.spaceBinding)
+		return norequeue, r.deleteSpaceBindingResource(sbrAssociated.spaceBinding)
 	}
 
 	// delete the SBR
 	if err := memberClusterWithSpaceBindingRequest.Client.Delete(context.TODO(), spaceBindingRequest); err != nil {
-		return errs.Wrapf(err, "unable to delete the SpaceBindingRequest")
+		return norequeue, errs.Wrapf(err, "unable to delete the SpaceBindingRequest")
 	}
-	return nil
+	return requeueDelay, nil
 }
 
 // SpaceBindingRequestAssociated is a wrapper that holds details regarding SB, and it's SBR if there is any associated.
