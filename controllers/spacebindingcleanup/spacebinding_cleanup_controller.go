@@ -121,7 +121,7 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	logger.Info("deleting the SpaceBinding")
 
 	// check if spaceBinding was created from SpaceBindingRequest,
-	// in that case we must delete the SBR and will take care of deleting the SpaceBinding as well
+	// in that case we must delete the SBR and then the SBR controller will take care of deleting the SpaceBinding
 	spaceBindingReqeuestAssociated := checkSpaceBindingRequestAssociated(spaceBinding)
 	if spaceBindingReqeuestAssociated.found {
 		return r.deleteSpaceBindingRequest(logger, spaceBindingReqeuestAssociated)
