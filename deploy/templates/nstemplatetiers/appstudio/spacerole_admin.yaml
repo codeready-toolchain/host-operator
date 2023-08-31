@@ -200,6 +200,18 @@ objects:
       - pods/exec
     verbs:
       - create
+  - apiGroups:
+    - toolchain.dev.openshift.com
+    resources:
+    - spacebindingrequests
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
