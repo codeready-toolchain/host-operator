@@ -5,6 +5,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/go-logr/logr"
@@ -124,11 +125,29 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	// in that case we must delete the SBR and then the SBR controller will take care of deleting the SpaceBinding
 	spaceBindingReqeuestAssociated := checkSpaceBindingRequestAssociated(spaceBinding)
 	if spaceBindingReqeuestAssociated.found {
+		if err := r.logErrorIfSBRisDisabled(logger, spaceBindingReqeuestAssociated); err != nil {
+			return norequeue, err
+		}
 		return r.deleteSpaceBindingRequest(logger, spaceBindingReqeuestAssociated)
 	}
 
 	// otherwise delete the SpaceBinding resource directly ...
 	return norequeue, r.deleteSpaceBindingResource(spaceBinding)
+}
+
+func (r *Reconciler) logErrorIfSBRisDisabled(logger logr.Logger, spaceBindingReqeuestAssociated *SpaceBindingRequestAssociated) error {
+	// check if spacebindinrequest functionality is enabled.
+	// if not let's log an error since the SBR controller might be stopped,
+	// which means that the SBR resource will remain in terminating state
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return errs.Wrapf(err, "unable to get toolchainconfig")
+	}
+	if !config.SpaceConfig().SpaceBindingRequestIsEnabled() {
+		logger.Error(errs.New("SpaceBindRequest functionality is disabled in toolchainconfig"),
+			"spacebinding was created from spacebindingrequest", "spacebinding.name", spaceBindingReqeuestAssociated.spaceBinding.Name)
+	}
+	return nil
 }
 
 func (r *Reconciler) deleteSpaceBindingResource(spaceBinding *toolchainv1alpha1.SpaceBinding) error {

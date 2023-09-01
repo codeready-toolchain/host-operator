@@ -3,6 +3,7 @@ package spacebindingcleanup
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -13,7 +14,9 @@ import (
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	spacebindingrequesttest "github.com/codeready-toolchain/host-operator/test/spacebindingrequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	corev1 "k8s.io/api/core/v1"
@@ -147,6 +150,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 }
 
 func TestDeleteSpaceBindingRequest(t *testing.T) {
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t,
+		testconfig.SpaceConfig().SpaceBindingRequestEnabled(true))
 	sbr := spacebindingrequesttest.NewSpaceBindingRequest("lara", "lara-tenant",
 		spacebindingrequesttest.WithMUR("lara"),
 		spacebindingrequesttest.WithSpaceRole("admin"))
@@ -154,9 +159,8 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 	t.Run("SpaceBindingRequest is deleted", func(t *testing.T) {
 		// given
 		member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr), "member-1", corev1.ConditionTrue)
-
-		fakeClient := test.NewFakeClient(t, sbLaraAdmin)
-		reconciler := prepareReconciler(t, fakeClient, member1)
+		hostClient := test.NewFakeClient(t, sbLaraAdmin, toolchainconfig)
+		reconciler := prepareReconciler(t, hostClient, member1)
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
@@ -171,8 +175,8 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 	t.Run("spaceBinding is deleted when spaceBindingRequest is missing", func(t *testing.T) {
 		// given
 		member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue) // for some reason spacebindingrequest is gone from member cluster
-		fakeClient := test.NewFakeClient(t, sbLaraAdmin)
-		reconciler := prepareReconciler(t, fakeClient, member1)
+		hostClient := test.NewFakeClient(t, sbLaraAdmin, toolchainconfig)
+		reconciler := prepareReconciler(t, hostClient, member1)
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
@@ -181,7 +185,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		require.False(t, res.Requeue)
 		require.True(t, res.RequeueAfter == 0) // no requeue
 		require.NoError(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).DoesNotExist() // the spacebinding is deleted
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).DoesNotExist() // the spacebinding is deleted
 	})
 
 	t.Run("unable to get SpaceBindingRequest", func(t *testing.T) {
@@ -194,15 +198,15 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			return member1Client.Get(ctx, key, obj, opts...)
 		}
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue) // for some reason spacebindingrequest is gone from member cluster
-		fakeClient := test.NewFakeClient(t, sbLaraAdmin)
-		reconciler := prepareReconciler(t, fakeClient, member1)
+		hostClient := test.NewFakeClient(t, sbLaraAdmin, toolchainconfig)
+		reconciler := prepareReconciler(t, hostClient, member1)
 
 		// when
 		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
 		require.EqualError(t, err, "unable to get the current *v1alpha1.SpaceBindingRequest: mock error")
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).Exists() // the spacebinding is not deleted yet
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
 	})
 
 	t.Run("fails while deleting the SpaceBindingRequest", func(t *testing.T) {
@@ -215,19 +219,20 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			return member1Client.Client.Delete(ctx, obj, opts...)
 		}
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue) // for some reason spacebindingrequest is gone from member cluster
-		fakeClient := test.NewFakeClient(t, sbLaraAdmin)
-		reconciler := prepareReconciler(t, fakeClient, member1)
+		hostClient := test.NewFakeClient(t, sbLaraAdmin, toolchainconfig)
+		reconciler := prepareReconciler(t, hostClient, member1)
 
 		// when
 		_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
 		require.EqualError(t, err, "unable to delete the SpaceBindingRequest: mock error")
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", fakeClient).Exists() // the spacebinding is not deleted yet
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
 	})
 }
 
 func prepareReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *Reconciler {
+	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

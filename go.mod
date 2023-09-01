@@ -114,3 +114,5 @@ require (
 )
 
 go 1.19
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230901094159-27b8c2e056bc
