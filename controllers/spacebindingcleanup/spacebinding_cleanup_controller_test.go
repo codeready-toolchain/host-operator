@@ -166,7 +166,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
-		require.True(t, res.RequeueAfter == 10*time.Second)
+		require.Equal(t, res.RequeueAfter, 10*time.Second)
 		require.NoError(t, err)
 		spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
 	})
