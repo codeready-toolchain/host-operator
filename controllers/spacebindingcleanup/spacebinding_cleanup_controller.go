@@ -94,16 +94,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("the MUR was not found", "MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
-			if requeueAfter, err := r.deleteSpaceBinding(logger, spaceBinding); err != nil {
-				return ctrl.Result{}, err
-			} else if requeueAfter > 0 {
-				return ctrl.Result{
-					Requeue:      true,
-					RequeueAfter: requeueAfter,
-				}, nil
-			}
-			// spacebinding deleted and no reconcile needed
-			return ctrl.Result{}, nil
+			requeueAfter, err := r.deleteSpaceBinding(logger, spaceBinding)
+			return ctrl.Result{
+				RequeueAfter: requeueAfter,
+			}, err
 		}
 		// error while reading MUR
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound MUR")
