@@ -51,7 +51,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.False(t, res.Requeue)
-		require.True(t, res.RequeueAfter == 0) // no requeue
+		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
