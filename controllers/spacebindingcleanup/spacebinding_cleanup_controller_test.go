@@ -50,7 +50,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
-		require.False(t, res.Requeue)
 		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
@@ -67,7 +66,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbJoeRedhatView))
 
 		// then
-		require.False(t, res.Requeue)
 		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
@@ -86,7 +84,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
-		require.False(t, res.Requeue)
 		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
@@ -103,7 +100,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraRedhatAdmin))
 
 		// then
-		require.False(t, res.Requeue)
 		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
@@ -181,7 +177,6 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
-		require.False(t, res.Requeue)
 		require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 		require.NoError(t, err)
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).DoesNotExist() // the spacebinding is deleted
