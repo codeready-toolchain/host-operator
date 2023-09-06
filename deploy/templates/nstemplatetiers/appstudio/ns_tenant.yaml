@@ -70,6 +70,14 @@ objects:
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
+    name: toolchain-crds
+    namespace: ${SPACE_NAME}-tenant
+  spec:
+    hard:
+      count/spacerequests.toolchain.dev.openshift.com: "32"
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
     name: appstudio-crds
     namespace: ${SPACE_NAME}-tenant
   spec:
@@ -94,9 +102,9 @@ objects:
     hard:
       count/environments.appstudio.redhat.com: "512"
       count/promotionruns.appstudio.redhat.com: "512"
-      count/deploymenttargetclaims.appstudio.redhat.com: "512"
-      count/deploymenttargetclasses.appstudio.redhat.com: "512"
-      count/deploymenttargets.appstudio.redhat.com: "512"
+      count/deploymenttargetclaims.appstudio.redhat.com: "32"
+      count/deploymenttargetclasses.appstudio.redhat.com: "32"
+      count/deploymenttargets.appstudio.redhat.com: "32"
 - apiVersion: v1
   kind: ResourceQuota
   metadata:

@@ -80,31 +80,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Fetch the SpaceRequest
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
-	var memberClusterWithSpaceRequest cluster.Cluster
-	var err error
-	for _, memberCluster := range r.MemberClusters {
-		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: request.Namespace,
-			Name:      request.Name,
-		}, spaceRequest)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				// Error reading the object - requeue the request.
-				return reconcile.Result{}, errs.Wrap(err, "unable to get the current SpaceRequest")
-			}
-
-			//  spacerequest CR not found on current membercluster
-			continue
+	memberClusterWithSpaceRequest, found, err := cluster.LookupMember(r.MemberClusters, request, spaceRequest)
+	if err != nil {
+		if !found {
+			// got error while searching for SpaceRequest CR
+			return reconcile.Result{}, err
 		}
-
-		// save the member cluster on which the SpaceRequest CR was found
-		memberClusterWithSpaceRequest = memberCluster
-		break // exit once found
-	}
-	// if we exited with a notFound error
-	// it means that we couldn't find the spacerequest object on any of the given member clusters
-	if err != nil && errors.IsNotFound(err) {
-		// let's just log the info
+		// Just log the error but proceed because we did find the member anyway
+		logger.Error(err, "error while searching for SpaceRequest")
+	} else if !found {
 		logger.Info("unable to find SpaceRequest")
 		return reconcile.Result{}, nil
 	}
@@ -127,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// ensure there is a secret that provides admin access to each provisioned namespaces of the subSpace
 	if err := r.ensureSecretForProvisionedNamespaces(logger, memberClusterWithSpaceRequest, spaceRequest, subSpace); err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.setStatusFailedToCreateSubSpace(logger, memberClusterWithSpaceRequest, spaceRequest, err)
 	}
 
 	// update spaceRequest conditions and target cluster url
@@ -449,7 +433,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 				return errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
 			}
 			if err := memberClusterWithSpaceRequest.Client.Create(context.TODO(), kubeConfigSecret); err != nil {
-				return err
+				return errs.Wrap(err, "error while creating secret")
 			}
 			logger.Info("Created Secret", "Name", kubeConfigSecret.Name)
 
