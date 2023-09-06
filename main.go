@@ -290,39 +290,36 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 		os.Exit(1)
 	}
-	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() ||
-		crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
-		// init cluster scoped member cluster clients
-		clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
-		if err != nil {
-			setupLog.Error(err, "")
+	// init cluster scoped member cluster clients
+	clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+
+	// enable space request
+	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+		if err = (&spacerequest.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			MemberClusters: clusterScopedMemberClusters,
+			Scheme:         mgr.GetScheme(),
+		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
 			os.Exit(1)
 		}
+	}
 
-		// enable space request
-		if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
-			if err = (&spacerequest.Reconciler{
-				Client:         mgr.GetClient(),
-				Namespace:      namespace,
-				MemberClusters: clusterScopedMemberClusters,
-				Scheme:         mgr.GetScheme(),
-			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-				setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
-				os.Exit(1)
-			}
-		}
-
-		// enable space binding request
-		if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
-			if err = (&spacebindingrequest.Reconciler{
-				Client:         mgr.GetClient(),
-				Namespace:      namespace,
-				MemberClusters: clusterScopedMemberClusters,
-				Scheme:         mgr.GetScheme(),
-			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-				setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
-				os.Exit(1)
-			}
+	// enable space binding request
+	if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
+		if err = (&spacebindingrequest.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			MemberClusters: clusterScopedMemberClusters,
+			Scheme:         mgr.GetScheme(),
+		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
+			os.Exit(1)
 		}
 	}
 	if err = (&space.Reconciler{
@@ -342,9 +339,10 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err = (&spacebindingcleanup.Reconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Namespace: namespace,
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Namespace:      namespace,
+		MemberClusters: clusterScopedMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
 		os.Exit(1)
