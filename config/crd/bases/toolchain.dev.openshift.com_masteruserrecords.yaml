@@ -69,6 +69,24 @@ spec:
                   for the purpose of migrating the users to a new IdP provider client,
                   and contains the user's "original-sub" claim
                 type: string
+              propagatedClaims:
+                description: PropagatedClaims contains a selection of claim values
+                  from the SSO Identity Provider which are intended to be "propagated"
+                  down the resource dependency chain
+                properties:
+                  accountID:
+                    description: AccountID contains the value of the 'account_id'
+                      claim
+                    type: string
+                  originalSub:
+                    description: OriginalSub is an optional property temporarily introduced
+                      for the purpose of migrating the users to a new IdP provider
+                      client, and contains the user's "original-sub" claim
+                    type: string
+                  userID:
+                    description: UserID contains the value of the 'user_id' claim
+                    type: string
+                type: object
               tierName:
                 description: TierName is an optional property introduced to retain
                   the name of the tier for which the Dev Sandbox user is provisioned,
