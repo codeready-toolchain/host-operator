@@ -126,6 +126,7 @@ spec:
                     type: string
                 required:
                 - email
+                - preferredUsername
                 type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
