@@ -121,6 +121,8 @@ spec:
                   userID:
                     description: UserID contains the value of the 'user_id' claim
                     type: string
+                required:
+                - email
                 type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
