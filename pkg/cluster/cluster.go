@@ -8,8 +8,6 @@ import (
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,22 +20,19 @@ type Cluster struct {
 	Cache      cache.Cache
 }
 
-// LookupMember takes in a list of member clusters and a Request, it then searches for the member cluster that triggered the request.
+// LookupMember takes in a list of member clusters and the NamespacedName of the Object, it then searches for the member cluster that triggered the request.
 // returns memberCluster/true/nil in case the Object was found on one of the given member clusters
 // returns memberCluster/true/error in case the Object was found on one of the given member clusters but there was also an error while searching it
 // returns memberCluster/false/nil in case the Object was NOT found on any of the given member clusters
 // returns memberCluster/false/error in case the Object was NOT found on any of the given member clusters and there was an error while trying to read one or more of the memberclusters
 //
 // CAVEAT: if the object was not found and there is an error reading from more than one member cluster, only the last read error will be returned.
-func LookupMember(memberClusters map[string]Cluster, request ctrl.Request, object runtimeclient.Object) (Cluster, bool, error) {
+func LookupMember(memberClusters map[string]Cluster, namespacedName types.NamespacedName, object runtimeclient.Object) (Cluster, bool, error) {
 	var memberClusterWithObject Cluster
 	var getError error
 	var found bool
 	for _, memberCluster := range memberClusters {
-		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: request.Namespace,
-			Name:      request.Name,
-		}, object)
+		err := memberCluster.Client.Get(context.TODO(), namespacedName, object)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				// Error reading the object
