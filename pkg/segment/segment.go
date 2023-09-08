@@ -2,6 +2,7 @@ package segment
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/segmentio/analytics-go/v3"
@@ -44,9 +45,12 @@ const AccountActivated = "account activated"
 func (c *Client) TrackAccountActivation(username, userID, accountID string) {
 	logger.Info("sending event to Segment", "event", AccountActivated, "username_hash", Hash(username), "userid", userID, "accountid", accountID)
 	if err := c.client.Enqueue(analytics.Track{
-		Event:      AccountActivated,
-		UserId:     Hash(username),
-		Properties: analytics.NewProperties().Set("user_id", userID),
+		Event:  AccountActivated,
+		UserId: Hash(username),
+		Properties: analytics.NewProperties().
+			Set("user_id", userID).
+			Set("account_id", accountID).
+			Set("epoch_time", time.Now().UnixMilli()),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
 				"groupId": accountID,

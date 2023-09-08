@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,25 +39,25 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("without previous entry", func(t *testing.T) {
 			// given
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-			initObjs := []runtime.Object{basicTier}
-			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
+			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+			initObjs := []runtime.Object{base1nsTier}
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
 			// check that an entry was added in `status.updates`
-			tiertest.AssertThatNSTemplateTier(t, "basic", cl).
+			tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 				HasStatusUpdatesItems(1).
 				HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-					Hash: basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
+					Hash: base1nsTier.Labels["toolchain.dev.openshift.com/base1ns-tier-hash"],
 				})
 		})
 
 		t.Run("with previous entries", func(t *testing.T) {
 			// given
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithPreviousUpdates(
+			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithPreviousUpdates(
 				toolchainv1alpha1.NSTemplateTierHistory{
 					StartTime: metav1.Now(),
 					Hash:      "abc123",
@@ -66,19 +66,19 @@ func TestReconcile(t *testing.T) {
 					StartTime: metav1.Now(),
 					Hash:      "def456",
 				}))
-			initObjs := []runtime.Object{basicTier}
-			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
+			initObjs := []runtime.Object{base1nsTier}
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
 			// check that an entry was added in `status.updates`
-			tiertest.AssertThatNSTemplateTier(t, "basic", cl).
+			tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 				HasStatusUpdatesItems(3).
 				HasValidPreviousUpdates().
 				HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-					Hash: basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
+					Hash: base1nsTier.Labels["toolchain.dev.openshift.com/base1ns-tier-hash"],
 				})
 		})
 	})
@@ -87,21 +87,21 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("last entry exists with matching hash", func(t *testing.T) {
 			// given
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates,
+			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 				tiertest.WithCurrentUpdate()) // current update already exists
 
-			initObjs := []runtime.Object{basicTier}
-			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
+			initObjs := []runtime.Object{base1nsTier}
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			// check that no entry was added in `status.updates`
-			tiertest.AssertThatNSTemplateTier(t, "basic", cl).
+			tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 				HasStatusUpdatesItems(1). // same number of entries
 				HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-					Hash: basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
+					Hash: base1nsTier.Labels["toolchain.dev.openshift.com/base1ns-tier-hash"],
 				})
 		})
 	})
@@ -112,10 +112,10 @@ func TestReconcile(t *testing.T) {
 
 			t.Run("tier not found", func(t *testing.T) {
 				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-				initObjs := []runtime.Object{basicTier}
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+				initObjs := []runtime.Object{base1nsTier}
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
 					}
@@ -130,10 +130,10 @@ func TestReconcile(t *testing.T) {
 
 			t.Run("other error", func(t *testing.T) {
 				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-				initObjs := []runtime.Object{basicTier}
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+				initObjs := []runtime.Object{base1nsTier}
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
@@ -152,10 +152,10 @@ func TestReconcile(t *testing.T) {
 
 			t.Run("when adding new update", func(t *testing.T) {
 				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-				initObjs := []runtime.Object{basicTier}
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+				initObjs := []runtime.Object{base1nsTier}
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}

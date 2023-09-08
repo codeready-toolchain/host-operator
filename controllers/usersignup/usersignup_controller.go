@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -29,10 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -241,7 +239,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
 
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
-			opts := client.MatchingLabels(labels)
+			opts := runtimeclient.MatchingLabels(labels)
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}
 
 			// Query BannedUser for resources that match the same email hash
@@ -285,7 +283,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
 			"Failed to list MasterUserRecords by owner")
@@ -373,7 +371,13 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		alreadyVerificationRequired := condition.IsFalseWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, toolchainv1alpha1.UserSignupVerificationRequiredReason)
+		err := r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		if err == nil && !alreadyVerificationRequired {
+			// increment the verification required counter only the first time the UserSignup status is set to verification required
+			metrics.UserSignupVerificationRequiredTotal.Inc()
+		}
+		return err
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.ClusterManager)
@@ -488,20 +492,25 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(oldState, state)
+	r.updateUserSignupMetricsByState(userSignup, oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
+		if states.ApprovedManually(userSignup) {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual").Inc()
+		} else {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic").Inc()
+		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
@@ -512,49 +521,33 @@ func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState st
 }
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
-	replaced := usersignup.TransformUsername(instance.Spec.Username)
-
-	// Check for any forbidden prefixes
-	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
-		if strings.HasPrefix(replaced, prefix) {
-			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
-			break
-		}
-	}
-
-	// Check for any forbidden suffixes
-	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
-		if strings.HasSuffix(replaced, suffix) {
-			replaced = fmt.Sprintf("%s%s", replaced, "-crt")
-			break
-		}
-	}
-
-	validationErrors := validation.IsQualifiedName(replaced)
-	if len(validationErrors) > 0 {
-		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))
-	}
-
-	transformed := replaced
+	// transformed should now be of maxLength specified in TransformUsername
+	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
+	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
+	maxlengthWithSuffix := usersignup.MaxLength - 4
+	newUsername := transformed
 
 	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
-		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
+		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: newUsername}
 		err := r.Client.Get(context.TODO(), namespacedMurName, mur)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				return "", err
 			}
 			// If there was a NotFound error looking up the mur, it means we found an available name
-			return transformed, nil
+			return newUsername, nil
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
-
-		transformed = fmt.Sprintf("%s-%d", replaced, i)
+		if len(transformed) > maxlengthWithSuffix {
+			newUsername = transformed[:maxlengthWithSuffix] + fmt.Sprintf("-%d", i)
+		} else {
+			newUsername = fmt.Sprintf("%s-%d", transformed, i)
+		}
 	}
 
 	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
@@ -596,7 +589,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 
 	// track the MUR creation as an account activation event in Segment
 	if r.SegmentClient != nil {
-		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
 	} else {
 		logger.Info("segment client not configured to track account activations")
 	}
@@ -651,7 +644,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.Name,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), spaceBindings, opts); err != nil {
 		return errs.Wrap(err, fmt.Sprintf(`attempt to list SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
 	}
@@ -725,7 +718,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivating,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
@@ -761,7 +754,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivated,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err

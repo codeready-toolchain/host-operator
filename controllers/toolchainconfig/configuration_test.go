@@ -10,10 +10,10 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/types"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetToolchainConfig(t *testing.T) {
@@ -82,7 +82,7 @@ func TestGetToolchainConfig(t *testing.T) {
 		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 			return fmt.Errorf("get failed")
 		}
 
@@ -189,7 +189,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 			return fmt.Errorf("get failed")
 		}
 
@@ -472,5 +472,28 @@ func TestUsers(t *testing.T) {
 		assert.Equal(t, 10, toolchainCfg.Users().MasterUserRecordUpdateFailureThreshold())
 		assert.Equal(t, []string{"bread", "butter"}, toolchainCfg.Users().ForbiddenUsernamePrefixes())
 		assert.Equal(t, []string{"sugar", "cream"}, toolchainCfg.Users().ForbiddenUsernameSuffixes())
+	})
+}
+
+func TestGitHubSecret(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Empty(t, toolchainCfg.GitHubSecret().AccessTokenKey())
+	})
+	t.Run("non-default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.ToolchainStatus().
+				GitHubSecretRef("github").
+				GitHubSecretAccessTokenKey("accessToken"))
+		gitHubSecretValues := make(map[string]string)
+		gitHubSecretValues["accessToken"] = "abc123"
+		secrets := make(map[string]map[string]string)
+		secrets["github"] = gitHubSecretValues
+
+		toolchainCfg := newToolchainConfig(cfg, secrets)
+
+		assert.Equal(t, "abc123", toolchainCfg.GitHubSecret().AccessTokenKey())
 	})
 }

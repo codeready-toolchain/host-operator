@@ -37,9 +37,9 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    parentSpace.GetNamespace(),
-			GenerateName: parentSpace.GetName() + "-",
-			Labels:       labels,
+			Namespace: parentSpace.GetNamespace(),
+			Name:      SubSpaceName(parentSpace, spaceRequest),
+			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
 			TargetClusterRoles: spaceRequest.Spec.TargetClusterRoles,
@@ -55,4 +55,9 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 	}
 
 	return space
+}
+
+// SubSpaceName generates a name for a subSpace based on parentSpace name and spacerequest UID.
+func SubSpaceName(parentSpace *toolchainv1alpha1.Space, spacerequest *toolchainv1alpha1.SpaceRequest) string {
+	return parentSpace.GetName() + string(spacerequest.UID[:5]) // we only get the first 5 chars from UID so we can keep the name within the length limits
 }

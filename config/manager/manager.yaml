@@ -27,42 +27,62 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - command:
-        - host-operator
-        args:
-        - --leader-elect
-        image: REPLACE_IMAGE
-        name: manager
-        securityContext:
-          allowPrivilegeEscalation: false
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        env:
-        - name: REGISTRATION_SERVICE_IMAGE
-          value: REPLACE_REGISTRATION_SERVICE_IMAGE
-        - name: WATCH_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: OPERATOR_NAME
-          value: "host-operator"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 250M
+        - name: kube-rbac-proxy
+          image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.7.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+          args:
+            - "--secure-listen-address=0.0.0.0:8443"
+            - "--upstream=http://127.0.0.1:8080/"
+            - "--logtostderr=true"
+            - "--v=3"
+          ports:
+            - containerPort: 8443
+              name: https
+        - name: manager
+          command:
+          - host-operator
+          args:
+            - "--health-probe-bind-address=:8081"
+            - "--metrics-bind-address=127.0.0.1:8080"
+            - "--leader-elect"
+          image: REPLACE_IMAGE
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+          - name: REGISTRATION_SERVICE_IMAGE
+            value: REPLACE_REGISTRATION_SERVICE_IMAGE
+          - name: WATCH_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: "host-operator"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 250M
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

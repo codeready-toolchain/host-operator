@@ -9,7 +9,7 @@ objects:
   kind: Role
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-user-actions
+    name: appstudio-admin-user-actions
   rules:
   - apiGroups:
     - appstudio.redhat.com
@@ -18,7 +18,14 @@ objects:
     - components
     - componentdetectionqueries
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+    - deletecollection
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -27,40 +34,58 @@ objects:
     - snapshots
     - environments
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
-      - appstudio.redhat.com
+    - appstudio.redhat.com
     resources:
-      - deploymenttargets
-      - deploymenttargetclaims
+    - deploymenttargets
+    - deploymenttargetclaims
     verbs:
-      - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
-      - managed-gitops.redhat.com
+    - managed-gitops.redhat.com
     resources:
-      - gitopsdeployments
-      - gitopsdeploymentmanagedenvironments
-      - gitopsdeploymentrepositorycredentials
-      - gitopsdeploymentsyncruns
+    - gitopsdeployments
+    - gitopsdeploymentmanagedenvironments
+    - gitopsdeploymentrepositorycredentials
+    - gitopsdeploymentsyncruns
     verbs:
-      - get
-      - list
-      - watch
+    - get
+    - list
+    - watch
   - apiGroups:
-      - tekton.dev
+    - tekton.dev
     resources:
-      - pipelineruns
+    - pipelineruns
     verbs:
-      - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
-      - results.tekton.dev
+    - results.tekton.dev
     resources:
-      - results
-      - records
-      - logs
+    - results
+    - records
+    - logs
     verbs:
-      - get
-      - list
+    - get
+    - list
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -71,14 +96,26 @@ objects:
     - releaseplans
     - releaseplanadmissions
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
-      - jvmbuildservice.io
+    - jvmbuildservice.io
     resources:
-      - jbsconfigs
-      - artifactbuilds
+    - jbsconfigs
+    - artifactbuilds
     verbs:
-      - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -88,43 +125,104 @@ objects:
     - spifilecontentrequests
     - spiaccesstokendataupdates
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - remotesecrets
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - ""
     resources:
     - secrets
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   - apiGroups:
     - ""
     resources:
     - configmaps
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - buildpipelineselectors
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
   # Allow to manage pipeline ServiceAccount for linking secrets used for repositories
   - apiGroups:
     - ""
     resources:
-    - serviceaccounts 
+    - serviceaccounts
     resourceNames:
-    - pipeline  
+    - appstudio-pipeline
     verbs:
     - get
     - list
     - watch
     - update
     - patch
+  # Allow to exec (rsh) to pods
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+  - apiGroups:
+    - toolchain.dev.openshift.com
+    resources:
+    - spacebindingrequests
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-${USERNAME}-actions-user
+    name: appstudio-admin-${USERNAME}-actions-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: appstudio-user-actions
+    name: appstudio-admin-user-actions
   subjects:
   - kind: User
     name: ${USERNAME}

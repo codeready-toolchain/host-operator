@@ -8,14 +8,15 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetOldestSignupPendingApproval(t *testing.T) {
@@ -72,9 +73,9 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 
 func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 	// given
-	withoutStateLabel := space.NewSpace("without-state")
-	pending := space.NewSpace("pending", space.WithStateLabel("pending"))
-	clusterAssigned := space.NewSpace("cluster-assigned", space.WithStateLabel("cluster-assigned"))
+	withoutStateLabel := spacetest.NewSpace(test.HostOperatorNs, "without-state")
+	pending := spacetest.NewSpace(test.HostOperatorNs, "pending", spacetest.WithStateLabel("pending"))
+	clusterAssigned := spacetest.NewSpace(test.HostOperatorNs, "cluster-assigned", spacetest.WithStateLabel("cluster-assigned"))
 
 	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending, clusterAssigned)
 
@@ -97,7 +98,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 
 	t.Run("will pick the newly added pending Space", func(t *testing.T) {
 		// given
-		space.WithStateLabel("pending")(clusterAssigned)
+		spacetest.WithStateLabel("pending")(clusterAssigned)
 		err := cl.Update(context.TODO(), clusterAssigned)
 		require.NoError(t, err)
 
@@ -126,7 +127,7 @@ func approve(t *testing.T, cl *test.FakeClient, signup *toolchainv1alpha1.UserSi
 }
 
 func assignCluster(t *testing.T, cl *test.FakeClient, sp *toolchainv1alpha1.Space) {
-	space.WithStateLabel("cluster-assigned")(sp)
+	spacetest.WithStateLabel("cluster-assigned")(sp)
 	err := cl.Update(context.TODO(), sp)
 	require.NoError(t, err)
 }
@@ -186,12 +187,12 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 
 func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 	// given
-	withoutStateLabel := space.NewSpace("without-state")
+	withoutStateLabel := spacetest.NewSpace(test.HostOperatorNs, "without-state")
 	// we need to create the Spaces with different timestamp in the range of seconds because
 	// the k8s resource keeps the time in RFC3339 format where the smallest unit are seconds.
-	pending1 := space.NewSpace("1-oldest", space.WithStateLabel("pending"), space.CreatedBefore(5*time.Second))
-	pending2 := space.NewSpace("2-oldest", space.WithStateLabel("pending"), space.CreatedBefore(3*time.Second))
-	pending3 := space.NewSpace("3-oldest", space.WithStateLabel("pending"), space.CreatedBefore(2*time.Second))
+	pending1 := spacetest.NewSpace(test.HostOperatorNs, "1-oldest", spacetest.WithStateLabel("pending"), spacetest.CreatedBefore(5*time.Second))
+	pending2 := spacetest.NewSpace(test.HostOperatorNs, "2-oldest", spacetest.WithStateLabel("pending"), spacetest.CreatedBefore(3*time.Second))
+	pending3 := spacetest.NewSpace(test.HostOperatorNs, "3-oldest", spacetest.WithStateLabel("pending"), spacetest.CreatedBefore(2*time.Second))
 	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
@@ -204,7 +205,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 
 	t.Run("should keep two Spaces since the pending4 hasn't been loaded yet", func(t *testing.T) {
 		// given
-		pending4 := space.NewSpace("pending-4", space.WithStateLabel("pending"))
+		pending4 := spacetest.NewSpace(test.HostOperatorNs, "pending-4", spacetest.WithStateLabel("pending"))
 		err := cl.Create(context.TODO(), pending4)
 		require.NoError(t, err)
 
@@ -286,7 +287,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 	assert.Nil(t, foundPending)
 }
 
-func newCache(t *testing.T, objectType client.Object, listPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
+func newCache(t *testing.T, objectType runtimeclient.Object, listPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

@@ -12,22 +12,34 @@ import (
 )
 
 func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup, murName string) {
-	assertMessageQueued(t, cl, murName, us.Spec.Userid, us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], "account activated")
+	assertMessageQueued(t, cl, murName, us.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], "account activated")
 }
 
 func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, accountID string, event string) {
 	require.IsType(t, &MockClient{}, cl.Client())
 	require.Len(t, cl.Client().(*MockClient).Queue, 1)
-	assert.Equal(t, analytics.Track{
-		UserId:     segment.Hash(username),
-		Event:      event,
-		Properties: analytics.NewProperties().Set("user_id", userID),
+	expectedTrackEvent := analytics.Track{
+		UserId: segment.Hash(username),
+		Event:  event,
+		Properties: analytics.Properties{
+			"user_id":    userID,
+			"account_id": accountID,
+		},
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
 				"groupId": accountID,
 			},
 		},
-	}, cl.Client().(*MockClient).Queue[0])
+	}
+	actualMessage := cl.Client().(*MockClient).Queue[0]
+	actualTrackEvent, ok := actualMessage.(analytics.Track)
+	require.True(t, ok)
+	assert.Equal(t, expectedTrackEvent.UserId, actualTrackEvent.UserId)
+	assert.Equal(t, expectedTrackEvent.Event, actualTrackEvent.Event)
+	assert.Equal(t, expectedTrackEvent.Context, actualTrackEvent.Context)
+	assert.Equal(t, expectedTrackEvent.Properties["user_id"], actualTrackEvent.Properties["user_id"])
+	assert.Equal(t, expectedTrackEvent.Properties["account_id"], actualTrackEvent.Properties["account_id"])
+	assert.NotEmpty(t, actualTrackEvent.Properties["epoch_time"]) // not comparing the timestamp in test
 }
 
 func AssertNoMessageQueued(t *testing.T, cl *segment.Client) {

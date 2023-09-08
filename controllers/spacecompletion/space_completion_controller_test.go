@@ -12,15 +12,16 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
-	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -30,7 +31,7 @@ func TestCreateSpace(t *testing.T) {
 
 	t.Run("without any field set - then it sets only tierName", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-fields",
+		space := spacetest.NewSpace(test.HostOperatorNs, "without-fields",
 			spacetest.WithTierName(""))
 		r, req, cl := prepareReconcile(t, space, getMemberClusters)
 
@@ -46,7 +47,7 @@ func TestCreateSpace(t *testing.T) {
 
 	t.Run("with tierName but without targetCluster - only targetCluster should be set", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-targetCluster",
+		space := spacetest.NewSpace(test.HostOperatorNs, "without-targetCluster",
 			spacetest.WithTierName("advanced"))
 		r, req, cl := prepareReconcile(t, space, getMemberClusters)
 
@@ -62,7 +63,7 @@ func TestCreateSpace(t *testing.T) {
 
 	t.Run("with targetCluster but without tierName - only tierName should be set", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-tierName",
+		space := spacetest.NewSpace(test.HostOperatorNs, "without-tierName",
 			spacetest.WithTierName(""),
 			spacetest.WithSpecTargetCluster("member2"))
 		r, req, cl := prepareReconcile(t, space, getMemberClusters)
@@ -80,7 +81,7 @@ func TestCreateSpace(t *testing.T) {
 	t.Run("no updates expected", func(t *testing.T) {
 		t.Run("with both fields set", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("with-fields",
+			space := spacetest.NewSpace(test.HostOperatorNs, "with-fields",
 				spacetest.WithTierName("advanced"),
 				spacetest.WithSpecTargetCluster("member2"))
 			r, req, cl := prepareReconcile(t, space, getMemberClusters)
@@ -97,7 +98,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when is being deleted, then nothing should be set", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("without-fields",
+			space := spacetest.NewSpace(test.HostOperatorNs, "without-fields",
 				spacetest.WithTierName(""),
 				spacetest.WithDeletionTimestamp())
 			r, req, cl := prepareReconcile(t, space, getMemberClusters)
@@ -114,7 +115,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when no member cluster available and when tierName is set", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("without-members",
+			space := spacetest.NewSpace(test.HostOperatorNs, "without-members",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
 
@@ -130,11 +131,11 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when the space is not there, then just skip it", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("not-found",
+			space := spacetest.NewSpace(test.HostOperatorNs, "not-found",
 				spacetest.WithTierName("advanced"))
 			r, req, _ := prepareReconcile(t, space, NewGetMemberClusters())
 			empty := test.NewFakeClient(t)
-			empty.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			empty.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("shouldn't be called")
 			}
 			r.Client = empty
@@ -148,10 +149,10 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when getting space fails", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("get-fails",
+			space := spacetest.NewSpace(test.HostOperatorNs, "get-fails",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -168,10 +169,10 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when Get ToolchainConfig fails and no field is set", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("oddity",
+			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName(""))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}
@@ -190,10 +191,10 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("when Get ToolchainConfig fails and only targetCluster is missing", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("oddity",
+			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}

@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
 	socialevent    *toolchainv1alpha1.SocialEvent
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -27,7 +27,7 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSocialEvent helper func to begin with the assertions on a SocialEvent
-func AssertThatSocialEvent(t test.T, namespace, name string, client client.Client) *Assertion {
+func AssertThatSocialEvent(t test.T, namespace, name string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),

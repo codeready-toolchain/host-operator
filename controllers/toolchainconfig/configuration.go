@@ -9,7 +9,7 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -31,7 +31,7 @@ type ToolchainConfig struct {
 
 // GetToolchainConfig returns a ToolchainConfig using the cache, or if the cache was not initialized
 // then retrieves the latest config using the provided client and updates the cache
-func GetToolchainConfig(cl client.Client) (ToolchainConfig, error) {
+func GetToolchainConfig(cl runtimeclient.Client) (ToolchainConfig, error) {
 	config, secrets, err := commonconfig.GetConfig(cl, &toolchainv1alpha1.ToolchainConfig{})
 	if err != nil {
 		// return default config
@@ -48,7 +48,7 @@ func GetCachedToolchainConfig() ToolchainConfig {
 }
 
 // ForceLoadToolchainConfig updates the cache using the provided client and returns the latest ToolchainConfig
-func ForceLoadToolchainConfig(cl client.Client) (ToolchainConfig, error) {
+func ForceLoadToolchainConfig(cl runtimeclient.Client) (ToolchainConfig, error) {
 	config, secrets, err := commonconfig.LoadLatest(cl, &toolchainv1alpha1.ToolchainConfig{})
 	if err != nil {
 		// return default config
@@ -79,6 +79,12 @@ func (c *ToolchainConfig) Print() {
 
 func (c *ToolchainConfig) Environment() string {
 	return commonconfig.GetString(c.cfg.Host.Environment, "prod")
+}
+
+func (c *ToolchainConfig) GitHubSecret() GitHubSecret {
+	return GitHubSecret{s: c.cfg.Host.ToolchainStatus.GitHubSecret,
+		secrets: c.secrets,
+	}
 }
 
 func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
@@ -140,6 +146,10 @@ func (s SpaceConfig) SpaceRequestIsEnabled() bool {
 	return commonconfig.GetBool(s.spaceConfig.SpaceRequestEnabled, false)
 }
 
+func (s SpaceConfig) SpaceBindingRequestIsEnabled() bool {
+	return commonconfig.GetBool(s.spaceConfig.SpaceBindingRequestEnabled, false)
+}
+
 type CapacityThresholdsConfig struct {
 	capacityThresholds toolchainv1alpha1.CapacityThresholds
 }
@@ -186,6 +196,21 @@ type MetricsConfig struct {
 
 func (d MetricsConfig) ForceSynchronization() bool {
 	return commonconfig.GetBool(d.metrics.ForceSynchronization, false)
+}
+
+type GitHubSecret struct {
+	s       toolchainv1alpha1.GitHubSecret
+	secrets map[string]map[string]string
+}
+
+func (gh GitHubSecret) githubSecret(secretKey string) string {
+	secret := commonconfig.GetString(gh.s.Ref, "")
+	return gh.secrets[secret][secretKey]
+}
+
+func (gh GitHubSecret) AccessTokenKey() string {
+	key := commonconfig.GetString(gh.s.AccessTokenKey, "")
+	return gh.githubSecret(key)
 }
 
 type NotificationsConfig struct {

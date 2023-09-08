@@ -5,7 +5,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	condition2 "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	v1 "k8s.io/api/core/v1"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,6 +43,7 @@ func WithRegistrationService(options ...RegistrationServiceToolchainStatusOption
 			Deployment:                   toolchainv1alpha1.RegistrationServiceDeploymentStatus{},
 			RegistrationServiceResources: toolchainv1alpha1.RegistrationServiceResourcesStatus{},
 			Health:                       toolchainv1alpha1.RegistrationServiceHealth{},
+			RevisionCheck:                toolchainv1alpha1.RevisionCheck{},
 		}
 		for _, modify := range options {
 			modify(regService)
@@ -62,6 +64,12 @@ func WithDeploymentCondition(condition toolchainv1alpha1.Condition) Registration
 func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
 	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
 		status.Health.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.Health.Conditions, condition)
+	}
+}
+
+func WithRevisionCheckCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
+		status.RevisionCheck.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.RevisionCheck.Conditions, condition)
 	}
 }
 
@@ -130,13 +138,13 @@ func WithEmptyMetrics() ToolchainStatusOption {
 func ToBeReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
-		Status: v1.ConditionTrue,
+		Status: corev1.ConditionTrue,
 	}
 }
 
 func ToBeNotReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
-		Status: v1.ConditionFalse,
+		Status: corev1.ConditionFalse,
 	}
 }

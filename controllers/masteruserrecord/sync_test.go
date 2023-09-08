@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -15,13 +16,12 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test/notification"
 	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -129,7 +129,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 	memberUserAcc := toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				toolchainv1alpha1.TierLabelKey: "basic",
+				toolchainv1alpha1.TierLabelKey: "base1ns",
 			},
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
@@ -155,7 +155,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				recordSpecUserAcc,
 			},
-			TierName: "basic",
+			TierName: "base1ns",
 		},
 	}
 	return record, recordSpecUserAcc, memberUserAcc
@@ -239,7 +239,7 @@ func TestSynchronizeStatus(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -288,7 +288,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -336,7 +336,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -465,7 +465,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -481,7 +481,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	t.Run("failed on the host side when creating notification", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+		hostClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -506,7 +506,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		userAcc := uatest.NewUserAccountFromMur(mur)
 
 		memberClient := test.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		err := murtest.Modify(mur, murtest.UserID("abc123"))
@@ -539,7 +539,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, provisionedMur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{
@@ -764,7 +764,7 @@ func TestRoutes(t *testing.T) {
 	})
 }
 
-func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
+func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, runtimeclient.Client) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	copiedMur := mur.DeepCopy()
 	toolchainStatus := NewToolchainStatus(
@@ -782,7 +782,7 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 	}, memberClient
 }
 
-func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostClient client.Client, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
+func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostClient runtimeclient.Client, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
 	userAccountCondition := userAccount.Status.Conditions[0]
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
@@ -800,7 +800,7 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 		AllUserAccountsHaveCondition(userAccountCondition)
 }
 
-func newMemberCluster(cl client.Client) cluster.Cluster {
+func newMemberCluster(cl runtimeclient.Client) cluster.Cluster {
 	return cluster.Cluster{
 		Config: &commoncluster.Config{
 			Name:              test.MemberClusterName,

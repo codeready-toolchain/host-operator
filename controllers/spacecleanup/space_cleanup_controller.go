@@ -6,23 +6,23 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
-	"github.com/go-logr/logr"
-	"github.com/redhat-cop/operator-utils/pkg/util"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Reconciler reconciles a Space object
 type Reconciler struct {
-	Client    client.Client
+	Client    runtimeclient.Client
 	Namespace string
 }
 
@@ -82,8 +82,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, time.Duration, error) {
 	bindings := &toolchainv1alpha1.SpaceBindingList{}
-	labelMatch := client.MatchingLabels{toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name}
-	if err := r.Client.List(context.TODO(), bindings, client.InNamespace(space.Namespace), labelMatch); err != nil {
+	labelMatch := runtimeclient.MatchingLabels{toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name}
+	if err := r.Client.List(context.TODO(), bindings, runtimeclient.InNamespace(space.Namespace), labelMatch); err != nil {
 		return false, 0, errs.Wrap(err, "unable to list SpaceBindings")
 	}
 

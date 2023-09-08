@@ -6,7 +6,7 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-compute
+    name: for-${SPACE_NAME}-compute
   spec:
     quota:
       hard:
@@ -19,11 +19,12 @@ objects:
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
     selector:
-      annotations:
-        openshift.io/requester: ${USERNAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
   # 12 hours

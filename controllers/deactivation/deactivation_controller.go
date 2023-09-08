@@ -6,30 +6,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
-	errs "github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
+	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // SetupWithManager sets up the controller with the Manager.
@@ -44,7 +41,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a Deactivation object
 type Reconciler struct {
-	Client client.Client
+	Client runtimeclient.Client
 	Scheme *runtime.Scheme
 }
 

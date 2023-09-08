@@ -8,7 +8,7 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}
+    name: for-${SPACE_NAME}
   spec:
     quota:
       hard:
@@ -17,11 +17,12 @@ objects:
         requests.storage: 7Gi
         persistentvolumeclaims: "5"
     selector:
-      annotations:
-        openshift.io/requester: ${USERNAME}
-      labels: null
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: CPU_LIMIT
   value: 4000m

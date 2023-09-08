@@ -6,14 +6,15 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -23,8 +24,8 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	sbJoeCompView := sb.NewSpaceBinding("joe", "comp", "view", "signupB")
 	sbLaraOtherEdit := sb.NewSpaceBinding("lara", "other", "edit", "signupC")
 
-	compSpace := space.NewSpace("comp")
-	orphanSpace := space.NewSpace("orphan")
+	compSpace := spacetest.NewSpace(test.HostOperatorNs, "comp")
+	orphanSpace := spacetest.NewSpace(test.HostOperatorNs, "orphan")
 
 	laraMur := masteruserrecord.NewMasterUserRecord(t, "lara")
 	joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")
@@ -80,7 +81,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	t.Run("should not return any SpaceBinding requests when list fails", func(t *testing.T) {
 		// given
 		cl := test.NewFakeClient(t, sbLaraCompAdmin, sbJoeCompView, sbLaraOtherEdit)
-		cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			return fmt.Errorf("some error")
 		}
 

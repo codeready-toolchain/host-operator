@@ -8,13 +8,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func MapNSTemplateTierToSpaces(namespace string, cl client.Client) func(object client.Object) []reconcile.Request {
+func MapNSTemplateTierToSpaces(namespace string, cl runtimeclient.Client) func(object runtimeclient.Object) []reconcile.Request {
 	mapperLog := ctrl.Log.WithName("NSTemplateTierToSpaceMapper")
-	return func(obj client.Object) []reconcile.Request {
+	return func(obj runtimeclient.Object) []reconcile.Request {
 		if tmplTier, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 			matchOutdated, err := nstemplatetier.OutdatedTierSelector(tmplTier)
 			if err != nil {
@@ -23,7 +23,7 @@ func MapNSTemplateTierToSpaces(namespace string, cl client.Client) func(object c
 			}
 			// look-up all spaces associated with the NSTemplateTier
 			spaces := &toolchainv1alpha1.SpaceList{}
-			if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace), matchOutdated); err != nil {
+			if err := cl.List(context.TODO(), spaces, runtimeclient.InNamespace(namespace), matchOutdated); err != nil {
 				mapperLog.Error(err, "cannot list outdated Spaces", "tierName", tmplTier.Name)
 				return []reconcile.Request{}
 			}

@@ -5,8 +5,10 @@ import (
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
-	"github.com/codeready-toolchain/host-operator/test/space"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,9 +19,9 @@ func TestMapToSpaceRequestByLabel(t *testing.T) {
 	// given
 	spaceRequest := spacerequesttest.NewSpaceRequest("mySpaceRequest", "jane")
 	// following space has a spaceRequest associated
-	subSpace := space.NewSpace("subSpace", space.WithLabel(v1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()), space.WithLabel(v1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()))
+	subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()), space.WithLabel(v1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()))
 	// following space has no spaceRequest associated
-	spacenosr := space.NewSpace("nospacerequest")
+	spacenosr := spacetest.NewSpace(test.HostOperatorNs, "nospacerequest")
 
 	t.Run("should return no space associated with a spacerequest", func(t *testing.T) {
 		// when

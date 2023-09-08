@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -29,7 +29,7 @@ var log = logf.Log.WithName("templates")
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
+func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
 
 	// initialize tier generator, loads templates from assets
 	generator, err := newNSTemplateTierGenerator(s, client, namespace, assets)
@@ -53,7 +53,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 }
 
 type tierGenerator struct {
-	client          client.Client
+	client          runtimeclient.Client
 	namespace       string
 	scheme          *runtime.Scheme
 	templatesByTier map[string]*tierData
@@ -63,7 +63,7 @@ type tierData struct {
 	name          string
 	rawTemplates  *templates
 	tierTemplates []*toolchainv1alpha1.TierTemplate
-	objects       []client.Object
+	objects       []runtimeclient.Object
 	basedOnTier   *BasedOnTier
 }
 
@@ -83,7 +83,7 @@ type template struct {
 }
 
 // newNSTemplateTierGenerator loads templates from the provided assets and processes the tierTemplates and NSTemplateTiers
-func newNSTemplateTierGenerator(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
+func newNSTemplateTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
 	// load templates from assets
 	templatesByTier, err := loadTemplatesByTiers(assets)
 	if err != nil {
@@ -133,7 +133,7 @@ type BasedOnTier struct {
 //
 //	based_on_tier.yaml
 //
-// basic/
+// base1ns/
 //
 //	cluster.yaml
 //	ns_dev.yaml
@@ -453,7 +453,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 //	      templateRef: appstudio-admin-ab12cd34-ab12cd34
 //
 // ------
-func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]client.Object, error) {
+func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]runtimeclient.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	if reflect.DeepEqual(nsTemplateTier, template{}) {
 		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)
