@@ -83,9 +83,14 @@ spec:
                       for the purpose of migrating the users to a new IdP provider
                       client, and contains the user's "original-sub" claim
                     type: string
+                  sub:
+                    description: Sub contains the value of the 'sub' claim
+                    type: string
                   userID:
                     description: UserID contains the value of the 'user_id' claim
                     type: string
+                required:
+                - sub
                 type: object
               tierName:
                 description: TierName is an optional property introduced to retain
