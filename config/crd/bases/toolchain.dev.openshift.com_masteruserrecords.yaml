@@ -78,6 +78,9 @@ spec:
                     description: AccountID contains the value of the 'account_id'
                       claim
                     type: string
+                  email:
+                    description: Email contains the user's email address
+                    type: string
                   originalSub:
                     description: OriginalSub is an optional property temporarily introduced
                       for the purpose of migrating the users to a new IdP provider
@@ -90,6 +93,7 @@ spec:
                     description: UserID contains the value of the 'user_id' claim
                     type: string
                 required:
+                - email
                 - sub
                 type: object
               tierName:
