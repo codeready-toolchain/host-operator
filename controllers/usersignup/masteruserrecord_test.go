@@ -25,6 +25,9 @@ func TestNewMasterUserRecord(t *testing.T) {
 		commonmur.TierName("deactivate90"),
 		commonmur.UserID("UserID123"),
 		commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+
+	expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
+
 	assert.Equal(t, expectedMUR, mur)
 }
 
@@ -48,6 +51,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 				commonmur.TierName("deactivate90"),
 				commonmur.UserID("UserID123"),
 				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+			expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 			assert.Equal(t, expectedMUR, mur)
 		})
 	})
@@ -69,6 +73,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 				commonmur.TierName("deactivate90"),
 				commonmur.UserID("UserID123"),
 				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+			expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 			assert.Equal(t, expectedMUR, mur)
 		})
 
