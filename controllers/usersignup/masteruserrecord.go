@@ -45,10 +45,11 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			Annotations: annotations,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserAccounts: userAccounts,
-			UserID:       userSignup.Spec.Userid,
-			OriginalSub:  userSignup.Spec.OriginalSub,
-			TierName:     userTierName,
+			UserAccounts:     userAccounts,
+			UserID:           userSignup.Spec.Userid,
+			OriginalSub:      userSignup.Spec.OriginalSub,
+			TierName:         userTierName,
+			PropagatedClaims: userSignup.Spec.IdentityClaims.PropagatedClaims,
 		},
 	}
 
