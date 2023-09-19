@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"text/template"
 	"time"
 
@@ -103,8 +102,6 @@ const (
 </div>
 {{end}}`
 )
-
-var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -488,11 +485,6 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return errs.Wrapf(err, "unable to get ToolchainConfig")
-	}
-
-	if !isValidEmailAddress(config.Notifications().AdminEmail()) {
-		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
-			config.Notifications().AdminEmail()))
 	}
 
 	tsValue := time.Now().Format("20060102150405")
@@ -947,11 +939,4 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
 	// if we get here it means that component health is ok
 	return true
-}
-
-func isValidEmailAddress(email string) bool {
-	if len(email) < 3 && len(email) > 254 {
-		return false
-	}
-	return emailRegex.MatchString(email)
 }
