@@ -138,6 +138,8 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20230912073725-4ae0201b4630 h1:Z281nLD0OLfdzbUq2tUK5/B6d2OX1hPg5oFGZSJM4RQ=
 github.com/codeready-toolchain/api v0.0.0-20230912073725-4ae0201b4630/go.mod h1:nn3W6eKb9PFIVwSwZW7wDeLACMBOwAV+4kddGuN+ARM=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230920120310-0f59f17bca92 h1:9gcDMkjSAjxM3RLUYCHv9prCDwdi7IgAWpTwTsDpGL8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230920120310-0f59f17bca92/go.mod h1:+rs3V8do2s0DzGPyCy2sgnvUs9GfSi5RVWx+AZC+cTM=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -430,8 +432,6 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/mailru/easyjson v0.7.6 h1:8yTIVnZgCoiM1TgqoeTl+LfU5Jg6/xL3QhGQnimLYnA=
 github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/matousjobanek/toolchain-common v0.0.0-20230919125431-20fdc3343e02 h1:MehE6FwCCTMzABvAIXudxdynBldCF3a4+bL2iqLj7tQ=
-github.com/matousjobanek/toolchain-common v0.0.0-20230919125431-20fdc3343e02/go.mod h1:+rs3V8do2s0DzGPyCy2sgnvUs9GfSi5RVWx+AZC+cTM=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
