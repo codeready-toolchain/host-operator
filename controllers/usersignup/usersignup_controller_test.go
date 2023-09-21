@@ -2205,11 +2205,12 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status has been set to Deactivated
+		fmt.Println(userSignup.Status.Conditions)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
+				Status: corev1.ConditionFalse,
+				Reason: "Deactivated",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
@@ -2291,8 +2292,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
+				Status: corev1.ConditionFalse,
+				Reason: "Deactivated",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
@@ -2447,8 +2448,8 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			},
 			{
 				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
+				Status: corev1.ConditionFalse,
+				Reason: "Deactivated",
 			},
 			{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -2782,8 +2783,8 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupApproved,
-					Status: corev1.ConditionTrue,
-					Reason: "ApprovedAutomatically",
+					Status: corev1.ConditionFalse,
+					Reason: "Deactivated",
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupComplete,
