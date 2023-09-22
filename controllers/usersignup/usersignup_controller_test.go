@@ -3479,7 +3479,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			initObjs = append(initObjs, userSignup, deactivate30Tier)
 			initObjs = append(initObjs, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 
-			// create 100 MURs that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
+			// create 100 MURs and Spaces that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
 			initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testusername.compliantUsername,
@@ -3488,14 +3488,13 @@ func TestDeathBy100Signups(t *testing.T) {
 				},
 			})
 
-			for i := 2; i <= 100; i++ {
-				initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i),
-						Namespace: test.HostOperatorNs,
-						Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
-					},
-				})
+			for i := 2; i <= 100; i += 2 {
+				initObjs = append(initObjs,
+					murtest.NewMasterUserRecord(t, fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i), murtest.WithOwnerLabel(uuid.Must(uuid.NewV4()).String())))
+			}
+			for i := 3; i <= 100; i += 2 {
+				initObjs = append(initObjs,
+					spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i)))
 			}
 
 			initObjs = append(initObjs, baseNSTemplateTier)
@@ -3559,6 +3558,69 @@ func TestDeathBy100Signups(t *testing.T) {
 					"1,external": 100,
 					"1,internal": 1, // was incremented, even though associated MUR could not be created
 				})
+		})
+	}
+}
+
+func TestGenerateUniqueCompliantUsername(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+
+	mur := murtest.NewMasterUserRecord(t, "cool-user")
+	space := spacetest.NewSpace(test.HostOperatorNs, "cool-user")
+	spaceInTerminating := spacetest.NewSpace(test.HostOperatorNs, "cool-user",
+		spacetest.WithFinalizer(),
+		spacetest.WithDeletionTimestamp(),
+		spacetest.WithCreatorLabel("cool-user"))
+
+	for testcase, object := range map[string]runtimeclient.Object{
+		"with conflicting MasterUserRecord":           mur,
+		"with conflicting Space":                      space,
+		"with conflicting Space in terminating state": spaceInTerminating,
+	} {
+		t.Run(testcase, func(t *testing.T) {
+			userSignup := commonsignup.NewUserSignup(
+				commonsignup.WithName("cool-user"),
+				commonsignup.ApprovedManually())
+
+			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
+			r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier,
+				deactivate30Tier, object, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+
+			InitializeCounters(t, NewToolchainStatus())
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+
+			// Lookup the user signup again
+			murtest.AssertThatMasterUserRecord(t, "cool-user-2", r.Client).
+				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, "cool-user")
+			userSignup = AssertThatUserSignup(t, test.HostOperatorNs, "cool-user", r.Client).
+				HasCompliantUsername("").
+				HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved").
+				Get()
+
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "ApprovedByAdmin",
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: corev1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: corev1.ConditionFalse,
+					Reason: "UserIsActive",
+				},
+			)
 		})
 	}
 }

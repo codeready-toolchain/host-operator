@@ -530,19 +530,27 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
-		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: newUsername}
-		err := r.Client.Get(context.TODO(), namespacedMurName, mur)
+		namespacedName := types.NamespacedName{Namespace: instance.Namespace, Name: newUsername}
+		err := r.Client.Get(context.TODO(), namespacedName, mur)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				return "", err
 			}
-			// If there was a NotFound error looking up the mur, it means we found an available name
-			return newUsername, nil
+			space := &toolchainv1alpha1.Space{}
+			err = r.Client.Get(context.TODO(), namespacedName, space)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return "", err
+				}
+				// If there was a NotFound error looking up the mur as well as space, it means we found an available name
+				return newUsername, nil
+			}
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
+
 		if len(transformed) > maxlengthWithSuffix {
 			newUsername = transformed[:maxlengthWithSuffix] + fmt.Sprintf("-%d", i)
 		} else {
