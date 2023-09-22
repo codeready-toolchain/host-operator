@@ -3573,19 +3573,52 @@ func TestGenerateUniqueCompliantUsername(t *testing.T) {
 		spacetest.WithDeletionTimestamp(),
 		spacetest.WithCreatorLabel("cool-user"))
 
-	for testcase, object := range map[string]runtimeclient.Object{
-		"with conflicting MasterUserRecord":           mur,
-		"with conflicting Space":                      space,
-		"with conflicting Space in terminating state": spaceInTerminating,
+	for testcase, params := range map[string]struct {
+		conflictingObject runtimeclient.Object
+		skipSpaceCreation string
+		expectedUsername  string
+	}{
+		"with conflicting MasterUserRecord": {
+			conflictingObject: mur,
+			skipSpaceCreation: "false",
+			expectedUsername:  "cool-user-2",
+		},
+		"with conflicting MasterUserRecord when space creation is skipped": {
+			conflictingObject: mur,
+			skipSpaceCreation: "true",
+			expectedUsername:  "cool-user-2",
+		},
+		"with conflicting Space": {
+			conflictingObject: space,
+			skipSpaceCreation: "false",
+			expectedUsername:  "cool-user-2",
+		},
+		"with conflicting Space  when space creation is skipped": {
+			conflictingObject: space,
+			skipSpaceCreation: "true",
+			expectedUsername:  "cool-user",
+		},
+		"with conflicting Space in terminating state": {
+			conflictingObject: spaceInTerminating,
+			skipSpaceCreation: "false",
+			expectedUsername:  "cool-user-2",
+		},
+		"with conflicting Space in terminating state when space creation is skipped": {
+			conflictingObject: spaceInTerminating,
+			skipSpaceCreation: "true",
+			expectedUsername:  "cool-user",
+		},
 	} {
 		t.Run(testcase, func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup(
 				commonsignup.WithName("cool-user"),
 				commonsignup.ApprovedManually())
 
+			userSignup.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = params.skipSpaceCreation
+
 			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 			r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier,
-				deactivate30Tier, object, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+				deactivate30Tier, params.conflictingObject, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 
 			InitializeCounters(t, NewToolchainStatus())
 
@@ -3597,7 +3630,7 @@ func TestGenerateUniqueCompliantUsername(t *testing.T) {
 			require.Equal(t, reconcile.Result{}, res)
 
 			// Lookup the user signup again
-			murtest.AssertThatMasterUserRecord(t, "cool-user-2", r.Client).
+			murtest.AssertThatMasterUserRecord(t, params.expectedUsername, r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, "cool-user")
 			userSignup = AssertThatUserSignup(t, test.HostOperatorNs, "cool-user", r.Client).
 				HasCompliantUsername("").
