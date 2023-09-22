@@ -3488,6 +3488,7 @@ func TestDeathBy100Signups(t *testing.T) {
 				},
 			})
 
+			// stagger the numbering for MURs and Spaces so that one of them will always be missing. eg. MURs will not be found on odd numbers and Spaces not found on even numbers until it makes 100 attempts
 			for i := 2; i <= 100; i += 2 {
 				initObjs = append(initObjs,
 					murtest.NewMasterUserRecord(t, fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i), murtest.WithOwnerLabel(uuid.Must(uuid.NewV4()).String())))
