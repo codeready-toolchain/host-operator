@@ -537,13 +537,12 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 				return "", err
 			}
 			space := &toolchainv1alpha1.Space{}
-			err = r.Client.Get(context.TODO(), namespacedName, space)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					return "", err
+			if err = r.Client.Get(context.TODO(), namespacedName, space); err != nil {
+				if errors.IsNotFound(err) {
+					// If there was a NotFound error looking up the mur as well as space, it means we found an available name
+					return newUsername, nil
 				}
-				// If there was a NotFound error looking up the mur as well as space, it means we found an available name
-				return newUsername, nil
+				return "", err
 			}
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
