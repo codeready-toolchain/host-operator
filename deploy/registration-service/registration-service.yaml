@@ -38,6 +38,7 @@ objects:
           - toolchainconfigs
           - toolchainstatuses
           - proxyplugins
+          - nstemplatetiers
         verbs:
           - get
           - list
