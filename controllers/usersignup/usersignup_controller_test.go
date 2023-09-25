@@ -2205,7 +2205,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status has been set to Deactivated
-		fmt.Println(userSignup.Status.Conditions)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupApproved,

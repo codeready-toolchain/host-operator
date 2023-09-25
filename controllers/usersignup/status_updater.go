@@ -55,8 +55,9 @@ var statusIncompletePendingApproval = func(message string) toolchainv1alpha1.Con
 }
 
 
-func (u *StatusUpdater) setStatusDeactivatedApproval(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusDeactivatedApproval(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
+		ctx,
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupApproved,
@@ -213,6 +214,12 @@ func (u *StatusUpdater) setStatusDeactivated(ctx context.Context, userSignup *to
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
+			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			Message: message,
+		},
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupApproved,
+			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 			Message: message,
 		})
