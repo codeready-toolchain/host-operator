@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/client"
+	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
-	"k8s.io/client-go/rest"
 
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
@@ -72,8 +72,8 @@ const (
 )
 
 const (
-	adminUnreadyNotificationSubject  = "ToolchainStatus has been in an unready status for an extended period"
-	adminRestoredNotificationSubject = "ToolchainStatus has now been restored to ready status"
+	adminUnreadyNotificationSubject  = "ToolchainStatus has been in an unready status for an extended period for %v"
+	adminRestoredNotificationSubject = "ToolchainStatus has now been restored to ready status for %v"
 )
 
 type toolchainStatusNotificationType string
@@ -485,9 +485,17 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 	return ""
 }
 
+func removeSchemeFromURL(proxyURL string) (string, error) {
+	url, err := url.Parse(proxyURL)
+	if err != nil {
+		return "", err
+	}
+	return url.Hostname(), nil
+}
+
 func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
-
+	logger := log.FromContext(ctx)
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return errs.Wrapf(err, "unable to get ToolchainConfig")
@@ -496,20 +504,24 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 	tsValue := time.Now().Format("20060102150405")
 	contentString := ""
 	subjectString := ""
+	domain := ""
+	if domain, err = removeSchemeFromURL(toolchainStatus.Status.HostRoutes.ProxyURL); err != nil {
+		logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", toolchainStatus.Status.HostRoutes.ProxyURL))
+		domain = toolchainStatus.Status.HostRoutes.ProxyURL
+	}
 	switch status {
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
 		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-
-		clusterURLs := ClusterURLs(toolchainStatus)
+		clusterURLs := ClusterURLs(logger, toolchainStatus)
 		contentString, err = GenerateUnreadyNotificationContent(clusterURLs, ExtractStatusMetadata(toolchainStatus))
 		if err != nil {
 			return err
 		}
-		subjectString = adminUnreadyNotificationSubject
+		subjectString = fmt.Sprintf(adminUnreadyNotificationSubject, domain)
 	case restoredStatus:
 		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>"
-		subjectString = adminRestoredNotificationSubject
+		subjectString = fmt.Sprintf(adminRestoredNotificationSubject, domain)
 	default:
 		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
 	}
@@ -520,7 +532,6 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 		WithSubjectAndContent(subjectString, contentString).
 		Create(config.Notifications().AdminEmail())
 
-	logger := log.FromContext(ctx)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
 		return err
@@ -530,20 +541,27 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 	return nil
 }
 
-func ClusterURLs(instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		result := map[string]string{}
+func ClusterURLs(logger logr.Logger, instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
 
-		for _, mbr := range instance.Status.Members {
-			result["Member cluster"] = mbr.ClusterName
+	if instance.Status.HostRoutes.ProxyURL != "" {
+		var domain string
+		var err error
+		if domain, err = removeSchemeFromURL(instance.Status.HostRoutes.ProxyURL); err != nil {
+			logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", instance.Status.HostRoutes.ProxyURL))
+			domain = instance.Status.HostRoutes.ProxyURL
 		}
+		return map[string]string{
+			"Cluster URL": domain,
+		}
+	}
 
-		return result
+	result := map[string]string{}
+
+	for _, mbr := range instance.Status.Members {
+		result["Member cluster"] = mbr.ClusterName
 	}
-	return map[string]string{
-		"Cluster URL": cfg.Host,
-	}
+
+	return result
 }
 
 type ComponentNotReadyStatus struct {

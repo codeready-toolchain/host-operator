@@ -1219,7 +1219,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 						require.NotNil(t, notification)
-						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
+						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster")
 						require.Equal(t, notification.Spec.Recipient, email)
 
 						t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
@@ -1249,7 +1249,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 							fmt.Println(notification)
 							require.NotNil(t, notification)
-							require.Equal(t, "ToolchainStatus has now been restored to ready status", notification.Spec.Subject)
+							require.Equal(t, "ToolchainStatus has now been restored to ready status for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
 							require.Equal(t, email, notification.Spec.Recipient)
 
 							t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
@@ -1297,7 +1297,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 								require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 								require.Len(t, notification.ObjectMeta.Name, 38)
 								require.NotNil(t, notification)
-								assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period", notification.Spec.Subject)
+								assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
 								assert.Equal(t, email, notification.Spec.Recipient)
 								assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
 								assert.True(t, strings.HasSuffix(strings.TrimSpace(notification.Spec.Content), "</div>"))
@@ -1714,7 +1714,7 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 4)
-		content, err := GenerateUnreadyNotificationContent(ClusterURLs(toolchainStatus), meta)
+		content, err := GenerateUnreadyNotificationContent(ClusterURLs(logger, toolchainStatus), meta)
 		require.NoError(t, err)
 		require.NotEmpty(t, content)
 		assert.Contains(t, content, "<h4>ToolchainStatus  not ready</h4>")
@@ -1722,6 +1722,18 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 		assert.Contains(t, content, "<h4>member-sandbox.ccc.openshiftapps.com Member Routes not ready</h4>")
 		assert.Contains(t, content, "<h4>Registration Service Deployment not ready</h4>")
 	})
+}
+
+func TestRemoveSchemeFromURL(t *testing.T) {
+	t.Run("test proxy url domain extraction", func(t *testing.T) {
+		// when
+		domain, err := removeSchemeFromURL("https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com")
+
+		// then
+		require.Equal(t, "api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com", domain)
+		require.Nil(t, err)
+	})
+
 }
 
 func newDeploymentWithConditions(deploymentName string, deploymentConditions ...appsv1.DeploymentCondition) *appsv1.Deployment {
