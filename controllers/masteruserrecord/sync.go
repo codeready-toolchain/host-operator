@@ -188,9 +188,6 @@ func (s *Synchronizer) alignDisabled() {
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
 func (s *Synchronizer) alignReadiness() (bool, error) {
-	if len(s.record.Status.UserAccounts) == 0 {
-		return false, nil
-	}
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
 			return false, nil

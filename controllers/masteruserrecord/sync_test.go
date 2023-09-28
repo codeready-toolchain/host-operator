@@ -666,7 +666,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
 			HasStatusUserAccounts().
-			HasConditions(toBeNotReady("Provisioning", ""))
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
 	})
 
 	t.Run("remove UserAccount from the status when there are two items and align readiness", func(t *testing.T) {
