@@ -12,6 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -22,22 +23,22 @@ import (
 )
 
 type Synchronizer struct {
-	hostClient        runtimeclient.Client
-	memberCluster     cluster.Cluster
-	memberUserAcc     *toolchainv1alpha1.UserAccount
-	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
-	record            *toolchainv1alpha1.MasterUserRecord
-	scheme            *runtime.Scheme
-	logger            logr.Logger
+	hostClient    runtimeclient.Client
+	memberCluster cluster.Cluster
+	memberUserAcc *toolchainv1alpha1.UserAccount
+	targetCluster string
+	record        *toolchainv1alpha1.MasterUserRecord
+	scheme        *runtime.Scheme
+	logger        logr.Logger
 }
 
 // synchronizeSpec synchronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
-func (s *Synchronizer) synchronizeSpec() error {
+func (s *Synchronizer) synchronizeSpec() (bool, error) {
 
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs")
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
-			return err
+			return false, err
 		}
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
@@ -57,11 +58,12 @@ func (s *Synchronizer) synchronizeSpec() error {
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
-			return err
+			return false, err
 		}
 		s.logger.Info("synchronizing complete")
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func (s *Synchronizer) isSynchronized() bool {
@@ -70,9 +72,24 @@ func (s *Synchronizer) isSynchronized() bool {
 		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
 		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 }
+func (s *Synchronizer) removeAccountFromStatus() error {
+	for i := range s.record.Status.UserAccounts {
+		if s.record.Status.UserAccounts[i].Cluster.Name == s.targetCluster {
+			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts[:i], s.record.Status.UserAccounts[i+1:]...)
+			if !util.IsBeingDeleted(s.record) {
+				if _, err := s.alignReadiness(); err != nil {
+					return err
+				}
+			}
+			s.logger.Info("updating MUR status")
+			return s.hostClient.Status().Update(context.TODO(), s.record)
+		}
+	}
+	return nil
+}
 
 func (s *Synchronizer) synchronizeStatus() error {
-	recordStatusUserAcc, index := getUserAccountStatus(s.recordSpecUserAcc.TargetCluster, s.record)
+	recordStatusUserAcc, index := getUserAccountStatus(s.targetCluster, s.record)
 
 	expectedRecordStatus := *(&recordStatusUserAcc).DeepCopy()
 	expectedRecordStatus.UserAccountStatus = s.memberUserAcc.Status
@@ -171,6 +188,9 @@ func (s *Synchronizer) alignDisabled() {
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
 func (s *Synchronizer) alignReadiness() (bool, error) {
+	if len(s.record.Status.UserAccounts) == 0 {
+		return false, nil
+	}
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
 			return false, nil

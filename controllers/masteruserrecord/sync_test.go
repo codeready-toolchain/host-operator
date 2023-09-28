@@ -33,11 +33,11 @@ func TestIsSynchronized(t *testing.T) {
 
 	t.Run("synchronized", func(t *testing.T) {
 		// given
-		record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+		record, memberUserAcc := setupSynchronizerItems()
 		s := Synchronizer{
-			memberUserAcc:     &memberUserAcc,
-			record:            &record,
-			recordSpecUserAcc: recordSpecUserAcc,
+			memberUserAcc: &memberUserAcc,
+			record:        &record,
+			targetCluster: "member-1",
 		}
 		// when/then
 		assert.True(t, s.isSynchronized())
@@ -47,12 +47,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("missing label", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			delete(memberUserAcc.Labels, toolchainv1alpha1.TierLabelKey)
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -60,12 +60,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("label does not match", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] = "foo"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -73,12 +73,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("missing email annotation", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			delete(memberUserAcc.Annotations, toolchainv1alpha1.UserEmailAnnotationKey)
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -86,12 +86,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("email annotation does not match", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = "foo"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -99,12 +99,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("different disable", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			record.Spec.Disabled = true
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -112,12 +112,12 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("different userID", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			record.Spec.UserID = "bar"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
+				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -125,7 +125,7 @@ func TestIsSynchronized(t *testing.T) {
 	})
 }
 
-func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccountEmbedded, toolchainv1alpha1.UserAccount) {
+func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccount) {
 	memberUserAcc := toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -140,9 +140,6 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			Disabled: false,
 		},
 	}
-	recordSpecUserAcc := toolchainv1alpha1.UserAccountEmbedded{
-		TargetCluster: "member-1",
-	}
 	record := toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -152,13 +149,10 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:   "foo",
 			Disabled: false,
-			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
-				recordSpecUserAcc,
-			},
 			TierName: "base1ns",
 		},
 	}
-	return record, recordSpecUserAcc, memberUserAcc
+	return record, memberUserAcc
 }
 
 func TestSynchronizeSpec(t *testing.T) {
@@ -176,10 +170,11 @@ func TestSynchronizeSpec(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err = sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
+	assert.True(t, createdOrUpdated)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur)
@@ -201,10 +196,11 @@ func TestSynchronizeAnnotation(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err := sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
+	assert.True(t, createdOrUpdated)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur)
@@ -514,20 +510,21 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAcc,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
-			scheme:            scheme,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAcc,
+			targetCluster: "member-1",
+			logger:        l,
+			scheme:        scheme,
 		}
 
 		// when
-		err = sync.synchronizeSpec()
+		createdOrUpdated, err := sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
+		assert.False(t, createdOrUpdated)
 		assert.Contains(t, err.Error(), "unable to update user account john")
 	})
 
@@ -543,13 +540,13 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{
-			record:            provisionedMur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAcc,
-			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
-			logger:            l,
-			scheme:            scheme,
+			record:        provisionedMur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAcc,
+			targetCluster: test.MemberClusterName,
+			logger:        l,
+			scheme:        scheme,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -625,13 +622,13 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 					memberClient := test.NewFakeClient(t, userAccount)
 					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 					sync := Synchronizer{
-						record:            mur,
-						hostClient:        hostClient,
-						memberCluster:     newMemberCluster(memberClient),
-						memberUserAcc:     userAccount,
-						recordSpecUserAcc: mur.Spec.UserAccounts[0],
-						logger:            l,
-						scheme:            scheme,
+						record:        mur,
+						hostClient:    hostClient,
+						memberCluster: newMemberCluster(memberClient),
+						memberUserAcc: userAccount,
+						targetCluster: "member-1",
+						logger:        l,
+						scheme:        scheme,
 					}
 
 					// when
@@ -642,6 +639,73 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				}
 			})
 		})
+	})
+}
+
+func TestRemoveAccountFromStatus(t *testing.T) {
+	// given
+	apiScheme(t)
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+		CompliantUsername: "john",
+	}
+
+	t.Run("remove UserAccount from the status when there is one item", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts().
+			HasConditions(toBeNotReady("Provisioning", ""))
+	})
+
+	t.Run("remove UserAccount from the status when there are two items and align readiness", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady("Provisioning", "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeNotReady("terminating", "")),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts(test.Member2ClusterName).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
+	})
+
+	t.Run("don't remove anything when UserAccount is not present, don't align readiness", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady("Provisioning", "")),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts(test.Member2ClusterName).
+			HasConditions(toBeNotReady("Provisioning", ""))
 	})
 }
 
@@ -666,12 +730,12 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur.DeepCopy(),
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur.DeepCopy(),
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			targetCluster: test.MemberClusterName,
+			logger:        l,
 		}
 
 		// when
@@ -701,12 +765,12 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			targetCluster: test.MemberClusterName,
+			logger:        l,
 		}
 
 		// when
@@ -736,12 +800,12 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			targetCluster: "member-1",
+			logger:        l,
 		}
 
 		// when
@@ -767,18 +831,19 @@ func TestRoutes(t *testing.T) {
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, runtimeclient.Client) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	copiedMur := mur.DeepCopy()
-	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
-	memberClient := test.NewFakeClient(t, userAccount, toolchainStatus)
+	memberClient := test.NewFakeClient(t)
+	if userAccount != nil {
+		memberClient = test.NewFakeClient(t, userAccount)
+	}
 
 	return Synchronizer{
-		record:            copiedMur,
-		hostClient:        hostClient,
-		memberCluster:     newMemberCluster(memberClient),
-		memberUserAcc:     userAccount,
-		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
-		logger:            zap.New(zap.UseDevMode(true)),
-		scheme:            apiScheme(t),
+		record:        copiedMur,
+		hostClient:    hostClient,
+		memberCluster: newMemberCluster(memberClient),
+		memberUserAcc: userAccount,
+		targetCluster: test.MemberClusterName,
+		logger:        zap.New(zap.UseDevMode(true)),
+		scheme:        apiScheme(t),
 	}, memberClient
 }
 

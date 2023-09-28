@@ -33,6 +33,8 @@ require (
 
 require github.com/google/uuid v1.3.0 // indirect
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20230928121547-4d52ef0f4be2
+
 require (
 	cloud.google.com/go v0.97.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
