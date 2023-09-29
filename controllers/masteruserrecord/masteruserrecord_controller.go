@@ -150,9 +150,13 @@ memberClusters:
 
 func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) ([]string, error) {
 	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
-	if err := r.Client.List(context.TODO(), spaceBindings, runtimeclient.InNamespace(mur.GetNamespace())); err != nil {
+	if err := r.Client.List(context.TODO(), spaceBindings,
+		runtimeclient.InNamespace(mur.GetNamespace()),
+		runtimeclient.MatchingLabels{
+			toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
+		}); err != nil {
 		return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
-			"unable to list SpaceBindings")
+			"unable to list SpaceBindings for the MasterUserRecord")
 	}
 	var targetClusters []string
 	for i := range spaceBindings.Items {

@@ -433,6 +433,38 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
+
+	t.Run("space even when it contains the right creator label, but doesn't have corresponding SpaceBinding should be ignored", func(t *testing.T) {
+		memberClient := commontest.NewFakeClient(t)
+		memberClient2 := commontest.NewFakeClient(t)
+
+		otherSpaceBinding := spacebindingtest.NewSpaceBinding("other-john", "john-space", "admin", "john-123")
+		hostClient := commontest.NewFakeClient(t, mur, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		InitializeCounters(t, toolchainStatus)
+
+		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
+
+		// when reconciling
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, result.RequeueAfter)
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			DoesNotExist()
+		uatest.AssertThatUserAccount(t, "john", memberClient2).
+			DoesNotExist()
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions().
+			HasStatusUserAccounts().
+			HasFinalizer()
+		AssertThatCountersAndMetrics(t).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 1, // unchanged
+			}).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1, // unchanged
+			})
+	})
 }
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
