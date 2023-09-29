@@ -159,9 +159,8 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 			"unable to list SpaceBindings for the MasterUserRecord")
 	}
 	var targetClusters []string
-	for i := range spaceBindings.Items {
-		binding := spaceBindings.Items[i]
-		if !coputil.IsBeingDeleted(&binding) {
+	for _, binding := range spaceBindings.Items {
+		if !coputil.IsBeingDeleted(&binding) { // nolint:gosec
 			space := &toolchainv1alpha1.Space{}
 			if err := r.Client.Get(context.TODO(), namespacedName(mur.Namespace, binding.Spec.Space), space); err != nil {
 				return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
