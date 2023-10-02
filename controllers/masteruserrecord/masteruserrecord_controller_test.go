@@ -119,7 +119,7 @@ func TestAddFinalizer(t *testing.T) {
 	})
 
 	t.Run("fails because it cannot add finalizer", func(t *testing.T) {
-		// given\
+		// given
 		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
 		memberClient := commontest.NewFakeClient(t)
 		hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
