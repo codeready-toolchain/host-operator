@@ -241,7 +241,6 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha
 		hostClient:    r.Client,
 		memberCluster: memberCluster,
 		memberUserAcc: userAccount,
-		targetCluster: targetCluster,
 		logger:        logger,
 		scheme:        r.Scheme,
 	}
@@ -326,7 +325,6 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, memberCluster cluster
 		hostClient:    r.Client,
 		memberCluster: memberCluster,
 		memberUserAcc: userAcc,
-		targetCluster: memberCluster.Name,
 		logger:        logger,
 		scheme:        r.Scheme,
 	}

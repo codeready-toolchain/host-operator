@@ -37,7 +37,6 @@ func TestIsSynchronized(t *testing.T) {
 		s := Synchronizer{
 			memberUserAcc: &memberUserAcc,
 			record:        &record,
-			targetCluster: "member-1",
 		}
 		// when/then
 		assert.True(t, s.isSynchronized())
@@ -52,7 +51,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -65,7 +63,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -78,7 +75,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -91,7 +87,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -104,7 +99,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -117,7 +111,6 @@ func TestIsSynchronized(t *testing.T) {
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
-				targetCluster: "member-1",
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -678,7 +671,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			hostClient:    hostClient,
 			memberCluster: newMemberCluster(memberClient),
 			memberUserAcc: userAcc,
-			targetCluster: "member-1",
 			logger:        l,
 			scheme:        scheme,
 		}
@@ -708,7 +700,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			hostClient:    hostClient,
 			memberCluster: newMemberCluster(memberClient),
 			memberUserAcc: userAcc,
-			targetCluster: test.MemberClusterName,
 			logger:        l,
 			scheme:        scheme,
 		}
@@ -790,7 +781,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 						hostClient:    hostClient,
 						memberCluster: newMemberCluster(memberClient),
 						memberUserAcc: userAccount,
-						targetCluster: "member-1",
 						logger:        l,
 						scheme:        scheme,
 					}
@@ -898,7 +888,6 @@ func TestRoutes(t *testing.T) {
 			hostClient:    hostClient,
 			memberCluster: newMemberCluster(memberClient),
 			memberUserAcc: userAccount,
-			targetCluster: test.MemberClusterName,
 			logger:        l,
 		}
 
@@ -933,7 +922,6 @@ func TestRoutes(t *testing.T) {
 			hostClient:    hostClient,
 			memberCluster: newMemberCluster(memberClient),
 			memberUserAcc: userAccount,
-			targetCluster: test.MemberClusterName,
 			logger:        l,
 		}
 
@@ -968,7 +956,6 @@ func TestRoutes(t *testing.T) {
 			hostClient:    hostClient,
 			memberCluster: newMemberCluster(memberClient),
 			memberUserAcc: userAccount,
-			targetCluster: "member-1",
 			logger:        l,
 		}
 
@@ -1005,7 +992,6 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 		hostClient:    hostClient,
 		memberCluster: newMemberCluster(memberClient),
 		memberUserAcc: userAccount,
-		targetCluster: test.MemberClusterName,
 		logger:        zap.New(zap.UseDevMode(true)),
 		scheme:        apiScheme(t),
 	}, memberClient

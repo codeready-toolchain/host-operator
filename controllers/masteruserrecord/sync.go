@@ -26,7 +26,6 @@ type Synchronizer struct {
 	hostClient    runtimeclient.Client
 	memberCluster cluster.Cluster
 	memberUserAcc *toolchainv1alpha1.UserAccount
-	targetCluster string
 	record        *toolchainv1alpha1.MasterUserRecord
 	scheme        *runtime.Scheme
 	logger        logr.Logger
@@ -74,7 +73,7 @@ func (s *Synchronizer) isSynchronized() bool {
 }
 func (s *Synchronizer) removeAccountFromStatus() error {
 	for i := range s.record.Status.UserAccounts {
-		if s.record.Status.UserAccounts[i].Cluster.Name == s.targetCluster {
+		if s.record.Status.UserAccounts[i].Cluster.Name == s.memberCluster.Name {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts[:i], s.record.Status.UserAccounts[i+1:]...)
 			if !util.IsBeingDeleted(s.record) {
 				if _, err := alignReadiness(s.logger, s.scheme, s.hostClient, s.record); err != nil {
@@ -89,7 +88,7 @@ func (s *Synchronizer) removeAccountFromStatus() error {
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
-	recordStatusUserAcc, index := getUserAccountStatus(s.targetCluster, s.record)
+	recordStatusUserAcc, index := getUserAccountStatus(s.memberCluster.Name, s.record)
 
 	expectedRecordStatus := *(&recordStatusUserAcc).DeepCopy()
 	expectedRecordStatus.UserAccountStatus = s.memberUserAcc.Status
