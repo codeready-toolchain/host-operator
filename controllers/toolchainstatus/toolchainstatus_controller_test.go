@@ -1725,7 +1725,7 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 }
 
 func TestRemoveSchemeFromURL(t *testing.T) {
-	t.Run("test proxy url domain extraction", func(t *testing.T) {
+	t.Run("test proxy url domain extraction validURL", func(t *testing.T) {
 		// when
 		domain, err := removeSchemeFromURL("https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com")
 
@@ -1733,8 +1733,11 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		require.Equal(t, "api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com", domain)
 		require.Nil(t, err)
 
+	})
+
+	t.Run("test proxy url domain extraction incorrectURL", func(t *testing.T) {
 		// when
-		domain, err = removeSchemeFromURL("incorrect$%url")
+		domain, err := removeSchemeFromURL("incorrect$%url")
 
 		// then
 		require.Equal(t, "", domain)

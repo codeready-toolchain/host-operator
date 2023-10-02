@@ -507,7 +507,6 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 	domain := ""
 	if domain, err = removeSchemeFromURL(toolchainStatus.Status.HostRoutes.ProxyURL); err != nil {
 		logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", toolchainStatus.Status.HostRoutes.ProxyURL))
-		domain = toolchainStatus.Status.HostRoutes.ProxyURL
 	}
 	switch status {
 	case unreadyStatus:
