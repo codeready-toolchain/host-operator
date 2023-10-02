@@ -1340,6 +1340,7 @@ func newController(hostCl runtimeclient.Client, s *runtime.Scheme, memberCl ...C
 		NewMemberClusterWithClient(cl, name, corev1.ConditionTrue)
 		r.MemberClusters[name] = cluster.Cluster{
 			Config: &commoncluster.Config{
+				Name:              name,
 				Type:              commoncluster.Member,
 				OperatorNamespace: commontest.MemberOperatorNs,
 				OwnerClusterName:  commontest.MemberClusterName,

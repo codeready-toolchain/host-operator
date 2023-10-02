@@ -97,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 		logger.Info("ensuring user accounts")
-		var membersWithUserAccounts []string
+		var membersWithUserAccounts map[string]bool
 		if membersWithUserAccounts, err = r.ensureUserAccounts(logger, mur); err != nil || membersWithUserAccounts == nil {
 			return reconcile.Result{}, err
 		}
@@ -122,12 +122,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, err
 }
 
-func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetClusters []string) (time.Duration, error) {
-	for _, toDelete := range targetClusters {
-		requeueTime, err := r.deleteUserAccount(logger, toDelete, mur)
+func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetClusters map[string]cluster.Cluster) (time.Duration, error) {
+	for clusterName, memberCluster := range targetClusters {
+		requeueTime, err := r.deleteUserAccount(logger, memberCluster, mur)
 		if err != nil {
 			return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
-				"failed to delete UserAccount in the member cluster '%s'", toDelete)
+				"failed to delete UserAccount in the member cluster '%s'", clusterName)
 		} else if requeueTime > 0 {
 			return requeueTime, nil
 		}
@@ -135,21 +135,17 @@ func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *to
 	return 0, nil
 }
 
-func (r *Reconciler) membersWithoutUserAccount(membersWithUserAccounts []string) []string {
-	var membersWithout []string
-memberClusters:
-	for memberName := range r.MemberClusters {
-		for _, targetCluster := range membersWithUserAccounts {
-			if memberName == targetCluster {
-				continue memberClusters
-			}
+func (r *Reconciler) membersWithoutUserAccount(membersWithUserAccounts map[string]bool) map[string]cluster.Cluster {
+	membersWithout := map[string]cluster.Cluster{}
+	for memberName, memberCluster := range r.MemberClusters {
+		if _, found := membersWithUserAccounts[memberName]; !found {
+			membersWithout[memberName] = memberCluster
 		}
-		membersWithout = append(membersWithout, memberName)
 	}
 	return membersWithout
 }
 
-func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) ([]string, error) {
+func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (map[string]bool, error) {
 	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(), spaceBindings,
 		runtimeclient.InNamespace(mur.GetNamespace()),
@@ -159,7 +155,8 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 		return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 			"unable to list SpaceBindings for the MasterUserRecord")
 	}
-	var targetClusters []string
+	// let's keep the list of target clusters the UserAccounts should be provisioned to in a map (value doesn't matter) to easily ensure uniqueness and make the subsequent usage easier
+	targetClusters := map[string]bool{}
 	for _, binding := range spaceBindings.Items {
 		if !coputil.IsBeingDeleted(&binding) { // nolint:gosec
 			space := &toolchainv1alpha1.Space{}
@@ -174,7 +171,7 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 					if createdOrUpdated, err := r.ensureUserAccount(logger, mur, space.Spec.TargetCluster); err != nil || createdOrUpdated {
 						return nil, err
 					}
-					targetClusters = append(targetClusters, space.Spec.TargetCluster)
+					targetClusters[space.Spec.TargetCluster] = true
 					break
 				}
 			}
@@ -305,7 +302,7 @@ func (r *Reconciler) useExistingConditionOfType(condType toolchainv1alpha1.Condi
 }
 
 func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
-	if requeue, err := r.ensureUserAccountsAreNotPresent(logger, mur, r.membersWithoutUserAccount(nil)); err != nil || requeue > 0 {
+	if requeue, err := r.ensureUserAccountsAreNotPresent(logger, mur, r.MemberClusters); err != nil || requeue > 0 {
 		return requeue, err
 	}
 	// Remove finalizer from MasterUserRecord
@@ -320,13 +317,8 @@ func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.Ma
 	return 0, nil
 }
 
-func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster string, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+func (r *Reconciler) deleteUserAccount(logger logr.Logger, memberCluster cluster.Cluster, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
 	requeueTime := 10 * time.Second
-	// get & check member cluster
-	memberCluster, found := r.MemberClusters[targetCluster]
-	if !found {
-		return 0, fmt.Errorf("unknown target member cluster '%s'", targetCluster)
-	}
 
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	sync := Synchronizer{
@@ -334,7 +326,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster string,
 		hostClient:    r.Client,
 		memberCluster: memberCluster,
 		memberUserAcc: userAcc,
-		targetCluster: targetCluster,
+		targetCluster: memberCluster.Name,
 		logger:        logger,
 		scheme:        r.Scheme,
 	}
@@ -343,7 +335,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster string,
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: mur.Name}
 	if err := memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info(fmt.Sprintf("UserAccount is not present in '%s' - making sure that it's not in the MasterUserRecord.Status", targetCluster))
+			logger.Info(fmt.Sprintf("UserAccount is not present in '%s' - making sure that it's not in the MasterUserRecord.Status", memberCluster.Name))
 			return 0, sync.removeAccountFromStatus()
 		}
 		return 0, err
