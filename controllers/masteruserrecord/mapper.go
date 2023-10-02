@@ -12,8 +12,8 @@ import (
 
 // MapSpaceToMasterUserRecord maps events on Spaces to MasterUserRecords by labels at SpaceBindings
 func MapSpaceToMasterUserRecord(cl runtimeclient.Client) func(object runtimeclient.Object) []reconcile.Request {
-        var logger = ctrl.Log.WithName("SpaceToMasterUserRecordMapper").WithValues("object-name", object.GetName(), "object-kind", object.GetObjectKind())
 	return func(obj runtimeclient.Object) []reconcile.Request {
+		var logger = ctrl.Log.WithName("SpaceToMasterUserRecordMapper").WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 		spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
 		err := cl.List(context.TODO(), spaceBindings,
 			runtimeclient.InNamespace(obj.GetNamespace()),
