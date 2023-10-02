@@ -919,7 +919,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
 		// given
-		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from commontest.Member2ClusterName and "member3-cluster" but will miss from commontest.MemberClusterName
+		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from commontest.Member2ClusterName but will miss from commontest.MemberClusterName
 		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing commontest.MemberClusterName cluster without updating anything else
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel("john-123"),
