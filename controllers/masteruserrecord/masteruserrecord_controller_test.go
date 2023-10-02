@@ -323,7 +323,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			})
 	})
 
-	t.Run("mur is being moved - new account should be created", func(t *testing.T) {
+	t.Run("mur is being moved from member2-cluster to member-cluster - new account should be created in member-cluster", func(t *testing.T) {
 		murCopy := mur.DeepCopy()
 		murCopy.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
@@ -364,7 +364,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 				string(metrics.Internal): 1, // unchanged
 			})
 
-		t.Run("the previous account should be deleted", func(t *testing.T) {
+		t.Run("the previous account should be deleted in member2-cluster", func(t *testing.T) {
 			// when
 			result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 			// then
