@@ -83,6 +83,41 @@ func TestAddFinalizer(t *testing.T) {
 			})
 	})
 
+	t.Run("provisioned even without UserAccounts when there is no SpaceBinding/Space", func(t *testing.T) {
+		// given
+		memberClient := commontest.NewFakeClient(t)
+		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMember(commontest.MemberClusterName),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+		))
+
+		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
+
+		// when
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		require.False(t, result.Requeue)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasFinalizer()
+		AssertThatCountersAndMetrics(t).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 1, // unchanged
+			}).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1, // unchanged
+			})
+	})
+
 	t.Run("fails because it cannot add finalizer", func(t *testing.T) {
 		// given\
 		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)

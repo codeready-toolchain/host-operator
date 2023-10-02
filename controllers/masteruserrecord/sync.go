@@ -77,7 +77,7 @@ func (s *Synchronizer) removeAccountFromStatus() error {
 		if s.record.Status.UserAccounts[i].Cluster.Name == s.targetCluster {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts[:i], s.record.Status.UserAccounts[i+1:]...)
 			if !util.IsBeingDeleted(s.record) {
-				if _, err := s.alignReadiness(); err != nil {
+				if _, err := alignReadiness(s.logger, s.scheme, s.hostClient, s.record); err != nil {
 					return err
 				}
 			}
@@ -108,7 +108,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		ready, err := s.alignReadiness()
+		ready, err := alignReadiness(s.logger, s.scheme, s.hostClient, s.record)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 	// Align readiness even if the user account statuses were not changed.
 	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
-	_, err = s.alignReadiness()
+	_, err = alignReadiness(s.logger, s.scheme, s.hostClient, s.record)
 	if err != nil {
 		return err
 	}
@@ -187,35 +187,45 @@ func (s *Synchronizer) alignDisabled() {
 }
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
-func (s *Synchronizer) alignReadiness() (bool, error) {
-	for _, uaStatus := range s.record.Status.UserAccounts {
+func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
+	// Lookup the UserSignup
+	for _, uaStatus := range mur.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
 			return false, nil
 		}
 	}
 
-	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+	// If the creation of the default space wasn't skipped and there is still no UserAccount in the status, then let's wait before making it ready
+	if mur.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] != "true" && len(mur.Status.UserAccounts) == 0 {
+		// We can mark the MUR ready with no UserAccount status set only when the MUR already contains the ready condition - this may mean that
+		// a UserAccount was removed.
+		if _, found := condition.FindConditionByType(mur.Status.Conditions, toolchainv1alpha1.ConditionReady); !found {
+			return false, nil
+		}
+	}
+
+	mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, toBeProvisioned())
 
 	// set ProvisionedTime if it is not already set, this information will be used for things like the start time for automatic user deactivation.
 	// the MUR status can change from provisioned to something else and back to provisioned but the time should only be set the first time.
-	if s.record.Status.ProvisionedTime == nil {
-		s.record.Status.ProvisionedTime = &metav1.Time{Time: time.Now()}
+	if mur.Status.ProvisionedTime == nil {
+		mur.Status.ProvisionedTime = &metav1.Time{Time: time.Now()}
 	}
 
-	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
+	if condition.IsNotTrue(mur.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		labels := map[string]string{
-			toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
+			toolchainv1alpha1.NotificationUserNameLabelKey: mur.Name,
 			toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
 		}
 		opts := runtimeclient.MatchingLabels(labels)
 		notificationList := &toolchainv1alpha1.NotificationList{}
-		if err := s.hostClient.List(context.TODO(), notificationList, opts); err != nil {
+		if err := hostClient.List(context.TODO(), notificationList, opts); err != nil {
 			return false, err
 		}
 		// if there is no existing notification with these labels
 		if len(notificationList.Items) == 0 {
 
-			config, err := toolchainconfig.GetToolchainConfig(s.hostClient)
+			config, err := toolchainconfig.GetToolchainConfig(hostClient)
 			if err != nil {
 				return false, errs.Wrapf(err, "unable to get ToolchainConfig")
 			}
@@ -226,17 +236,17 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 
 			// Lookup the UserSignup
 			userSignup := &toolchainv1alpha1.UserSignup{}
-			err = s.hostClient.Get(context.TODO(), types.NamespacedName{
-				Namespace: s.record.Namespace,
-				Name:      s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
+			err = hostClient.Get(context.TODO(), types.NamespacedName{
+				Namespace: mur.Namespace,
+				Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 			}, userSignup)
 			if err != nil {
 				return false, err
 			}
 
-			_, err = notify.NewNotificationBuilder(s.hostClient, s.record.Namespace).
+			_, err = notify.NewNotificationBuilder(hostClient, mur.Namespace).
 				WithNotificationType(toolchainv1alpha1.NotificationTypeProvisioned).
-				WithControllerReference(s.record, s.scheme).
+				WithControllerReference(mur, scheme).
 				WithTemplate(notificationtemplates.UserProvisionedTemplateName).
 				WithUserContext(userSignup).
 				WithKeysAndValues(keysAndVals).
@@ -246,10 +256,10 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				return false, err
 			}
 		} else {
-			s.logger.Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
-				toolchainv1alpha1.NotificationTypeProvisioned, s.record.Name, notificationList.Items[0]))
+			logger.Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
+				toolchainv1alpha1.NotificationTypeProvisioned, mur.Name, notificationList.Items[0]))
 		}
-		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
+		mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, toBeProvisionedNotificationCreated())
 	}
 
 	return true, nil

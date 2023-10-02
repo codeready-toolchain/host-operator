@@ -31,6 +31,26 @@ func TestNewMasterUserRecord(t *testing.T) {
 	assert.Equal(t, expectedMUR, mur)
 }
 
+func TestNewMasterUserRecordWhenSpaceCreationIsSkipped(t *testing.T) {
+	// given
+	userSignup := commonsignup.NewUserSignup(commonsignup.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
+
+	// when
+	mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
+
+	// then
+	expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
+		commonmur.WithOwnerLabel(userSignup.Name),
+		commonmur.TierName("deactivate90"),
+		commonmur.UserID("UserID123"),
+		commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"),
+		commonmur.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
+
+	expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
+
+	assert.Equal(t, expectedMUR, mur)
+}
+
 func TestMigrateMurIfNecessary(t *testing.T) {
 
 	t.Run("no update needed", func(t *testing.T) {

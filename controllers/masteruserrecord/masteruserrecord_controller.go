@@ -118,7 +118,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	return reconcile.Result{}, nil
+	_, err = alignReadiness(logger, r.Scheme, r.Client, mur)
+	return reconcile.Result{}, err
 }
 
 func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetClusters []string) (time.Duration, error) {
