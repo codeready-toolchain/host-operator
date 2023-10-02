@@ -260,7 +260,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha
 		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
 	}
 	// nothing done and no error occurred
-	logger.Info("user account on member cluster was already in sync", "target_cluster", targetCluster)
+	logger.Info("user account on member cluster was already present", "target_cluster", targetCluster, "updated", updated)
 	return updated, nil
 }
 
