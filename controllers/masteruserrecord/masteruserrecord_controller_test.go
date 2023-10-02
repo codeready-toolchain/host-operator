@@ -42,6 +42,7 @@ func TestAddFinalizer(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel("john-123"))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
@@ -83,10 +84,10 @@ func TestAddFinalizer(t *testing.T) {
 			})
 	})
 
-	t.Run("provisioned even without UserAccounts when there is no SpaceBinding/Space", func(t *testing.T) {
+	t.Run("no condition set when there is no SpaceBinding/Space", func(t *testing.T) {
 		// given
 		memberClient := commontest.NewFakeClient(t)
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
+		hostClient := commontest.NewFakeClient(t, mur)
 		InitializeCounters(t, NewToolchainStatus(
 			WithMember(commontest.MemberClusterName),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -107,7 +108,44 @@ func TestAddFinalizer(t *testing.T) {
 		require.False(t, result.Requeue)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasConditions().
+			HasFinalizer()
+		AssertThatCountersAndMetrics(t).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 1, // unchanged
+			}).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1, // unchanged
+			})
+	})
+
+	t.Run("provisioned without UserAccounts when Space creation is skipped", func(t *testing.T) {
+		// given
+		murSkipSpace := mur.DeepCopy()
+		murSkipSpace.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = "true"
+		memberClient := commontest.NewFakeClient(t)
+		hostClient := commontest.NewFakeClient(t, murSkipSpace, signup)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMember(commontest.MemberClusterName),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+		))
+
+		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
+
+		// when
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		require.False(t, result.Requeue)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{

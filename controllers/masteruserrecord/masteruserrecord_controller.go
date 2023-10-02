@@ -97,15 +97,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 		logger.Info("ensuring user accounts")
-		var membersWithUserAccounts map[string]bool
-		if membersWithUserAccounts, err = r.ensureUserAccounts(logger, mur); err != nil || membersWithUserAccounts == nil {
+		membersWithUserAccounts, err := r.ensureUserAccounts(logger, mur)
+		if err != nil {
 			return reconcile.Result{}, err
+		}
+		// if any was just created or updated, then just return
+		for _, createdOrUpdated := range membersWithUserAccounts {
+			if createdOrUpdated {
+				return reconcile.Result{}, nil
+			}
 		}
 		requeueTime, err := r.ensureUserAccountsAreNotPresent(logger, mur, r.membersWithoutUserAccount(membersWithUserAccounts))
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeueTime > 0 {
 			return reconcile.Result{RequeueAfter: requeueTime}, err
+		}
+		// just in case there was no change in the set of UserAccounts and there was no provisioned
+		if len(membersWithUserAccounts) == 0 {
+			if _, err := alignReadiness(logger, r.Scheme, r.Client, mur); err != nil {
+				return reconcile.Result{}, err
+			}
+			return reconcile.Result{}, r.Client.Status().Update(context.TODO(), mur)
 		}
 
 		// If the MUR is being deleted, delete the UserAccounts in members.
@@ -118,8 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	_, err = alignReadiness(logger, r.Scheme, r.Client, mur)
-	return reconcile.Result{}, err
+	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetClusters map[string]cluster.Cluster) (time.Duration, error) {
@@ -155,7 +167,7 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 		return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 			"unable to list SpaceBindings for the MasterUserRecord")
 	}
-	// let's keep the list of target clusters the UserAccounts should be provisioned to in a map (value doesn't matter) to easily ensure uniqueness and make the subsequent usage easier
+	// let's keep the list of target clusters the UserAccounts should be provisioned to in a map - the value defines if the account was just created or updated
 	targetClusters := map[string]bool{}
 	for _, binding := range spaceBindings.Items {
 		if !coputil.IsBeingDeleted(&binding) { // nolint:gosec
@@ -169,9 +181,10 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 				// todo - as soon as the other components (reg-service & proxy) are updated to support more UserAccounts per MUR, then this should be changed as well
 				if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] {
 					if createdOrUpdated, err := r.ensureUserAccount(logger, mur, space.Spec.TargetCluster); err != nil || createdOrUpdated {
-						return nil, err
+						targetClusters[space.Spec.TargetCluster] = true
+						return targetClusters, err
 					}
-					targetClusters[space.Spec.TargetCluster] = true
+					targetClusters[space.Spec.TargetCluster] = false
 					break
 				}
 			}
