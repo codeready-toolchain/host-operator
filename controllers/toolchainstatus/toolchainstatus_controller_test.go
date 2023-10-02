@@ -1732,6 +1732,14 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		// then
 		require.Equal(t, "api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com", domain)
 		require.Nil(t, err)
+
+		// when
+		domain, err = removeSchemeFromURL("incorrect$%url")
+
+		// then
+		require.Equal(t, "", domain)
+		require.NotNil(t, err)
+
 	})
 
 }

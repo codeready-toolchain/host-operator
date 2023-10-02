@@ -548,10 +548,10 @@ func ClusterURLs(logger logr.Logger, instance *toolchainv1alpha1.ToolchainStatus
 		var err error
 		if domain, err = removeSchemeFromURL(instance.Status.HostRoutes.ProxyURL); err != nil {
 			logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", instance.Status.HostRoutes.ProxyURL))
-			domain = instance.Status.HostRoutes.ProxyURL
-		}
-		return map[string]string{
-			"Cluster URL": domain,
+		} else {
+			return map[string]string{
+				"Cluster URL": domain,
+			}
 		}
 	}
 
