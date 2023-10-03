@@ -481,7 +481,7 @@ func TestAlignReadiness(t *testing.T) {
 		AssertNoNotificationsExist(t, hostClient)
 	})
 
-	t.Run("no UserAccount in status, space creation not skipped, no pre-existing MUR ready condition", func(t *testing.T) {
+	t.Run("no UserAccount in status, space creation not skipped, and MUR is without provisioned time", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel(userSignup.Name))
@@ -496,9 +496,31 @@ func TestAlignReadiness(t *testing.T) {
 		assert.False(t, ready)
 		require.Empty(t, mur.Status.ProvisionedTime)
 		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
-			HasConditions().
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasStatusUserAccounts()
 		AssertNoNotificationsExist(t, hostClient)
+	})
+
+	t.Run("no UserAccount in status, space creation not skipped,and MUR is with provisioned time", func(t *testing.T) {
+		// given
+		provisionedTime := metav1.Now()
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.ProvisionedMur(&provisionedTime))
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, ready)
+		assert.Equal(t, provisionedTime, *mur.Status.ProvisionedTime)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts()
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
 	})
 
 	t.Run("no UserAccount in status, space creation not skipped, with pre-existing MUR ready condition", func(t *testing.T) {
@@ -804,12 +826,14 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 		CompliantUsername: "john",
 	}
 
-	t.Run("remove UserAccount from the status when there is one item", func(t *testing.T) {
+	t.Run("remove UserAccount from the status when there is one item and the MUR was already provisioned before", func(t *testing.T) {
 		// given
+		provisionedTime := metav1.Now()
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel(userSignup.Name),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
-			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()))
+			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
+			murtest.ProvisionedMur(&provisionedTime))
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 

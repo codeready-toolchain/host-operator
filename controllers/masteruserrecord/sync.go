@@ -196,9 +196,11 @@ func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runti
 
 	// If the creation of the default space wasn't skipped and there is still no UserAccount in the status, then let's wait before making it ready
 	if mur.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] != "true" && len(mur.Status.UserAccounts) == 0 {
-		// We can mark the MUR ready with no UserAccount status set only when the MUR already contains the ready condition - this may mean that
-		// a UserAccount was removed.
-		if _, found := condition.FindConditionByType(mur.Status.Conditions, toolchainv1alpha1.ConditionReady); !found {
+		// We can mark the MUR ready with no UserAccount status set only when the MUR was already provisioned before - this may mean that
+		// all UserAccounts were removed, which is a valid case and should be OK.
+		// In other words, let's set unready "Provisioning" condition and exit the function if the provisioned time is not set for the MUR yet
+		if mur.Status.ProvisionedTime == nil {
+			mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 			return false, nil
 		}
 	}

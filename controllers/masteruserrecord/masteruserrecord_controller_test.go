@@ -84,7 +84,7 @@ func TestAddFinalizer(t *testing.T) {
 			})
 	})
 
-	t.Run("no condition set when there is no SpaceBinding/Space", func(t *testing.T) {
+	t.Run("provisioning condition set when there is no SpaceBinding/Space present yet", func(t *testing.T) {
 		// given
 		memberClient := commontest.NewFakeClient(t)
 		hostClient := commontest.NewFakeClient(t, mur)
@@ -108,7 +108,7 @@ func TestAddFinalizer(t *testing.T) {
 		require.False(t, result.Requeue)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions().
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
@@ -306,8 +306,14 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
+
+	provisionedTime := metav1.Now()
 	mur := murtest.NewMasterUserRecord(t, "john",
-		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"), murtest.WithOwnerLabel("john-123"))
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+		murtest.WithOwnerLabel("john-123"),
+		murtest.ProvisionedMur(&provisionedTime))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
@@ -332,7 +338,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	t.Run("creation of UserAccounts for different spaces is disabled", func(t *testing.T) {
 		memberClient := commontest.NewFakeClient(t, newUserAccount(namespacedName(commontest.MemberOperatorNs, mur.Name), mur))
 		memberClient2 := commontest.NewFakeClient(t)
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -372,7 +378,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		}
 		memberClient := commontest.NewFakeClient(t)
 		memberClient2 := commontest.NewFakeClient(t, newUserAccount(namespacedName(commontest.MemberOperatorNs, mur.Name), mur))
-		hostClient := commontest.NewFakeClient(t, murCopy, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, murCopy, signup, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -446,7 +452,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacetest.WithDeletionTimestamp()(terminatingSpace)
 		spacetest.WithFinalizer()(terminatingSpace)
 
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, terminatingSpace, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, spaceBinding, terminatingSpace, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -461,7 +467,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions().
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
@@ -480,7 +486,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacebindingtest.WithDeletionTimestamp()(terminatingSpaceBinding)
 		spacebindingtest.WithFinalizer()(terminatingSpaceBinding)
 
-		hostClient := commontest.NewFakeClient(t, mur, terminatingSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, terminatingSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -495,7 +501,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions().
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
@@ -512,7 +518,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		memberClient2 := commontest.NewFakeClient(t)
 
 		otherSpaceBinding := spacebindingtest.NewSpaceBinding("other-john", "john-space", "admin", "john-123")
-		hostClient := commontest.NewFakeClient(t, mur, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -527,7 +533,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions().
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
