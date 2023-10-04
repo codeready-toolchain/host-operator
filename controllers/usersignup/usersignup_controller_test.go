@@ -4430,15 +4430,48 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 
 	})
 
-	// If a space is updating, don't mark usersignups as "Incomplete", since
-	// they'll get rejected by the registration service
-	t.Run("until Space is updated", func(t *testing.T) {
-		// given
+	t.Run("when space is provisioned", func(t *testing.T) {
+		//given
 		space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.SpaceProvisionedReason,
+		})
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
+		// and
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: corev1.ConditionTrue,
+				Reason: "",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: corev1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: corev1.ConditionFalse,
+				Reason: "UserIsActive",
+			})
+	})
+
+	// If a space is updating, keep usersignups that have already completed
+	t.Run("keep usersignups while space is updating", func(t *testing.T) {
+		// given
+		space.Status.Conditions = []toolchainv1alpha1.Condition{{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceUpdatingReason,
-		})
+		}}
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4463,30 +4496,31 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 				Status: corev1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-
 	})
 
-	t.Run("when space is provisioned", func(t *testing.T) {
-		//given
-		space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
+	// If a space is updating, usersignups that haven't already completed should be marked as incomplete
+	t.Run("mark in-progress signups as incomplete when space is updating", func(t *testing.T) {
+		// given
+		space.Status.Conditions = []toolchainv1alpha1.Condition{{
 			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.SpaceProvisionedReason,
-		})
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceUpdatingReason,
+		}}
+		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
-		// then
 		require.NoError(t, err)
 		require.Equal(t, reconcile.Result{}, res)
-		// and
+		// then
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
-				Status: corev1.ConditionTrue,
-				Reason: "",
+				Type:    toolchainv1alpha1.UserSignupComplete,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+				Message: "space foo was not ready",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
