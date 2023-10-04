@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -308,39 +309,41 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	hostCl := test.NewFakeClient(t, config)
 	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
-	log := logf.Log.WithName("test")
+	logger := logf.Log.WithName("test")
+	ctx := context.Background()
+	log.IntoContext(ctx, logger)
 
 	t.Run("no error provided", func(t *testing.T) {
-		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+		statusUpdater := func(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
 			assert.Equal(t, "failed to load the latest configuration: underlying error", message)
 			return nil
 		}
 
 		// test
-		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, nil, "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, nil, "failed to load the latest configuration")
 
 		require.Nil(t, err)
 	})
 
 	t.Run("status updated", func(t *testing.T) {
-		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+		statusUpdater := func(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
 			assert.Equal(t, "failed to load the latest configuration: underlying error", message)
 			return nil
 		}
 
 		// test
-		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
 
 		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
 	})
 
 	t.Run("status update failed", func(t *testing.T) {
-		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+		statusUpdater := func(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
 
 		// when
-		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
 
 		// then
 		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
