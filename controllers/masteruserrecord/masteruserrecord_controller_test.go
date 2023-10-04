@@ -367,38 +367,40 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			})
 	})
 
-	t.Run("mur is being moved from member2-cluster to member-cluster - new account should be created in member-cluster", func(t *testing.T) {
-		murCopy := mur.DeepCopy()
-		murCopy.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
-			{
-				Cluster: toolchainv1alpha1.Cluster{
-					Name: commontest.Member2ClusterName,
-				},
-			},
-		}
-		memberClient := commontest.NewFakeClient(t)
-		memberClient2 := commontest.NewFakeClient(t, newUserAccount(namespacedName(commontest.MemberOperatorNs, mur.Name), mur))
-		hostClient := commontest.NewFakeClient(t, murCopy, signup, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+	t.Run("mur is being moved from member-cluster to member2-cluster - new account should be created in member2-cluster", func(t *testing.T) {
+		murToMove := murtest.NewMasterUserRecord(t, "john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+			murtest.WithOwnerLabel("john-123"),
+			murtest.ProvisionedMur(&provisionedTime),
+			murtest.StatusUserAccount(commontest.MemberClusterName))
+
+		memberClient := commontest.NewFakeClient(t, newUserAccount(namespacedName(commontest.MemberOperatorNs, murToMove.Name), murToMove))
+		memberClient2 := commontest.NewFakeClient(t)
+		spaceInM2 := spacetest.NewSpace(murToMove.Namespace, "john-space",
+			spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
+			spacetest.WithSpecTargetCluster(commontest.Member2ClusterName))
+
+		hostClient := commontest.NewFakeClient(t, murToMove, signup, spaceBinding, spaceInM2, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
 		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(murToMove))
 		// then
 		require.NoError(t, err)
 		assert.Empty(t, result.RequeueAfter)
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			MatchMasterUserRecord(mur).
+			MatchMasterUserRecord(murToMove).
 			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			Exists().
-			MatchMasterUserRecord(mur).
+			MatchMasterUserRecord(murToMove).
 			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
-			HasStatusUserAccounts(commontest.Member2ClusterName).
+			HasStatusUserAccounts(commontest.MemberClusterName).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
@@ -408,38 +410,38 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 				string(metrics.Internal): 1, // unchanged
 			})
 
-		t.Run("the previous account should be deleted in member2-cluster", func(t *testing.T) {
+		t.Run("the previous account should be deleted in member-cluster", func(t *testing.T) {
 			// when
-			result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+			result, err := cntrl.Reconcile(context.TODO(), newMurRequest(murToMove))
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, 10*time.Second, result.RequeueAfter)
 			uatest.AssertThatUserAccount(t, "john", memberClient).
-				Exists().
-				MatchMasterUserRecord(mur).
-				HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
-			uatest.AssertThatUserAccount(t, "john", memberClient2).
 				DoesNotExist()
+			uatest.AssertThatUserAccount(t, "john", memberClient2).
+				Exists().
+				MatchMasterUserRecord(murToMove).
+				HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 			murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 				HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
-				HasStatusUserAccounts(commontest.Member2ClusterName, commontest.MemberClusterName).
+				HasStatusUserAccounts(commontest.MemberClusterName, commontest.Member2ClusterName).
 				HasFinalizer()
 
 			t.Run("update the status when the UserAccount is gone", func(t *testing.T) {
 				// when
-				result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+				result, err := cntrl.Reconcile(context.TODO(), newMurRequest(murToMove))
 				// then
 				require.NoError(t, err)
 				assert.Empty(t, result.RequeueAfter)
 				uatest.AssertThatUserAccount(t, "john", memberClient).
-					Exists().
-					MatchMasterUserRecord(mur).
-					HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
-				uatest.AssertThatUserAccount(t, "john", memberClient2).
 					DoesNotExist()
+				uatest.AssertThatUserAccount(t, "john", memberClient2).
+					Exists().
+					MatchMasterUserRecord(murToMove).
+					HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 				murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 					HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
-					HasStatusUserAccounts(commontest.MemberClusterName).
+					HasStatusUserAccounts(commontest.Member2ClusterName).
 					HasFinalizer()
 			})
 		})
