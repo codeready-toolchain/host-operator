@@ -2047,6 +2047,70 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	})
 }
 
+func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
+	// given
+	userSignup := commonsignup.NewUserSignup()
+	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
+		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+		baseNSTemplateTier, deactivate30Tier)
+	InitializeCounters(t, NewToolchainStatus(
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+		}),
+	))
+
+	// when - The first reconcile creates the MasterUserRecord
+	res, err := r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+	// We should now have a MUR
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+
+	key := types.NamespacedName{
+		Namespace: test.HostOperatorNs,
+		Name:      userSignup.Name,
+	}
+	instance := &toolchainv1alpha1.UserSignup{}
+	err = r.Client.Get(context.TODO(), key, instance)
+	require.NoError(t, err)
+	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+	mur := toolchainv1alpha1.MasterUserRecord{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, &mur)
+	require.NoError(t, err)
+
+	require.Equal(t, mur.Spec.PropagatedClaims, userSignup.Spec.IdentityClaims.PropagatedClaims)
+
+	// Modify one of the propagated claims
+	userSignup.Spec.IdentityClaims.PropagatedClaims.Email = "abc@def.com"
+
+	// Reconcile the UserSignup again
+	r, req, _ = prepareReconcile(t, userSignup.Name, ready, userSignup, deactivate30Tier)
+	res, err = r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Reload the MUR
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, &mur)
+	require.NoError(t, err)
+
+	// Confirm the propagated claim has been updated in the MUR
+	require.Equal(t, "abc@def.com", mur.Spec.PropagatedClaims.Email)
+}
+
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup(commonsignup.WithUsername("foo#$%^bar@redhat.com"))

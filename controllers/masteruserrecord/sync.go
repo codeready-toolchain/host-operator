@@ -42,6 +42,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
+		s.memberUserAcc.Spec.PropagatedClaims = s.record.Spec.PropagatedClaims
 
 		// In addition to synchronizing the spec, ensure both the tier label and email annotation are set
 		// The tier label is used for an appstudio workaround in the member operator, see https://github.com/codeready-toolchain/member-operator/pull/333
@@ -67,6 +68,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 func (s *Synchronizer) isSynchronized() bool {
 	return s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
 		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
+		s.memberUserAcc.Spec.PropagatedClaims == s.record.Spec.PropagatedClaims &&
 		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
 		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 }
