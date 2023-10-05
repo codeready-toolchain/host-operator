@@ -4385,23 +4385,64 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 func TestUserSignupStatusNotReady(t *testing.T) {
 	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(
-		commonsignup.ApprovedManually(),
-		commonsignup.WithTargetCluster("member1"),
-		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-		commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey))
 
-	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
-	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-	space := spacetest.NewSpace(test.HostOperatorNs, "foo",
-		spacetest.WithSpecTargetCluster("member-1"),
-		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-		spacetest.WithFinalizer())
+	setup := func() (*toolchainv1alpha1.UserSignup, *toolchainv1alpha1.MasterUserRecord, *toolchainv1alpha1.Space, *toolchainv1alpha1.SpaceBinding) {
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("member1"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
+			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey))
 
-	spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
+		mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+		space := spacetest.NewSpace(test.HostOperatorNs, "foo",
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+
+		spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
+		return userSignup, mur, space, spacebinding
+	}
+
+	signupIncomplete := []toolchainv1alpha1.Condition{
+		{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+			Message: "space foo was not ready",
+		},
+		{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserIsActive",
+		},
+	}
+	signupComplete := []toolchainv1alpha1.Condition{
+		{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+			Reason: "",
+		},
+		{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserIsActive",
+		},
+	}
 
 	t.Run("until Space is provisioned", func(t *testing.T) {
 		//given
+		userSignup, mur, space, spacebinding := setup()
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4410,28 +4451,13 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupComplete,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
-				Message: "space foo was not ready",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserIsActive",
-			})
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete...)
 
 	})
 
 	t.Run("when space is provisioned", func(t *testing.T) {
-		//given
+		// given
+		userSignup, mur, space, spacebinding := setup()
 		space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
@@ -4446,27 +4472,14 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
-				Status: corev1.ConditionTrue,
-				Reason: "",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserIsActive",
-			})
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
 	})
 
 	// If a space is updating, keep usersignups that have already completed
 	t.Run("keep usersignups while space is updating", func(t *testing.T) {
 		// given
+		userSignup, mur, space, spacebinding := setup()
+		userSignup.Status.Conditions = signupComplete
 		space.Status.Conditions = []toolchainv1alpha1.Condition{{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
@@ -4480,32 +4493,14 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		// then
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
-				Status: corev1.ConditionTrue,
-				Reason: "",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserIsActive",
-			})
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
 	})
 
 	// If a space is updating, usersignups that haven't already completed should be marked as incomplete
 	t.Run("mark in-progress signups as incomplete when space is updating", func(t *testing.T) {
 		// given
-		space.Status.Conditions = []toolchainv1alpha1.Condition{{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceUpdatingReason,
-		}}
+		userSignup, mur, space, spacebinding := setup()
+		space.Status.Conditions = signupIncomplete
 		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
@@ -4515,23 +4510,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		// then
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupComplete,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
-				Message: "space foo was not ready",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: corev1.ConditionFalse,
-				Reason: "UserIsActive",
-			})
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete...)
 	})
 }
 
