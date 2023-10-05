@@ -1106,33 +1106,36 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
+		t.Run("no notificaion created", func(t *testing.T) {
+			// given
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
-		// when
-		res, err := reconciler.Reconcile(context.TODO(), req)
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
 
-		// then
-		require.NoError(t, err)
-		assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 
-		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
-			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
-
-		// Confirm there is no notification
-		assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
-		assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+			// Confirm there is no notification
+			assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
+			assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+		})
 
 		t.Run("Notification not created when host operator deployment not ready within threshold", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 				status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
@@ -1172,9 +1175,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					// then
 					require.Error(t, err)
-					require.Equal(t, fmt.Sprintf("Failed to create toolchain status unready notification: cannot create notification "+
-						"due to configuration error - admin.email [%s] is invalid or not set", email),
-						err.Error())
+					require.True(t, strings.HasPrefix(err.Error(), fmt.Sprintf("Failed to create toolchain status unready notification: The specified recipient [%s] is not a valid email address", email)))
 					assert.Equal(t, requeueResult, res)
 
 					// Confirm there is no notification
@@ -1198,106 +1199,113 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
+				for _, email := range []string{"admin@dev.sandbox.com", "admin@dev.sandbox.com, another-admin@acme.com"} {
+					t.Run("for email "+email, func(t *testing.T) {
+						toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
 
-				// when
-				res, err := reconciler.Reconcile(context.TODO(), req)
-
-				// then
-				require.NoError(t, err)
-				assert.Equal(t, requeueResult, res)
-				// confirm restored notification has not been created
-				assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
-				// Confirm the unready notification has been created
-				notification := assertToolchainStatusNotificationCreated(t, fakeClient)
-				require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
-
-				require.NotNil(t, notification)
-				require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
-				require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
-
-				t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
-					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
-						status.DeploymentAvailableCondition())
-
-					// Reload the toolchain status
-					require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
-						toolchainStatus.Name), toolchainStatus))
-
-					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-						hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-
-					// when
-					res, err := reconciler.Reconcile(context.TODO(), req)
-
-					// then
-					require.NoError(t, err)
-					assert.Equal(t, requeueResult, res)
-
-					// Confirm there is no unready notification
-					assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
-
-					// Confirm restored notification has been created
-					notification := assertToolchainStatusNotificationCreated(t, fakeClient)
-					require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-restored-"))
-
-					require.NotNil(t, notification)
-					require.Equal(t, notification.Spec.Subject, "ToolchainStatus has now been restored to ready status")
-					require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
-
-					t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
-						// given
-						hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
-							status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-
-						// Reload the toolchain status
-						require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
-							toolchainStatus.Name), toolchainStatus))
-
-						// Reconcile in order to update the ready status to false
 						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 							hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 						// when
-						_, err := reconciler.Reconcile(context.TODO(), req)
-
-						require.NoError(t, err)
-						// Confirm there is no notification
-						assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
-						assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
-
-						// Reload the toolchain status
-						require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
-							toolchainStatus.Name), toolchainStatus))
-
-						// Now override the last transition time again
-						overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
-
-						// Reconcile once more
-						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-							hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
-
-						// when
-						res, err = reconciler.Reconcile(context.TODO(), req)
+						res, err := reconciler.Reconcile(context.TODO(), req)
 
 						// then
 						require.NoError(t, err)
 						assert.Equal(t, requeueResult, res)
-						// Confirm restored notification is not created
+						// confirm restored notification has not been created
 						assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
 						// Confirm the unready notification has been created
 						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
-						require.Len(t, notification.ObjectMeta.Name, 38)
+
 						require.NotNil(t, notification)
-						assert.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
-						assert.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
-						assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
-						assert.True(t, strings.HasSuffix(strings.TrimSpace(notification.Spec.Content), "</div>"))
-						assert.NotContains(t, notification.Spec.Content, "managedFields")
+						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
+						require.Equal(t, notification.Spec.Recipient, email)
+
+						t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
+							hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
+								status.DeploymentAvailableCondition())
+
+							// Reload the toolchain status
+							require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+								toolchainStatus.Name), toolchainStatus))
+
+							reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+								hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
+
+							// when
+							res, err := reconciler.Reconcile(context.TODO(), req)
+
+							// then
+							require.NoError(t, err)
+							assert.Equal(t, requeueResult, res)
+
+							// Confirm there is no unready notification
+							assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
+
+							// Confirm restored notification has been created
+							notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+							require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-restored-"))
+
+							fmt.Println(notification)
+							require.NotNil(t, notification)
+							require.Equal(t, "ToolchainStatus has now been restored to ready status", notification.Spec.Subject)
+							require.Equal(t, email, notification.Spec.Recipient)
+
+							t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
+								// given
+								hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
+									status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+
+								// Reload the toolchain status
+								require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+									toolchainStatus.Name), toolchainStatus))
+
+								// Reconcile in order to update the ready status to false
+								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
+
+								// when
+								_, err := reconciler.Reconcile(context.TODO(), req)
+
+								require.NoError(t, err)
+								// Confirm there is no notification
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+
+								// Reload the toolchain status
+								require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+									toolchainStatus.Name), toolchainStatus))
+
+								// Now override the last transition time again
+								overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
+
+								// Reconcile once more
+								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
+
+								// when
+								res, err = reconciler.Reconcile(context.TODO(), req)
+
+								// then
+								require.NoError(t, err)
+								assert.Equal(t, requeueResult, res)
+								// Confirm restored notification is not created
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+								// Confirm the unready notification has been created
+								notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+								require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+								require.Len(t, notification.ObjectMeta.Name, 38)
+								require.NotNil(t, notification)
+								assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period", notification.Spec.Subject)
+								assert.Equal(t, email, notification.Spec.Recipient)
+								assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
+								assert.True(t, strings.HasSuffix(strings.TrimSpace(notification.Spec.Content), "</div>"))
+								assert.NotContains(t, notification.Spec.Content, "managedFields")
+							})
+						})
 					})
-				})
+				}
 			})
 		})
 	})
