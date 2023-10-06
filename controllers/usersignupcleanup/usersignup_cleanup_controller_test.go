@@ -119,6 +119,10 @@ func TestUserCleanup(t *testing.T) {
 		statusErr := &apierrors.StatusError{}
 		require.True(t, errors.As(err, &statusErr))
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+
+		t.Run("deletion is not initiated twice", func(t *testing.T) {
+			alreadyDeletedSignupIgnored(t, userSignup)
+		})
 	})
 
 	t.Run("without phone verification initiated", func(t *testing.T) {
@@ -140,6 +144,10 @@ func TestUserCleanup(t *testing.T) {
 		// and verify the metrics
 		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
 		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // incremented
+
+		t.Run("deletion is not initiated twice", func(t *testing.T) {
+			alreadyDeletedSignupIgnored(t, userSignup)
+		})
 	})
 
 	t.Run("with phone verification initiated", func(t *testing.T) {
@@ -162,6 +170,10 @@ func TestUserCleanup(t *testing.T) {
 		// and verify the metrics
 		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
 		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
+
+		t.Run("deletion is not initiated twice", func(t *testing.T) {
+			alreadyDeletedSignupIgnored(t, userSignup)
+		})
 	})
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
@@ -251,7 +263,22 @@ func TestUserCleanup(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, deleted)
 	})
+}
 
+func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.UserSignup) {
+	// Now let's simulate the situation when the signup is already being deleted and reconcile it again.
+	nw := corev1.Now()
+	userSignup.DeletionTimestamp = &nw
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+	res, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+	require.Empty(t, res)
+
+	// The UserSignup should still be present because signups with a non-empty deletion timestamp are ignored
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+	err = r.Client.Get(context.Background(), key, userSignup)
+	require.NoError(t, err)
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
