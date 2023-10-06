@@ -4538,6 +4538,15 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: meta.Name,
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub:         "44332211",
+					UserID:      "135246",
+					AccountID:   "357468",
+					OriginalSub: "11223344",
+					Email:       "joe@redhat.com",
+				},
+			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
@@ -4587,7 +4596,9 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 			},
 		}
 		ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
-		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier, mur, space)
+		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
+			commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+			baseNSTemplateTier, deactivate30Tier, mur, space)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
