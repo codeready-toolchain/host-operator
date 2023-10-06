@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/client"
+	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
-	"k8s.io/client-go/rest"
 
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -73,8 +72,8 @@ const (
 )
 
 const (
-	adminUnreadyNotificationSubject  = "ToolchainStatus has been in an unready status for an extended period"
-	adminRestoredNotificationSubject = "ToolchainStatus has now been restored to ready status"
+	adminUnreadyNotificationSubject  = "ToolchainStatus has been in an unready status for an extended period for %v"
+	adminRestoredNotificationSubject = "ToolchainStatus has now been restored to ready status for %v"
 )
 
 type toolchainStatusNotificationType string
@@ -141,7 +140,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
+	err = r.Client.Get(ctx, request.NamespacedName, toolchainStatus)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -152,7 +151,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.aggregateAndUpdateStatus(reqLogger, toolchainStatus)
+	err = r.aggregateAndUpdateStatus(ctx, toolchainStatus)
 	if err != nil {
 		reqLogger.Error(err, "Failed to update status")
 		return reconcile.Result{RequeueAfter: requeueTime}, err
@@ -167,12 +166,11 @@ type statusHandler struct {
 	handleStatus statusHandlerFunc
 }
 
-type statusHandlerFunc func(logr.Logger, *toolchainv1alpha1.ToolchainStatus) bool
+type statusHandlerFunc func(context.Context, *toolchainv1alpha1.ToolchainStatus) bool
 
 // aggregateAndUpdateStatus runs each of the status handlers. Each status handler reports readiness for a toolchain component. If any
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
-func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-
+func (r *Reconciler) aggregateAndUpdateStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// collect status handlers that will contribute status of various toolchain components
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
 	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
@@ -194,7 +192,7 @@ func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainSt
 
 	// retrieve component statuses eg. ToolchainCluster, host deployment
 	for _, statusHandler := range statusHandlers {
-		isReady := statusHandler.handleStatus(reqLogger, toolchainStatus)
+		isReady := statusHandler.handleStatus(ctx, toolchainStatus)
 		if !isReady {
 			unreadyComponents = append(unreadyComponents, string(statusHandler.name))
 		}
@@ -202,18 +200,18 @@ func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainSt
 
 	// if any components were not ready then set the overall status to not ready
 	if len(unreadyComponents) > 0 {
-		err := r.notificationCheck(reqLogger, toolchainStatus)
+		err := r.notificationCheck(ctx, toolchainStatus)
 		if err != nil {
 			return err
 		}
 
-		return r.setStatusNotReady(reqLogger, toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
+		return r.setStatusNotReady(ctx, toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
 
-	return r.setStatusReady(reqLogger, toolchainStatus)
+	return r.setStatusReady(ctx, toolchainStatus)
 }
 
-func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) notificationCheck(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// If the current ToolchainStatus:
 	// a) Is currently not ready or the deployments versions are not up-to-date,
 	// b) has not been ready for longer than the configured threshold, and
@@ -224,17 +222,19 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 		threshold := time.Now().Add(-durationAfterUnready)
 		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
 			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
-				if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
-					reqLogger.Error(err, "Failed to create toolchain status unready notification")
+				logger := log.FromContext(ctx)
+
+				if err := r.sendToolchainStatusNotification(ctx, toolchainStatus, unreadyStatus); err != nil {
+					logger.Error(err, "Failed to create toolchain status unready notification")
 
 					// set the failed to create notification status condition
-					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+					return r.wrapErrorWithStatusUpdate(ctx, toolchainStatus,
 						r.setStatusUnreadyNotificationCreationFailed, err,
 						"Failed to create toolchain status unready notification")
 				}
 
-				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
-					reqLogger.Error(err, "Failed to update notification created status")
+				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(ctx, toolchainStatus); err != nil {
+					logger.Error(err, "Failed to update notification created status")
 					return err
 				}
 			}
@@ -244,7 +244,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 	return nil
 }
 
-func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// If the current ToolchainStatus:
 	// a) Was not ready before,
 	// b) notification was sent out due prolonged not ready status, and
@@ -252,10 +252,11 @@ func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolc
 	// send a notification to the admin mailing list
 	if condition.IsFalse(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		if condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
-			if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, restoredStatus); err != nil {
-				reqLogger.Error(err, "Failed to create toolchain status restored notification")
+			if err := r.sendToolchainStatusNotification(ctx, toolchainStatus, restoredStatus); err != nil {
+				logger := log.FromContext(ctx)
+				logger.Error(err, "Failed to create toolchain status restored notification")
 				// set the failed to create notification status condition
-				return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+				return r.wrapErrorWithStatusUpdate(ctx, toolchainStatus,
 					r.setStatusReadyNotificationCreationFailed, err,
 					"Failed to create toolchain restored notification")
 			}
@@ -265,9 +266,10 @@ func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolc
 }
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
-func (r *Reconciler) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) synchronizeWithCounter(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	if err := counter.Synchronize(r.Client, toolchainStatus); err != nil {
-		reqLogger.Error(err, "unable to synchronize with the counter")
+		logger := log.FromContext(ctx)
+		logger.Error(err, "unable to synchronize with the counter")
 		return false
 	}
 	return true
@@ -275,7 +277,8 @@ func (r *Reconciler) synchronizeWithCounter(reqLogger logr.Logger, toolchainStat
 
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns false
 // if the deployment is not determined to be ready
-func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
 	// ensure host operator status is set
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
@@ -290,7 +293,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	// look up name of the host operator deployment
 	hostOperatorName, errDeploy := commonconfig.GetOperatorName()
 	if errDeploy != nil {
-		reqLogger.Error(errDeploy, status.ErrMsgCannotGetDeployment)
+		logger.Error(errDeploy, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
 			fmt.Sprintf("%s: %s", status.ErrMsgCannotGetDeployment, errDeploy.Error()))
 		operatorStatus.Conditions = []toolchainv1alpha1.Condition{*errCondition}
@@ -306,7 +309,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
 	errDeploy = status.ValidateComponentConditionReady(deploymentConditions...)
 	if errDeploy != nil {
-		reqLogger.Error(errDeploy, "host operator deployment is not ready")
+		logger.Error(errDeploy, "host operator deployment is not ready")
 		allOK = false
 	}
 	operatorStatus.Conditions = deploymentConditions
@@ -316,7 +319,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	// we also need to check when we called GitHub api last time, in order to avoid rate limiting issues.
 	toolchainConfig, errToolchainConfig := toolchainconfig.GetToolchainConfig(r.Client)
 	if errToolchainConfig != nil {
-		reqLogger.Error(errToolchainConfig, "unable to get toolchainconfig")
+		logger.Error(errToolchainConfig, "unable to get toolchainconfig")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckOperatorErrorReason,
 			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()))
 		operatorStatus.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*errCondition}
@@ -336,7 +339,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	errVersionCheck := status.ValidateComponentConditionReady(*versionCondition)
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
-		reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
+		logger.Error(errVersionCheck, "host operator deployment is not up to date")
 		allOK = false
 	}
 	operatorStatus.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
@@ -351,7 +354,7 @@ func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
 // if the registration service is not ready
-func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 
 	s := regServiceSubstatusHandler{
 		controllerClient:    r.Client,
@@ -373,7 +376,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 	ready := true
 	// call each of the registration service status handlers
 	for _, statusHandler := range substatusHandlers {
-		ready = statusHandler(reqLogger, toolchainStatus) && ready
+		ready = statusHandler(ctx, toolchainStatus) && ready
 	}
 
 	return ready
@@ -381,10 +384,11 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 
 // hostRoutesHandleStatus retrieves the public routes which should be exposed to the users. Such as Proxy URL.
 // Returns false if any route is not available.
-func (r *Reconciler) hostRoutesHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	proxyURL, err := r.proxyURL()
+func (r *Reconciler) hostRoutesHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	proxyURL, err := r.proxyURL(ctx)
 	if err != nil {
-		reqLogger.Error(err, "Proxy route was not found")
+		logger := log.FromContext(ctx)
+		logger.Error(err, "Proxy route was not found")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusProxyRouteUnavailableReason, err.Error())
 		toolchainStatus.Status.HostRoutes.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return false
@@ -397,10 +401,10 @@ func (r *Reconciler) hostRoutesHandleStatus(reqLogger logr.Logger, toolchainStat
 	return true
 }
 
-func (r *Reconciler) proxyURL() (string, error) {
+func (r *Reconciler) proxyURL(ctx context.Context) (string, error) {
 	route := &routev1.Route{}
 	namespacedName := types.NamespacedName{Namespace: r.Namespace, Name: registrationservice.ProxyRouteName}
-	if err := r.Client.Get(context.TODO(), namespacedName, route); err != nil {
+	if err := r.Client.Get(ctx, namespacedName, route); err != nil {
 		return "", err
 	}
 
@@ -418,7 +422,9 @@ func (r *Reconciler) proxyURL() (string, error) {
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
 // if any of the members are not ready or if no member clusters are found
-func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) membersHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
+
 	// get member clusters
 	logger.Info("updating member status")
 	memberClusters := r.GetMembersFunc()
@@ -431,7 +437,7 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 	}
 	for _, memberCluster := range memberClusters {
 		memberStatusObj := &toolchainv1alpha1.MemberStatus{}
-		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
+		err := memberCluster.Client.Get(ctx, types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
 		if err != nil {
 			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
 			logger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
@@ -466,7 +472,7 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 	}
 
 	// add member cluster statuses to toolchainstatus, and assign apiEndpoint in members
-	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members, memberClusters) && ready
+	ready = compareAndAssignMemberStatuses(ctx, toolchainStatus, members, memberClusters) && ready
 	return ready
 }
 
@@ -479,9 +485,17 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 	return ""
 }
 
-func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
-	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
+func removeSchemeFromURL(proxyURL string) (string, error) {
+	url, err := url.Parse(proxyURL)
+	if err != nil {
+		return "", err
+	}
+	return url.Hostname(), nil
+}
 
+func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
+	logger := log.FromContext(ctx)
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return errs.Wrapf(err, "unable to get ToolchainConfig")
@@ -490,20 +504,23 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	tsValue := time.Now().Format("20060102150405")
 	contentString := ""
 	subjectString := ""
+	domain := ""
+	if domain, err = removeSchemeFromURL(toolchainStatus.Status.HostRoutes.ProxyURL); err != nil {
+		logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", toolchainStatus.Status.HostRoutes.ProxyURL))
+	}
 	switch status {
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
 		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-
-		clusterURLs := ClusterURLs(toolchainStatus)
+		clusterURLs := ClusterURLs(logger, toolchainStatus)
 		contentString, err = GenerateUnreadyNotificationContent(clusterURLs, ExtractStatusMetadata(toolchainStatus))
 		if err != nil {
 			return err
 		}
-		subjectString = adminUnreadyNotificationSubject
+		subjectString = fmt.Sprintf(adminUnreadyNotificationSubject, domain)
 	case restoredStatus:
 		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>"
-		subjectString = adminRestoredNotificationSubject
+		subjectString = fmt.Sprintf(adminRestoredNotificationSubject, domain)
 	default:
 		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
 	}
@@ -523,20 +540,27 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	return nil
 }
 
-func ClusterURLs(instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		result := map[string]string{}
+func ClusterURLs(logger logr.Logger, instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
 
-		for _, mbr := range instance.Status.Members {
-			result["Member cluster"] = mbr.ClusterName
+	if instance.Status.HostRoutes.ProxyURL != "" {
+		var domain string
+		var err error
+		if domain, err = removeSchemeFromURL(instance.Status.HostRoutes.ProxyURL); err != nil {
+			logger.Error(err, fmt.Sprintf("Error while parsing proxyUrl %v", instance.Status.HostRoutes.ProxyURL))
+		} else {
+			return map[string]string{
+				"Cluster URL": domain,
+			}
 		}
+	}
 
-		return result
+	result := map[string]string{}
+
+	for _, mbr := range instance.Status.Members {
+		result["Member cluster"] = mbr.ClusterName
 	}
-	return map[string]string{
-		"Cluster URL": cfg.Host,
-	}
+
+	return result
 }
 
 type ComponentNotReadyStatus struct {
@@ -687,7 +711,8 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 	return result
 }
 
-func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
+func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
+	logger := log.FromContext(ctx)
 	allOk := true
 	for index, member := range toolchainStatus.Status.Members {
 		newMemberStatus, ok := members[member.ClusterName]
@@ -726,35 +751,37 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 // the controller should always update at least the last updated timestamp of the status so the status should be updated
 // regardless of whether any specific fields were updated. This way a problem with the controller can be indicated if
 // the last updated timestamp was not updated.
-func (r *Reconciler) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
+func (r *Reconciler) updateStatusConditions(ctx context.Context, status *toolchainv1alpha1.ToolchainStatus,
 	newConditions ...toolchainv1alpha1.Condition) error {
+	logger := log.FromContext(ctx)
 	status.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(status.Status.Conditions, newConditions...)
 	logger.Info("updating ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
-	err := r.Client.Status().Update(context.TODO(), status)
+	err := r.Client.Status().Update(ctx, status)
 	logger.Info("updated ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
 	return err
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
-	statusUpdater func(reqLogger logr.Logger, userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
+func (r *Reconciler) wrapErrorWithStatusUpdate(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
+	statusUpdater func(ctx context.Context, userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
 	args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	if err := statusUpdater(logger, toolchainStatus, err.Error()); err != nil {
+	if err := statusUpdater(ctx, toolchainStatus, err.Error()); err != nil {
+		logger := log.FromContext(ctx)
 		logger.Error(err, "Error updating ToolchainStatus status")
 	}
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *Reconciler) setStatusReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	err := r.restoredCheck(reqLogger, toolchainStatus)
+func (r *Reconciler) setStatusReady(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	err := r.restoredCheck(ctx, toolchainStatus)
 	if err != nil {
 		return err
 	}
 	return r.updateStatusConditions(
-		reqLogger,
+		ctx,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
@@ -768,9 +795,9 @@ func (r *Reconciler) setStatusReady(reqLogger logr.Logger, toolchainStatus *tool
 		})
 }
 
-func (r *Reconciler) setStatusNotReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
+func (r *Reconciler) setStatusNotReady(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 	return r.updateStatusConditions(
-		reqLogger,
+		ctx,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -780,10 +807,11 @@ func (r *Reconciler) setStatusNotReady(reqLogger logr.Logger, toolchainStatus *t
 		})
 }
 
-func (r *Reconciler) setStatusToolchainStatusUnreadyNotificationCreated(reqLogger logr.Logger,
+func (r *Reconciler) setStatusToolchainStatusUnreadyNotificationCreated(
+	ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	return r.updateStatusConditions(
-		reqLogger,
+		ctx,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
@@ -792,11 +820,11 @@ func (r *Reconciler) setStatusToolchainStatusUnreadyNotificationCreated(reqLogge
 		})
 }
 
-func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(reqLogger logr.Logger,
+func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
 	return r.updateStatusConditions(
-		reqLogger,
+		ctx,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -806,11 +834,11 @@ func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(reqLogger logr.L
 		})
 }
 
-func (r *Reconciler) setStatusReadyNotificationCreationFailed(reqLogger logr.Logger,
+func (r *Reconciler) setStatusReadyNotificationCreationFailed(ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
 	return r.updateStatusConditions(
-		reqLogger,
+		ctx,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -833,14 +861,15 @@ type regServiceSubstatusHandler struct {
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
-func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	deploymentConditions := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
 	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
 
 	err := status.ValidateComponentConditionReady(deploymentConditions...)
 	if err != nil {
-		reqLogger.Error(err, "a problem was detected in the deployment status")
+		logger := log.FromContext(ctx)
+		logger.Error(err, "a problem was detected in the deployment status")
 		return false
 	}
 
@@ -848,11 +877,12 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqL
 }
 
 // addRegistrationServiceHealthAndRevisionCheckStatus handles the RegistrationService.Health part of the toolchainstatus
-func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionCheckStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionCheckStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
 	// get the JSON payload from the health endpoint
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
 	if err != nil {
-		reqLogger.Error(err, errMsgRegistrationServiceNotReady)
+		logger.Error(err, errMsgRegistrationServiceNotReady)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return false
@@ -861,7 +891,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	// bad response
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("bad response from %s : statusCode=%d", registrationServiceHealthURL, resp.StatusCode)
-		reqLogger.Error(err, errMsgRegistrationServiceNotReady)
+		logger.Error(err, errMsgRegistrationServiceNotReady)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return false
@@ -870,16 +900,16 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	// decode the response to JSON
 	defer func() {
 		if _, err := io.ReadAll(resp.Body); err != nil {
-			reqLogger.Error(err, "unable to read the response")
+			logger.Error(err, "unable to read the response")
 		}
 		if err := resp.Body.Close(); err != nil {
-			reqLogger.Error(err, "unable to close the body")
+			logger.Error(err, "unable to close the body")
 		}
 	}()
 	healthValues := status.Health{}
 	err = json.NewDecoder(resp.Body).Decode(&healthValues)
 	if err != nil {
-		reqLogger.Error(err, errMsgRegistrationServiceNotReady)
+		logger.Error(err, errMsgRegistrationServiceNotReady)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return false
@@ -898,7 +928,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	toolchainStatus.Status.RegistrationService.Health = healthStatus
 	if !healthValues.Alive {
 		err = fmt.Errorf(errMsgRegistrationServiceHealthStatusUnhealthy)
-		reqLogger.Error(err, "registration service is unhealthy")
+		logger.Error(err, "registration service is unhealthy")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return false
@@ -912,7 +942,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	// check that deployed version matches source code repository commit
 	toolchainConfig, errToolchainConfig := toolchainconfig.GetToolchainConfig(s.controllerClient)
 	if errToolchainConfig != nil {
-		reqLogger.Error(errToolchainConfig, status.ErrMsgCannotGetDeployment)
+		logger.Error(errToolchainConfig, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckOperatorErrorReason,
 			fmt.Sprintf("unable to get ToolchainConfig: %s", errToolchainConfig.Error()))
 		toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*errCondition}
@@ -931,7 +961,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	err = status.ValidateComponentConditionReady(*versionCondition)
 	if err != nil {
 		// add version is not up-to-date condition
-		reqLogger.Error(err, "registration service deployment is not up to date")
+		logger.Error(err, "registration service deployment is not up to date")
 		toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*versionCondition}
 		return false
 	}

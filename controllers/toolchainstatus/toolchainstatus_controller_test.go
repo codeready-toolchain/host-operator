@@ -1219,7 +1219,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 						require.NotNil(t, notification)
-						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
+						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster")
 						require.Equal(t, notification.Spec.Recipient, email)
 
 						t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
@@ -1249,10 +1249,11 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 							fmt.Println(notification)
 							require.NotNil(t, notification)
-							require.Equal(t, "ToolchainStatus has now been restored to ready status", notification.Spec.Subject)
+							require.Equal(t, "ToolchainStatus has now been restored to ready status for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
 							require.Equal(t, email, notification.Spec.Recipient)
 
 							t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
+
 								// given
 								hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 									status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
@@ -1294,14 +1295,52 @@ func TestToolchainStatusNotifications(t *testing.T) {
 								assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
 								// Confirm the unready notification has been created
 								notification := assertToolchainStatusNotificationCreated(t, fakeClient)
-								require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
-								require.Len(t, notification.ObjectMeta.Name, 38)
-								require.NotNil(t, notification)
-								assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period", notification.Spec.Subject)
-								assert.Equal(t, email, notification.Spec.Recipient)
-								assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
-								assert.True(t, strings.HasSuffix(strings.TrimSpace(notification.Spec.Content), "</div>"))
-								assert.NotContains(t, notification.Spec.Content, "managedFields")
+								assertToolChainNotificationUnreadyStatus(t, false, notification, email)
+							})
+
+							t.Run("Toolchain status not ready again for extended period, notification is created with invalid ProxyURL", func(t *testing.T) {
+								// given
+								hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
+									status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+
+								// Reload the toolchain status
+								require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+									toolchainStatus.Name), toolchainStatus))
+
+								// Reconcile in order to update the ready status to false
+								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRouteInvalid())
+
+								// when
+								_, err := reconciler.Reconcile(context.TODO(), req)
+
+								require.NoError(t, err)
+								// Confirm there is no notification
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+
+								// Reload the toolchain status
+								require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+									toolchainStatus.Name), toolchainStatus))
+
+								// Now override the last transition time again
+								overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
+
+								// Reconcile once more
+								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRouteInvalid())
+
+								// when
+								res, err = reconciler.Reconcile(context.TODO(), req)
+
+								// then
+								require.NoError(t, err)
+								assert.Equal(t, requeueResult, res)
+								// Confirm restored notification is not created
+								assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
+								// Confirm the unready notification has been created
+								notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+								assertToolChainNotificationUnreadyStatus(t, true, notification, email)
 							})
 						})
 					})
@@ -1309,6 +1348,21 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			})
 		})
 	})
+}
+
+func assertToolChainNotificationUnreadyStatus(t *testing.T, invalidURL bool, notification *toolchainv1alpha1.Notification, email string) {
+	require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+	require.Len(t, notification.ObjectMeta.Name, 38)
+	require.NotNil(t, notification)
+	if invalidURL {
+		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for ", notification.Spec.Subject)
+	} else {
+		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
+	}
+	assert.Equal(t, email, notification.Spec.Recipient)
+	assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
+	assert.True(t, strings.HasSuffix(strings.TrimSpace(notification.Spec.Content), "</div>"))
+	assert.NotContains(t, notification.Spec.Content, "managedFields")
 }
 
 func overrideLastTransitionTime(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, overrideTime metav1.Time) {
@@ -1714,7 +1768,7 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 4)
-		content, err := GenerateUnreadyNotificationContent(ClusterURLs(toolchainStatus), meta)
+		content, err := GenerateUnreadyNotificationContent(ClusterURLs(logger, toolchainStatus), meta)
 		require.NoError(t, err)
 		require.NotEmpty(t, content)
 		assert.Contains(t, content, "<h4>ToolchainStatus  not ready</h4>")
@@ -1722,6 +1776,29 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 		assert.Contains(t, content, "<h4>member-sandbox.ccc.openshiftapps.com Member Routes not ready</h4>")
 		assert.Contains(t, content, "<h4>Registration Service Deployment not ready</h4>")
 	})
+}
+
+func TestRemoveSchemeFromURL(t *testing.T) {
+	t.Run("test proxy url domain extraction validURL", func(t *testing.T) {
+		// when
+		domain, err := removeSchemeFromURL("https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com")
+
+		// then
+		require.Equal(t, "api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com", domain)
+		require.Nil(t, err)
+
+	})
+
+	t.Run("test proxy url domain extraction incorrectURL", func(t *testing.T) {
+		// when
+		domain, err := removeSchemeFromURL("incorrect$%url")
+
+		// then
+		require.Equal(t, "", domain)
+		require.NotNil(t, err)
+
+	})
+
 }
 
 func newDeploymentWithConditions(deploymentName string, deploymentConditions ...appsv1.DeploymentCondition) *appsv1.Deployment {
@@ -1775,6 +1852,24 @@ func proxyRoute() *routev1.Route {
 		},
 		Spec: routev1.RouteSpec{
 			Host: fmt.Sprintf("api-%s.%s", test.HostOperatorNs, test.HostClusterName),
+			Port: &routev1.RoutePort{
+				TargetPort: intstr.FromInt(8081),
+			},
+			TLS: &routev1.TLSConfig{
+				Termination: routev1.TLSTerminationEdge,
+			},
+		},
+	}
+}
+
+func proxyRouteInvalid() *routev1.Route {
+	return &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "api",
+			Namespace: test.HostOperatorNs,
+		},
+		Spec: routev1.RouteSpec{
+			Host: ":invalid$%host",
 			Port: &routev1.RoutePort{
 				TargetPort: intstr.FromInt(8081),
 			},
