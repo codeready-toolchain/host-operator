@@ -279,6 +279,10 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 	err = r.Client.Get(context.Background(), key, userSignup)
 	require.NoError(t, err)
+
+	// and verify that the metrics are unchanged
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal))
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
