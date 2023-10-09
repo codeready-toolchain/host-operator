@@ -53,6 +53,7 @@ const (
 	defaultRegistrationServiceName    = "registration-service"
 	unreadyStatusNotification         = "toolchainstatus-unready"
 	restoredStatusNotification        = "toolchainstatus-restore"
+	hostProxyUrl                      = "https://api-toolchain-host-operator.apps.host-cluster"
 )
 
 type fakeHTTPClient struct {
@@ -203,7 +204,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 			)). // also regservice is not up-to-date since we return the same mocked github commit
-			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+			HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 	})
 
 	t.Run("HostOperator tests", func(t *testing.T) {
@@ -232,7 +233,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
@@ -254,7 +255,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
@@ -277,7 +278,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
@@ -300,7 +301,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator and registration service deployments version are not up to date", func(t *testing.T) {
@@ -333,7 +334,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
 				)). // also regservice is not up-to-date since we return the same mocked github commit
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("deployment version check is disabled", func(t *testing.T) {
@@ -366,7 +367,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "is not running in prod environment"),
 					)).
-					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+					HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 			})
 
 			t.Run("when environment is prod but github secret is not present", func(t *testing.T) {
@@ -398,7 +399,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"),
 					)).
-					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+					HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 			})
 
 			t.Run("when environment is prod ,github secret is present but last github api call is not satisfied", func(t *testing.T) {
@@ -456,7 +457,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 					)).
-					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+					HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 			})
 		})
 	})
@@ -481,7 +482,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable()).
 				HasRegistrationServiceStatus(
 					registrationServiceDeploymentNotReady("DeploymentNotFound", "unable to get the deployment: deployments.apps \"registration-service\" not found"),
 				)
@@ -503,7 +504,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Available"))
 		})
 
@@ -523,7 +524,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Progressing"))
 		})
 	})
@@ -550,7 +551,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("http client error")).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - bad status code", func(t *testing.T) {
@@ -569,7 +570,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500")).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
@@ -588,7 +589,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("invalid character '}' after object key")).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - not alive", func(t *testing.T) {
@@ -607,7 +608,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("the registration service health endpoint is reporting an unhealthy status")).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 	})
 
@@ -656,7 +657,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("http://api-toolchain-host-operator.host-cluster/api", hostRoutesAvailable())
+				HasHostRoutesStatus("http://api-toolchain-host-operator.apps.host-cluster/api", hostRoutesAvailable())
 		})
 	})
 
@@ -684,7 +685,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					registrationServiceReady(
 						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
 						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-1 and member-2 clusters were removed", func(t *testing.T) {
@@ -718,7 +719,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-2", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-1 cluster was removed", func(t *testing.T) {
@@ -755,7 +756,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-2", spaceCount(10), ready()),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-2 cluster was removed", func(t *testing.T) {
@@ -791,7 +792,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-2", spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus saying that there was no member cluster present should be removed", func(t *testing.T) {
@@ -816,7 +817,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
@@ -840,7 +841,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-2", noResourceUsage(), spaceCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
@@ -865,7 +866,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-2", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("synchronization with the counter fails", func(t *testing.T) {
@@ -889,7 +890,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
@@ -915,7 +916,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus with no condition", func(t *testing.T) {
@@ -937,7 +938,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1"), memberCluster("member-2")).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 		})
 
 		t.Run("All components ready but one member is missing", func(t *testing.T) {
@@ -972,7 +973,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						memberCluster("member-3", noResourceUsage(), spaceCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
 					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+					HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 			})
 
 			t.Run("with zero user accounts", func(t *testing.T) {
@@ -995,7 +996,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+					HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 			})
 		})
 	})
@@ -1124,7 +1125,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
-				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+				HasHostRoutesStatus(hostProxyUrl, hostRoutesAvailable())
 
 			// Confirm there is no notification
 			assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
@@ -1219,7 +1220,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 						require.NotNil(t, notification)
-						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster")
+						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period for host-cluster")
 						require.Equal(t, notification.Spec.Recipient, email)
 
 						t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
@@ -1249,7 +1250,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 							fmt.Println(notification)
 							require.NotNil(t, notification)
-							require.Equal(t, "ToolchainStatus has now been restored to ready status for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
+							require.Equal(t, "ToolchainStatus has now been restored to ready status for host-cluster", notification.Spec.Subject)
 							require.Equal(t, email, notification.Spec.Recipient)
 
 							t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
@@ -1357,7 +1358,7 @@ func assertToolChainNotificationUnreadyStatus(t *testing.T, invalidURL bool, not
 	if invalidURL {
 		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for ", notification.Spec.Subject)
 	} else {
-		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for api-toolchain-host-operator.host-cluster", notification.Spec.Subject)
+		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for host-cluster", notification.Spec.Subject)
 	}
 	assert.Equal(t, email, notification.Spec.Recipient)
 	assert.True(t, strings.HasPrefix(notification.Spec.Content, "<h3>The following issues"))
@@ -1784,7 +1785,7 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		domain, err := removeSchemeFromURL("https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com")
 
 		// then
-		require.Equal(t, "api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com", domain)
+		require.Equal(t, "stone-stg-host.qc0p.p1.openshiftapps.com", domain)
 		require.Nil(t, err)
 
 	})
@@ -1851,7 +1852,7 @@ func proxyRoute() *routev1.Route {
 			Namespace: test.HostOperatorNs,
 		},
 		Spec: routev1.RouteSpec{
-			Host: fmt.Sprintf("api-%s.%s", test.HostOperatorNs, test.HostClusterName),
+			Host: fmt.Sprintf("api-%s.%s.%s", test.HostOperatorNs, "apps", test.HostClusterName),
 			Port: &routev1.RoutePort{
 				TargetPort: intstr.FromInt(8081),
 			},
