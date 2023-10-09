@@ -370,7 +370,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 
 			// if the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
 			logger.Info("Checking whether Space is Ready", "Space", space.Name)
-			if !condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason) {
+			if !condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason) &&
+				!condition.IsTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete) {
 				return true, r.updateIncompleteStatus(ctx, userSignup, fmt.Sprintf("space %s was not ready", space.Name))
 			}
 		}
