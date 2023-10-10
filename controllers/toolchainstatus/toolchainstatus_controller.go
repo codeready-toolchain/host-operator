@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 	"time"
 
@@ -45,6 +46,7 @@ import (
 // general toolchainstatus constants
 const (
 	memberStatusName = "toolchain-member-status"
+	proxyPrefix      = "api-toolchain-host-operator.apps."
 
 	registrationServiceHealthURL = "http://registration-service/api/v1/health"
 
@@ -490,7 +492,9 @@ func removeSchemeFromURL(proxyURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return url.Hostname(), nil
+	hostName := url.Hostname()
+	hostName = strings.TrimPrefix(hostName, proxyPrefix)
+	return hostName, nil
 }
 
 func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
