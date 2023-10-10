@@ -171,6 +171,93 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		})
 }
 
+func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord(t, "ricky")
+	mur.Spec.OriginalSub = "original-sub:ZZZZZ"
+	mur.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "999888"
+	mur.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "777666"
+
+	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+
+	toolchainStatus := NewToolchainStatus(
+		WithMember(commontest.MemberClusterName,
+			WithRoutes("https://console.foo.com", "https://che.foo.com", toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.ConditionReady,
+				Status: corev1.ConditionTrue,
+			})),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+		}),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		}),
+	)
+
+	memberClient := commontest.NewFakeClient(t)
+	hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
+
+	InitializeCounters(t, toolchainStatus)
+
+	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
+
+	// when
+	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+	uatest.AssertThatUserAccount(t, "ricky", memberClient).
+		Exists().
+		MatchMasterUserRecord(mur).
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666").
+		HasSpec(toolchainv1alpha1.UserAccountSpec{
+			UserID:           mur.Spec.UserID,
+			Disabled:         false,
+			OriginalSub:      mur.Spec.OriginalSub,
+			PropagatedClaims: mur.Spec.PropagatedClaims,
+		})
+
+	murtest.AssertThatMasterUserRecord(t, "ricky", hostClient).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+		HasFinalizer()
+	AssertThatCountersAndMetrics(t).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1, // unchanged
+		}).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1, // unchanged
+		})
+
+	// Reload the MasterUserRecord
+	require.NoError(t, hostClient.Get(context.Background(), runtimeclient.ObjectKeyFromObject(mur), mur))
+
+	// Now modify the mur's propagated claims by changing one property value (the default email is "joe@redhat.com")
+	mur.Spec.PropagatedClaims.Email = "ricky@redhat.com"
+	require.NoError(t, hostClient.Update(context.Background(), mur))
+
+	// Reconcile again
+	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+	require.NoError(t, err)
+
+	// Confirm that the properties still match
+	uatest.AssertThatUserAccount(t, "ricky", memberClient).
+		Exists().
+		MatchMasterUserRecord(mur).
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666").
+		HasSpec(toolchainv1alpha1.UserAccountSpec{
+			UserID:           mur.Spec.UserID,
+			Disabled:         false,
+			OriginalSub:      mur.Spec.OriginalSub,
+			PropagatedClaims: mur.Spec.PropagatedClaims,
+		})
+}
+
 func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
