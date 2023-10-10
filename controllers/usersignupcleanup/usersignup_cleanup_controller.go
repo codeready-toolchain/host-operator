@@ -2,6 +2,7 @@ package usersignupcleanup
 
 import (
 	"context"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -64,6 +65,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 	ctx = log.IntoContext(ctx, reqLogger)
+
+	if util.IsBeingDeleted(instance) {
+		reqLogger.Info("UserSignup is already being deleted")
+		return reconcile.Result{}, nil
+	}
 
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
