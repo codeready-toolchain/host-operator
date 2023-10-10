@@ -258,12 +258,19 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord(t, "ricky")
-	mur.Spec.OriginalSub = "original-sub:ZZZZZ"
-	mur.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "999888"
-	mur.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "777666"
 
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("ricky-123"))
+	mur := murtest.NewMasterUserRecord(t, "ricky",
+		murtest.WithOwnerLabel("ricky-123"),
+		murtest.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888"),
+		murtest.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666"),
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+	mur.Spec.OriginalSub = "original-sub:ZZZZZ"
+
+	spaceBinding := spacebindingtest.NewSpaceBinding("ricky", "ricky-space", "admin", "ricky-123")
+	space := spacetest.NewSpace(mur.Namespace, "ricky-space",
+		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "ricky-123"),
+		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
 
 	toolchainStatus := NewToolchainStatus(
 		WithMember(commontest.MemberClusterName,
@@ -280,7 +287,7 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 	)
 
 	memberClient := commontest.NewFakeClient(t)
-	hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
+	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space, signup, toolchainStatus)
 
 	InitializeCounters(t, toolchainStatus)
 
