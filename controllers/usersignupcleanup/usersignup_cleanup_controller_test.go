@@ -275,12 +275,12 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	require.NoError(t, err)
 	require.Empty(t, res)
 
-	// The UserSignup should still be present because signups with a non-empty deletion timestamp are ignored
+	// The UserSignup should still be present because signups with a non-empty deletion timestamp are ignored.
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 	err = r.Client.Get(context.Background(), key, userSignup)
 	require.NoError(t, err)
 
-	// and verify that the metrics are unchanged
+	// And verify that the metrics stay unchanged after they were reset to "0" when we prepared the reconcile above.
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal))
 }
