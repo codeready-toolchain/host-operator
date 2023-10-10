@@ -21,6 +21,11 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		changed = true
 	}
 
+	if mur.Spec.PropagatedClaims != userSignup.Spec.IdentityClaims.PropagatedClaims {
+		mur.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
+		changed = true
+	}
+
 	return changed
 }
 
