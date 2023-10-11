@@ -41,6 +41,9 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 	annotations := map[string]string{
 		toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
 	}
+	if skipValue, present := userSignup.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey]; present {
+		annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = skipValue
+	}
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
