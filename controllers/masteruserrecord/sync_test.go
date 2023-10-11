@@ -33,11 +33,10 @@ func TestIsSynchronized(t *testing.T) {
 
 	t.Run("synchronized", func(t *testing.T) {
 		// given
-		record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+		record, memberUserAcc := setupSynchronizerItems()
 		s := Synchronizer{
-			memberUserAcc:     &memberUserAcc,
-			record:            &record,
-			recordSpecUserAcc: recordSpecUserAcc,
+			memberUserAcc: &memberUserAcc,
+			record:        &record,
 		}
 		// when/then
 		assert.True(t, s.isSynchronized())
@@ -47,12 +46,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("missing label", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			delete(memberUserAcc.Labels, toolchainv1alpha1.TierLabelKey)
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -60,12 +58,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("label does not match", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] = "foo"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -73,12 +70,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("missing email annotation", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			delete(memberUserAcc.Annotations, toolchainv1alpha1.UserEmailAnnotationKey)
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -86,12 +82,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("email annotation does not match", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = "foo"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -99,12 +94,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("different disable", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			record.Spec.Disabled = true
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -112,12 +106,11 @@ func TestIsSynchronized(t *testing.T) {
 
 		t.Run("different userID", func(t *testing.T) {
 			// given
-			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record, memberUserAcc := setupSynchronizerItems()
 			record.Spec.UserID = "bar"
 			s := Synchronizer{
-				memberUserAcc:     &memberUserAcc,
-				record:            &record,
-				recordSpecUserAcc: recordSpecUserAcc,
+				memberUserAcc: &memberUserAcc,
+				record:        &record,
 			}
 			// when/then
 			assert.False(t, s.isSynchronized())
@@ -125,7 +118,7 @@ func TestIsSynchronized(t *testing.T) {
 	})
 }
 
-func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccountEmbedded, toolchainv1alpha1.UserAccount) {
+func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccount) {
 	memberUserAcc := toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -140,9 +133,6 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			Disabled: false,
 		},
 	}
-	recordSpecUserAcc := toolchainv1alpha1.UserAccountEmbedded{
-		TargetCluster: "member-1",
-	}
 	record := toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -152,13 +142,10 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:   "foo",
 			Disabled: false,
-			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
-				recordSpecUserAcc,
-			},
 			TierName: "base1ns",
 		},
 	}
-	return record, recordSpecUserAcc, memberUserAcc
+	return record, memberUserAcc
 }
 
 func TestSynchronizeSpec(t *testing.T) {
@@ -176,10 +163,11 @@ func TestSynchronizeSpec(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err = sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
+	assert.True(t, createdOrUpdated)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur)
@@ -201,10 +189,11 @@ func TestSynchronizeAnnotation(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err := sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
+	assert.True(t, createdOrUpdated)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur)
@@ -256,8 +245,13 @@ func TestSynchronizeStatus(t *testing.T) {
 func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	// given
 	apiScheme(t)
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+		CompliantUsername: "john",
+	}
 	mur := murtest.NewMasterUserRecord(t, "john",
-		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")))
+		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")),
+		murtest.WithOwnerLabel(userSignup.Name))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
@@ -269,12 +263,12 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		UserAccountStatus: userAccount.Status,
 	}}
 
-	uatest.Modify(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
-
 	t.Run("successful", func(t *testing.T) {
 		// given
+		updatingUserAccount := userAccount.DeepCopy()
+		uatest.Modify(updatingUserAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+		sync, memberClient := prepareSynchronizer(t, updatingUserAccount, mur, hostClient)
 
 		// when
 		err := sync.synchronizeStatus()
@@ -282,7 +276,24 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, sync.record.Status.ProvisionedTime)
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, updatingUserAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+	})
+
+	t.Run("successful and ready", func(t *testing.T) {
+		// given
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		preSyncTime := metav1.Now()
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
 	})
 
 	t.Run("failed on the host side", func(t *testing.T) {
@@ -349,9 +360,10 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	})
 }
 
-func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
+func TestAlignReadiness(t *testing.T) {
 	// given
-	apiScheme(t)
+	s := apiScheme(t)
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 
 	// A basic userSignup to set as the mur owner
 	userSignup := commonsignup.NewUserSignup()
@@ -359,19 +371,11 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		CompliantUsername: "john",
 	}
 
-	mur := murtest.NewMasterUserRecord(t, "john",
-		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
-	mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignup.Name
+	preparedMUR := murtest.NewMasterUserRecord(t, "john",
+		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+		murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
+		murtest.WithOwnerLabel(userSignup.Name))
 
-	userAccount := uatest.NewUserAccountFromMur(mur,
-		uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
-
-	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		Cluster: toolchainv1alpha1.Cluster{
-			Name: test.MemberClusterName,
-		},
-		UserAccountStatus: userAccount.Status,
-	}}
 	dummyNotification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("dummy-%s", toolchainv1alpha1.NotificationTypeProvisioned),
@@ -383,43 +387,219 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		},
 	}
 
-	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
+	log := zap.New(zap.UseDevMode(true))
 
-	t.Run("successful", func(t *testing.T) {
+	t.Run("ready propagated and notification created", func(t *testing.T) {
 		// given
+		mur := preparedMUR.DeepCopy()
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
-		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		preSyncTime := metav1.Now()
-		err := sync.synchronizeStatus()
+		preAlignTime := metav1.Now()
+		ready, err := alignReadiness(log, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
-		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		assert.True(t, ready)
+		require.True(t, preAlignTime.Time.Before(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
 		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+	})
+
+	t.Run("ready propagated and notification created with two accounts", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()),
+			murtest.WithOwnerLabel(userSignup.Name))
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
+
+		// when
+		preAlignTime := metav1.Now()
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, ready)
+		require.True(t, preAlignTime.Time.Before(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts(test.MemberClusterName, test.Member2ClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+	})
+
+	t.Run("UserAccount not ready", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeNotReady(toolchainv1alpha1.UserAccountProvisioningReason, "")),
+			murtest.WithOwnerLabel(userSignup.Name))
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, ready)
+		require.Empty(t, mur.Status.ProvisionedTime)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeNotReady(toolchainv1alpha1.UserAccountProvisioningReason, ""))
+		AssertNoNotificationsExist(t, hostClient)
+	})
+
+	t.Run("two UserAccounts, one not ready", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeNotReady(toolchainv1alpha1.UserAccountProvisioningReason, "")),
+			murtest.WithOwnerLabel(userSignup.Name))
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, ready)
+		require.Empty(t, mur.Status.ProvisionedTime)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasStatusUserAccounts(test.MemberClusterName, test.Member2ClusterName).
+			HasStatusUserAccountsWithCondition(test.MemberClusterName, toBeProvisioned()).
+			HasStatusUserAccountsWithCondition(test.Member2ClusterName, toBeNotReady(toolchainv1alpha1.UserAccountProvisioningReason, ""))
+		AssertNoNotificationsExist(t, hostClient)
+	})
+
+	t.Run("no UserAccount in status, space creation not skipped, and MUR is without provisioned time", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name))
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, ready)
+		require.Empty(t, mur.Status.ProvisionedTime)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasStatusUserAccounts()
+		AssertNoNotificationsExist(t, hostClient)
+	})
+
+	t.Run("no UserAccount in status, space creation not skipped,and MUR is with provisioned time", func(t *testing.T) {
+		// given
+		provisionedTime := metav1.Now()
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.ProvisionedMur(&provisionedTime))
+
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, ready)
+		assert.Equal(t, provisionedTime, *mur.Status.ProvisionedTime)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts()
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+	})
+
+	t.Run("no UserAccount in status, space creation not skipped, with pre-existing MUR ready condition", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.WithOwnerLabel(userSignup.Name))
+		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
+		mur.Status.ProvisionedTime = &provisionTime
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+		// when
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, ready)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasStatusUserAccounts().
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+	})
+
+	t.Run("no UserAccount in status, space creation is skipped", func(t *testing.T) {
+		// given
+		murWithoutCondition := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
+		murWithCondition := murtest.NewMasterUserRecord(t, "john",
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
+
+		for _, mur := range []*toolchainv1alpha1.MasterUserRecord{murWithoutCondition, murWithCondition} {
+			hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+
+			// when
+			preAlignTime := metav1.Now()
+			ready, err := alignReadiness(log, s, hostClient, mur)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, ready)
+			require.True(t, preAlignTime.Time.Before(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+			murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+				HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+				HasStatusUserAccounts().
+				AllUserAccountsHaveCondition(toBeProvisioned())
+			OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		}
+
 	})
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
+		mur := preparedMUR.DeepCopy()
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
-		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
-		sync.record.Status.ProvisionedTime = &provisionTime
+		mur.Status.ProvisionedTime = &provisionTime
+
 		// when
-		preSyncTime := metav1.Now()
-		err := sync.synchronizeStatus()
+		preAlignTime := metav1.Now()
+		ready, err := alignReadiness(log, s, hostClient, mur)
+
 		// then
 		require.NoError(t, err)
-		require.True(t, preSyncTime.Time.After(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
-		assert.Equal(t, provisionTime.Time, sync.record.Status.ProvisionedTime.Time) // timestamp should be the same
+		assert.True(t, ready)
+		require.True(t, preAlignTime.Time.After(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
+		assert.Equal(t, provisionTime.Time, mur.Status.ProvisionedTime.Time) // timestamp should be the same
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
 		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
 	})
 
 	t.Run("When notification was already created, but the update of status failed before, which means that the condition is not set", func(t *testing.T) {
 		// given
+		mur := preparedMUR.DeepCopy()
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s", mur.Name, toolchainv1alpha1.NotificationTypeProvisioned),
@@ -431,67 +611,62 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 			},
 		}
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification, notification)
-		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		preSyncTime := metav1.Now()
-		err := sync.synchronizeStatus()
+		preAlignTime := metav1.Now()
+		ready, err := alignReadiness(log, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
-		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		assert.True(t, ready)
+		require.True(t, preAlignTime.Time.Before(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
 		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
 	})
 
 	t.Run("no new notification created when condition is already set", func(t *testing.T) {
 		// given
-		murCopy := mur.DeepCopy()
-		murCopy.Status.Conditions = append(murCopy.Status.Conditions, toBeProvisionedNotificationCreated())
-		hostClient := test.NewFakeClient(t, murCopy, readyToolchainStatus)
-		sync, memberClient := prepareSynchronizer(t, userAccount, murCopy, hostClient)
+		mur := preparedMUR.DeepCopy()
+		mur.Status.Conditions = append(mur.Status.Conditions, toBeProvisionedNotificationCreated())
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		// when
-		preSyncTime := metav1.Now()
-		err := sync.synchronizeStatus()
+		preAlignTime := metav1.Now()
+		ready, err := alignReadiness(log, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
-		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, murCopy, toBeProvisioned(), toBeProvisionedNotificationCreated())
-		AssertNoNotificationsExist(t, hostClient)
-	})
-
-	t.Run("failed on the host side when doing update", func(t *testing.T) {
-		// given
-		hostClient := test.NewFakeClient(t)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-			return fmt.Errorf("some error")
-		}
-		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
-
-		// when
-		err := sync.synchronizeStatus()
-
-		// then
-		require.Error(t, err)
+		assert.True(t, ready)
+		require.True(t, preAlignTime.Time.Before(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
 		AssertNoNotificationsExist(t, hostClient)
 	})
 
 	t.Run("failed on the host side when creating notification", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur.DeepCopy())
+		mur := preparedMUR.DeepCopy()
+		hostClient := test.NewFakeClient(t, mur)
 		hostClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 			return fmt.Errorf("some error")
 		}
-		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		ready, err := alignReadiness(log, s, hostClient, mur)
 
 		// then
 		require.Error(t, err)
+		assert.False(t, ready)
 		AssertNoNotificationsExist(t, hostClient)
+		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
+			HasConditions(toBeProvisioned()).
+			HasStatusUserAccounts(test.MemberClusterName).
+			AllUserAccountsHaveCondition(toBeProvisioned())
 	})
 }
 
@@ -514,20 +689,20 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAcc,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
-			scheme:            scheme,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAcc,
+			logger:        l,
+			scheme:        scheme,
 		}
 
 		// when
-		err = sync.synchronizeSpec()
+		createdOrUpdated, err := sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
+		assert.False(t, createdOrUpdated)
 		assert.Contains(t, err.Error(), "unable to update user account john")
 	})
 
@@ -543,13 +718,12 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{
-			record:            provisionedMur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAcc,
-			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
-			logger:            l,
-			scheme:            scheme,
+			record:        provisionedMur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAcc,
+			logger:        l,
+			scheme:        scheme,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -625,13 +799,12 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 					memberClient := test.NewFakeClient(t, userAccount)
 					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 					sync := Synchronizer{
-						record:            mur,
-						hostClient:        hostClient,
-						memberCluster:     newMemberCluster(memberClient),
-						memberUserAcc:     userAccount,
-						recordSpecUserAcc: mur.Spec.UserAccounts[0],
-						logger:            l,
-						scheme:            scheme,
+						record:        mur,
+						hostClient:    hostClient,
+						memberCluster: newMemberCluster(memberClient),
+						memberUserAcc: userAccount,
+						logger:        l,
+						scheme:        scheme,
 					}
 
 					// when
@@ -642,6 +815,75 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				}
 			})
 		})
+	})
+}
+
+func TestRemoveAccountFromStatus(t *testing.T) {
+	// given
+	apiScheme(t)
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+		CompliantUsername: "john",
+	}
+
+	t.Run("remove UserAccount from the status when there is one item and the MUR was already provisioned before", func(t *testing.T) {
+		// given
+		provisionedTime := metav1.Now()
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
+			murtest.ProvisionedMur(&provisionedTime))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts().
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
+	})
+
+	t.Run("remove UserAccount from the status when there are two items and align readiness", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady("Provisioning", "")),
+			murtest.StatusUserAccount(test.MemberClusterName, toBeNotReady("terminating", "")),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts(test.Member2ClusterName).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
+	})
+
+	t.Run("don't remove anything when UserAccount is not present, don't align readiness", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.StatusCondition(toBeNotReady("Provisioning", "")),
+			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()))
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
+
+		// when
+		err := sync.removeAccountFromStatus()
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, mur.Name, hostClient).
+			HasStatusUserAccounts(test.Member2ClusterName).
+			HasConditions(toBeNotReady("Provisioning", ""))
 	})
 }
 
@@ -666,12 +908,11 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur.DeepCopy(),
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur.DeepCopy(),
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			logger:        l,
 		}
 
 		// when
@@ -701,12 +942,11 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			logger:        l,
 		}
 
 		// when
@@ -736,12 +976,11 @@ func TestRoutes(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		sync := Synchronizer{
-			record:            mur,
-			hostClient:        hostClient,
-			memberCluster:     newMemberCluster(memberClient),
-			memberUserAcc:     userAccount,
-			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			logger:            l,
+			record:        mur,
+			hostClient:    hostClient,
+			memberCluster: newMemberCluster(memberClient),
+			memberUserAcc: userAccount,
+			logger:        l,
 		}
 
 		// when
@@ -767,18 +1006,18 @@ func TestRoutes(t *testing.T) {
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, runtimeclient.Client) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	copiedMur := mur.DeepCopy()
-	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
-	memberClient := test.NewFakeClient(t, userAccount, toolchainStatus)
+	memberClient := test.NewFakeClient(t)
+	if userAccount != nil {
+		memberClient = test.NewFakeClient(t, userAccount)
+	}
 
 	return Synchronizer{
-		record:            copiedMur,
-		hostClient:        hostClient,
-		memberCluster:     newMemberCluster(memberClient),
-		memberUserAcc:     userAccount,
-		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
-		logger:            zap.New(zap.UseDevMode(true)),
-		scheme:            apiScheme(t),
+		record:        copiedMur,
+		hostClient:    hostClient,
+		memberCluster: newMemberCluster(memberClient),
+		memberUserAcc: userAccount,
+		logger:        zap.New(zap.UseDevMode(true)),
+		scheme:        apiScheme(t),
 	}, memberClient
 }
 

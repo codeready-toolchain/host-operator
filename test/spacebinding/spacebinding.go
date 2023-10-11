@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,5 +48,11 @@ func WithDeletionTimestamp() Option {
 	return func(spaceBinding *toolchainv1alpha1.SpaceBinding) {
 		now := metav1.NewTime(time.Now())
 		spaceBinding.DeletionTimestamp = &now
+	}
+}
+
+func WithFinalizer() Option {
+	return func(spaceBinding *toolchainv1alpha1.SpaceBinding) {
+		util.AddFinalizer(spaceBinding, toolchainv1alpha1.FinalizerName)
 	}
 }
