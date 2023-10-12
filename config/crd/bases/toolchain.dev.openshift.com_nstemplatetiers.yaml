@@ -50,6 +50,9 @@ spec:
                 required:
                 - templateRef
                 type: object
+              copySaToken:
+                description: flag to signigy whether to copy SA token or not
+                type: boolean
               namespaces:
                 description: The namespace templates
                 items:
