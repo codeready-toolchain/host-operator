@@ -103,8 +103,8 @@ ifeq ($(E2E_REPO_PATH),"")
 			$(eval AUTHOR_LINK = $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
 			@echo "using pull sha ${PULL_PULL_SHA}"
 			# get branch ref of the fork the PR was created from
-			$(eval CLONE_BRANCH_REF := $(shell jq -r '.refs[0].pulls[0].head_ref' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
-			@echo "found branch from clone info ${CLONE_BRANCH_REF}"
+			$(eval CLONE_BRANCH_REF := refs/heads/$(shell jq -r '.refs[0].pulls[0].head_ref' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
+			@echo "found branch from clone info: ${CLONE_BRANCH_REF}"
 			$(eval BRANCH_REF := $(shell curl ${AUTHOR_LINK}/host-operator.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${PULL_PULL_SHA} | awk '{print $$2}'))
         endif
 		@echo "using author link ${AUTHOR_LINK}"
