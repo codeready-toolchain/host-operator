@@ -51,7 +51,7 @@ spec:
                 - templateRef
                 type: object
               copySaToken:
-                description: flag to signigy whether to copy SA token or not
+                description: flag to signify whether to copy SA token or not
                 type: boolean
               namespaces:
                 description: The namespace templates
