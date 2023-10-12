@@ -218,7 +218,7 @@ objects:
   - kind: Service
     apiVersion: v1
     metadata:
-      name: metrics
+      name: proxy-metrics-service
       namespace: ${NAMESPACE}
       labels:
         provider: codeready-toolchain
