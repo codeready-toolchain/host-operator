@@ -203,6 +203,12 @@ func (u *StatusUpdater) setStatusDeactivated(ctx context.Context, userSignup *to
 			Status:  corev1.ConditionTrue,
 			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 			Message: message,
+		},
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupApproved,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			Message: message,
 		})
 }
 
