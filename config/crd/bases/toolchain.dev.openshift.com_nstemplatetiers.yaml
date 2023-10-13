@@ -50,9 +50,6 @@ spec:
                 required:
                 - templateRef
                 type: object
-              copySaToken:
-                description: flag to signify whether to copy SA token or not
-                type: boolean
               namespaces:
                 description: The namespace templates
                 items:
@@ -69,6 +66,13 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              spaceRequestConfig:
+                description: Provides the name of the Service Account whose token
+                  is to be copied
+                properties:
+                  saTokenToCopy:
+                    type: string
+                type: object
               spaceRoles:
                 additionalProperties:
                   description: NSTemplateTierSpaceRole the space roles definition
