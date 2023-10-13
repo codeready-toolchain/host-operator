@@ -101,11 +101,8 @@ ifeq ($(E2E_REPO_PATH),"")
 			$(eval AUTHOR_LINK = https://github.com/${AUTHOR})
         else
 			$(eval AUTHOR_LINK = $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
-			@echo "using pull sha ${PULL_PULL_SHA}"
 			# get branch ref of the fork the PR was created from
-			$(eval CLONE_BRANCH_REF := refs/heads/$(shell jq -r '.refs[0].pulls[0].head_ref' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
-			@echo "found branch from clone info: ${CLONE_BRANCH_REF}"
-			$(eval BRANCH_REF := $(shell curl ${AUTHOR_LINK}/host-operator.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${PULL_PULL_SHA} | awk '{print $$2}'))
+			$(eval BRANCH_REF := refs/heads/$(shell jq -r '.refs[0].pulls[0].head_ref' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
         endif
 		@echo "using author link ${AUTHOR_LINK}"
 		@echo "detected branch ref ${BRANCH_REF}"
@@ -116,8 +113,6 @@ ifeq ($(E2E_REPO_PATH),"")
 		if [[ -n "${REMOTE_E2E_BRANCH}" ]]; then \
 			git config --global user.email "devtools@redhat.com"; \
 			git config --global user.name "Devtools"; \
-			# retrieve the branch name \
-			BRANCH_NAME=`echo ${BRANCH_REF} | awk -F'/' '{print $$3}'`; \
 			# add the user's fork as remote repo \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} remote add external ${AUTHOR_LINK}/toolchain-e2e.git; \
 			# fetch the branch \
