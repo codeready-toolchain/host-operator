@@ -98,6 +98,7 @@ objects:
               ports:
                 - containerPort: 8080
                 - containerPort: 8081
+                - containerPort: 8082
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -214,6 +215,24 @@ objects:
       tls:
         termination: edge
       wildcardPolicy: None
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: proxy-metrics-service
+      namespace: ${NAMESPACE}
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+    spec:
+      ports:
+        - name: "8082"
+          protocol: TCP
+          port: 80
+          targetPort: 8082
+      selector:
+        run: registration-service
+      type: ClusterIP
+      sessionAffinity: null
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'
