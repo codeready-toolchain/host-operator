@@ -101,6 +101,12 @@ ifeq ($(E2E_REPO_PATH),"")
 			$(eval AUTHOR_LINK = https://github.com/${AUTHOR})
         else
 			$(eval AUTHOR_LINK = $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
+			$(eval HEAD_REF = $(shell jq -r '.refs[0].pulls[0]' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]' | grep head_ref))
+			@echo "head ref grep from pull data: ${HEAD_REF}"
+			$(eval NO_DATA = $(shell jq -r '.refs[0].pulls[0]' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]' | grep no_data))
+            @echo "no data grep from pull data: ${NO_DATA}"
+			$(eval NO_DATA = $(shell jq -r '.refs[0].pulls[0].no_data' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
+			@echo "no data from pull data: ${NO_DATA}"
 			# get branch ref of the fork the PR was created from
 			$(eval BRANCH_REF := refs/heads/$(shell jq -r '.refs[0].pulls[0].head_ref' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
         endif
