@@ -254,15 +254,14 @@ func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBinding
 	return r.updateSpaceBinding(logger, spaceBinding, spaceBindingRequest)
 }
 
-// updateSpaceBinding updates the MUR and Role from the spaceBindingRequest to the spacebinding object
+// updateSpaceBinding updates the Role from the spaceBindingRequest to the spacebinding object
 // if they are not up-to-date.
 // returns false/nil if everything is up-to-date
 // returns true/nil if spacebinding was updated
 // returns false/err if something went wrong
 func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
 	logger.Info("update spaceBinding")
-	if spaceBindingRequest.Spec.MasterUserRecord == spaceBinding.Spec.MasterUserRecord &&
-		spaceBindingRequest.Spec.SpaceRole == spaceBinding.Spec.SpaceRole {
+	if spaceBindingRequest.Spec.SpaceRole == spaceBinding.Spec.SpaceRole {
 		// everything is up-to-date let's return
 		return nil
 	}
@@ -270,9 +269,6 @@ func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	// update SpaceRole and MUR
 	logger.Info("updating spaceBinding", "spaceBinding.Name", spaceBinding.Name)
 	spaceBinding.Spec.SpaceRole = spaceBindingRequest.Spec.SpaceRole
-	spaceBinding.Spec.MasterUserRecord = spaceBindingRequest.Spec.MasterUserRecord
-	// update also the MUR label
-	spaceBinding.Labels[toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey] = spaceBindingRequest.Spec.MasterUserRecord
 	err := r.Client.Update(context.TODO(), spaceBinding)
 	if err != nil {
 		return errs.Wrap(err, "unable to update SpaceRole and MasterUserRecord fields")
