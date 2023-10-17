@@ -226,7 +226,7 @@ objects:
         run: proxy-metrics
     spec:
       ports:
-        - name: "8082"
+        - name: proxy-metrics
           protocol: TCP
           port: 80
           targetPort: metrics
