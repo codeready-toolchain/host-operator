@@ -67,10 +67,12 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               spaceRequestConfig:
-                description: Provides the name of the Service Account whose token
-                  is to be copied
+                description: SpaceRequestConfigName stores all the configuration related
+                  to the Space Request feature
                 properties:
-                  saTokenToCopy:
+                  serviceAccountName:
+                    description: Provides the name of the Service Account whose token
+                      is to be copied
                     type: string
                 type: object
               spaceRoles:
