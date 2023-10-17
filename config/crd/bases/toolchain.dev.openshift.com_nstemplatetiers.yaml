@@ -67,7 +67,7 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               spaceRequestConfig:
-                description: SpaceRequestConfigName stores all the configuration related
+                description: SpaceRequestConfig stores all the configuration related
                   to the Space Request feature
                 properties:
                   serviceAccountName:
