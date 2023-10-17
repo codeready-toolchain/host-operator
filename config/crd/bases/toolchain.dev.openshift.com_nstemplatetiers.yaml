@@ -66,6 +66,15 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              spaceRequestConfig:
+                description: SpaceRequestConfig stores all the configuration related
+                  to the Space Request feature
+                properties:
+                  serviceAccountName:
+                    description: Provides the name of the Service Account whose token
+                      is to be copied
+                    type: string
+                type: object
               spaceRoles:
                 additionalProperties:
                   description: NSTemplateTierSpaceRole the space roles definition
