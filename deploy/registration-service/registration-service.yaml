@@ -99,6 +99,7 @@ objects:
                 - containerPort: 8080
                 - containerPort: 8081
                 - containerPort: 8082
+                  name: metrics
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -222,13 +223,13 @@ objects:
       namespace: ${NAMESPACE}
       labels:
         provider: codeready-toolchain
-        run: registration-service
+        run: proxy-metrics
     spec:
       ports:
-        - name: "8082"
+        - name: proxy-metrics
           protocol: TCP
           port: 80
-          targetPort: 8082
+          targetPort: metrics
       selector:
         run: registration-service
       type: ClusterIP
