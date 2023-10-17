@@ -65,10 +65,11 @@ func SubSpaceName(parentSpace *toolchainv1alpha1.Space, spacerequest *toolchainv
 
 	// if the parent space is itself a subspace, then we need to strip its
 	// identifier out to prevent length limitations from kicking in
-	if parentSpace.Spec.ParentSpace != "" {
+	if parentSpace.Spec.ParentSpace != "" && len(parentSpaceName) > 6 {
 		// take of 6 characters to include the dash
 		parentSpaceName = string(parentSpaceName[:len(parentSpaceName)-6])
 	}
 
+	// we only get the first 5 chars from UID so we can keep the name within the length limits
 	return fmt.Sprintf("%v-%v", parentSpaceName, string(spacerequest.UID[:5]))
 }
