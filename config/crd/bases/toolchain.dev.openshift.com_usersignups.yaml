@@ -199,8 +199,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               homeSpace:
-                description: HomeSpace represents the default home space for the user.
-                  This is used by the proxy when no workspace context is provided.
+                description: HomeSpace is the name of the Space that is created for
+                  the user immediately after their account is approved. This is used
+                  by the proxy when no workspace context is provided.
                 type: string
             type: object
         type: object
