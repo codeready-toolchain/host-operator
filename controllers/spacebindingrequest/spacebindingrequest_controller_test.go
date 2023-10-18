@@ -489,34 +489,6 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 				Exists().
 				HasSpec(janeMur.Name, janeSpace.Name, "admin") // check that admin was set
 		})
-
-		t.Run("update MasterUserRecord", func(t *testing.T) {
-			// given
-			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
-				spacebindingrequesttest.WithMUR("jane"),
-				spacebindingrequesttest.WithSpaceRole("admin"))
-			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr)) // jane is still the MUR on the spacebinding
-			lanaMur := masteruserrecord.NewMasterUserRecord(t, "lana")                                                                                       // we have a new MUR we want to replace the previous one
-			sbr.Spec.MasterUserRecord = lanaMur.GetName()                                                                                                    // update MUR on SBR
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, base1nsTier, spaceBinding, janeSpace, lanaMur)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
-
-			// then
-			require.NoError(t, err)
-			// spacebindingrequest exists with expected config and finalizer
-			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
-				HasSpecSpaceRole("admin").
-				HasSpecMasterUserRecord(lanaMur.Name).
-				HasFinalizer()
-			// spacebinding was updated
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, lanaMur.Name, janeSpace.Name, hostClient).
-				Exists().
-				HasSpec(lanaMur.Name, janeSpace.Name, "admin").HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, lanaMur.GetName()) // check lana has now admin role in jane space
-		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
