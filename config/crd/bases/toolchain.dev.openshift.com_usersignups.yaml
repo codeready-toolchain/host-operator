@@ -198,6 +198,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              homeSpace:
+                description: HomeSpace is the name of the Space that is created for
+                  the user immediately after their account is approved. This is used
+                  by the proxy when no workspace context is provided.
+                type: string
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true
