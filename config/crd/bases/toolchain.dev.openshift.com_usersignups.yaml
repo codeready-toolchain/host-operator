@@ -198,6 +198,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              homeSpace:
+                description: HomeSpace represents the default home space for the user.
+                  This is used by the proxy when no workspace context is provided.
+                type: string
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true
