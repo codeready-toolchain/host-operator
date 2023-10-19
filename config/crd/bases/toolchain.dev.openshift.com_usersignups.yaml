@@ -88,6 +88,47 @@ spec:
               givenName:
                 description: The user's first name, obtained from the identity provider.
                 type: string
+              identityClaims:
+                description: IdentityClaims contains as-is claim values extracted
+                  from the user's access token
+                properties:
+                  accountID:
+                    description: AccountID contains the value of the 'account_id'
+                      claim
+                    type: string
+                  company:
+                    description: Company contains the value of the 'company' claim
+                    type: string
+                  email:
+                    description: Email contains the user's email address
+                    type: string
+                  familyName:
+                    description: FamilyName contains the value of the 'family_name'
+                      claim
+                    type: string
+                  givenName:
+                    description: GivenName contains the value of the 'given_name'
+                      claim
+                    type: string
+                  originalSub:
+                    description: OriginalSub is an optional property temporarily introduced
+                      for the purpose of migrating the users to a new IdP provider
+                      client, and contains the user's "original-sub" claim
+                    type: string
+                  preferredUsername:
+                    description: PreferredUsername contains the user's username
+                    type: string
+                  sub:
+                    description: Sub contains the value of the 'sub' claim
+                    type: string
+                  userID:
+                    description: UserID contains the value of the 'user_id' claim
+                    type: string
+                required:
+                - email
+                - preferredUsername
+                - sub
+                type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
                   for the purpose of migrating the users to a new IdP provider client,
@@ -157,6 +198,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              homeSpace:
+                description: HomeSpace is the name of the Space that is created for
+                  the user immediately after their account is approved. This is used
+                  by the proxy when no workspace context is provided.
+                type: string
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true

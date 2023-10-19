@@ -2,6 +2,7 @@ package usersignupcleanup
 
 import (
 	"context"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -10,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the UserSignup instance
 	instance := &toolchainv1alpha1.UserSignup{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -64,6 +64,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
+	ctx = log.IntoContext(ctx, reqLogger)
+
+	if util.IsBeingDeleted(instance) {
+		reqLogger.Info("UserSignup is already being deleted")
+		return reconcile.Result{}, nil
+	}
 
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
@@ -82,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			if createdTime.Time.Before(unverifiedThreshold) {
 				reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
-				return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
+				return reconcile.Result{}, r.DeleteUserSignup(ctx, instance)
 			}
 
 			// Requeue this for reconciliation after the time has passed between the last active time
@@ -132,7 +138,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")
-			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
+			return reconcile.Result{}, r.DeleteUserSignup(ctx, instance)
 		}
 
 		// Requeue this for reconciliation after the time has passed between the last transition time
@@ -150,18 +156,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 // DeleteUserSignup deletes the specified UserSignup
-func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
+func (r *Reconciler) DeleteUserSignup(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) error {
 	// before deleting the resource, we want to "remember" if the user triggered a phone verification or not,
 	// based on the presence of the `toolchain.dev.openshift.com/verification-code` annotation
 	_, phoneVerificationTriggered := userSignup.Annotations[toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey]
 
 	propagationPolicy := metav1.DeletePropagationForeground
-	err := r.Client.Delete(context.TODO(), userSignup, &runtimeclient.DeleteOptions{
+	err := r.Client.Delete(ctx, userSignup, &runtimeclient.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 	if err != nil {
 		return err
 	}
+
+	logger := log.FromContext(ctx)
 	logger.Info("Deleted UserSignup", "name", userSignup.Name)
 	// increment the appropriate counter, based whether the phone verification was triggered or not
 	if phoneVerificationTriggered {

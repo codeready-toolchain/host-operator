@@ -66,7 +66,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.Equal(t, "Notice: Your running application in namespace {{.Namespace}} has been idled", template.Subject)
-			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, we have reduced the number of instances of your\n        application to zero (0).")
+			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, we have reduced the number of instances of your\n        application {{.AppType}} {{.AppName}} to zero (0).")
 
 		})
 	})
@@ -80,7 +80,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.Equal(t, "Welcome to Red Hat Trusted Application Pipeline!", template.Subject)
-			assert.Contains(t, template.Content, "Welcome to Red Hat Trusted Application Pipeline!")
+			assert.Contains(t, template.Content, "Welcome to Red Hat Trusted Application Pipeline")
 			assert.NotContains(t, template.Content, "Sandbox")
 			assert.Equal(t, UserProvisionedTemplateName, template.Name)
 		})

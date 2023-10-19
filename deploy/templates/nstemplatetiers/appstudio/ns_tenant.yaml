@@ -66,7 +66,7 @@ objects:
       limits.ephemeral-storage: 50Gi
       requests.storage: 50Gi
       requests.ephemeral-storage: 50Gi
-      count/persistentvolumeclaims: "12"
+      count/persistentvolumeclaims: "30"
 - apiVersion: v1
   kind: ResourceQuota
   metadata:

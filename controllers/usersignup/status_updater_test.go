@@ -1,6 +1,7 @@
 package usersignup
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -10,10 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-var testLog = ctrl.Log.WithName("test")
 
 func TestUpdateStatus(t *testing.T) {
 	// given
@@ -23,13 +21,13 @@ func TestUpdateStatus(t *testing.T) {
 
 	t.Run("status updated", func(t *testing.T) {
 		// given
-		updateStatus := func(_ *toolchainv1alpha1.UserSignup, message string) error {
+		updateStatus := func(_ context.Context, _ *toolchainv1alpha1.UserSignup, message string) error {
 			assert.Equal(t, "oopsy woopsy", message)
 			return nil
 		}
 
 		// when
-		err := statusUpdater.wrapErrorWithStatusUpdate(testLog, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
+		err := statusUpdater.wrapErrorWithStatusUpdate(context.TODO(), userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
 
 		// then
 		require.Error(t, err)
@@ -38,12 +36,12 @@ func TestUpdateStatus(t *testing.T) {
 
 	t.Run("status update failed", func(t *testing.T) {
 		// given
-		updateStatus := func(_ *toolchainv1alpha1.UserSignup, _ string) error {
+		updateStatus := func(_ context.Context, _ *toolchainv1alpha1.UserSignup, _ string) error {
 			return fmt.Errorf("unable to update status")
 		}
 
 		// when
-		err := statusUpdater.wrapErrorWithStatusUpdate(testLog, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
+		err := statusUpdater.wrapErrorWithStatusUpdate(context.TODO(), userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
 
 		// then
 		require.Error(t, err)

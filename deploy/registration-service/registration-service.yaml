@@ -38,6 +38,7 @@ objects:
           - toolchainconfigs
           - toolchainstatuses
           - proxyplugins
+          - nstemplatetiers
         verbs:
           - get
           - list
@@ -97,6 +98,8 @@ objects:
               ports:
                 - containerPort: 8080
                 - containerPort: 8081
+                - containerPort: 8082
+                  name: metrics
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -213,6 +216,24 @@ objects:
       tls:
         termination: edge
       wildcardPolicy: None
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: proxy-metrics-service
+      namespace: ${NAMESPACE}
+      labels:
+        provider: codeready-toolchain
+        run: proxy-metrics
+    spec:
+      ports:
+        - name: proxy-metrics
+          protocol: TCP
+          port: 80
+          targetPort: metrics
+      selector:
+        run: registration-service
+      type: ClusterIP
+      sessionAffinity: null
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'

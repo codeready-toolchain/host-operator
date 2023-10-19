@@ -21,6 +21,11 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		changed = true
 	}
 
+	if mur.Spec.PropagatedClaims != userSignup.Spec.IdentityClaims.PropagatedClaims {
+		mur.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
+		changed = true
+	}
+
 	return changed
 }
 
@@ -36,6 +41,9 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 	annotations := map[string]string{
 		toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
 	}
+	if skipValue, present := userSignup.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey]; present {
+		annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = skipValue
+	}
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
@@ -45,10 +53,11 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			Annotations: annotations,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserAccounts: userAccounts,
-			UserID:       userSignup.Spec.Userid,
-			OriginalSub:  userSignup.Spec.OriginalSub,
-			TierName:     userTierName,
+			UserAccounts:     userAccounts,
+			UserID:           userSignup.Spec.Userid,
+			OriginalSub:      userSignup.Spec.OriginalSub,
+			TierName:         userTierName,
+			PropagatedClaims: userSignup.Spec.IdentityClaims.PropagatedClaims,
 		},
 	}
 
