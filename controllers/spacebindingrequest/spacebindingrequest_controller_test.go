@@ -16,6 +16,7 @@ import (
 	spacebindingrequesttest "github.com/codeready-toolchain/host-operator/test/spacebindingrequest"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	spacebindingcommon "github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
@@ -444,6 +445,28 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 			// then
 			cause := "cannot update SpaceBinding because it is currently being deleted"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
+		})
+
+		t.Run("SpaceBinding with same name already exists", func(t *testing.T) {
+			// given
+			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
+			// we have an SBR that will try to create the same SpaceBinding
+			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR(janeMur.Name),
+				spacebindingrequesttest.WithSpaceRole("admin"))
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+			// then
+			cause := fmt.Sprintf("SpaceBinding %s already exists for MasterUserRercord jane and Space jane", spaceBinding.GetName())
 			require.EqualError(t, err, cause)
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
