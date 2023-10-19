@@ -466,7 +466,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
 
 			// then
-			cause := fmt.Sprintf("SpaceBinding %s already exists for MasterUserRercord jane and Space jane", spaceBinding.GetName())
+			cause := fmt.Sprintf("SpaceBinding %s already exists for MasterUserRercord %s and Space %s", spaceBinding.GetName(), janeMur.GetName(), janeSpace.GetName())
 			require.EqualError(t, err, cause)
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
