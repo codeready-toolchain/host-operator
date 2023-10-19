@@ -300,10 +300,9 @@ func (r *Reconciler) createNewSpaceBinding(logger logr.Logger, memberCluster clu
 		}
 		logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 		return nil
-	} else {
-		return fmt.Errorf("SpaceBinding %s already exists for MasterUserRercord %s and Space %s", spaceBinding.GetName(), spaceBindingRequest.Spec.MasterUserRecord, space.GetName())
 	}
 
+	return fmt.Errorf("SpaceBinding %s already exists for MasterUserRercord %s and Space %s", spaceBinding.GetName(), spaceBindingRequest.Spec.MasterUserRecord, space.GetName())
 }
 
 // getSpace retrieves the name of the space that provisioned the namespace in which the spacebindingrequest was issued.
