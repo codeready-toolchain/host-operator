@@ -1,6 +1,7 @@
 package space
 
 import (
+	"fmt"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -60,14 +61,17 @@ func TestNewSubSubSpace(t *testing.T) {
 	sr := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
 		spacerequesttest.WithTierName("appstudio"),
 		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+	sr2 := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
+		spacerequesttest.WithTierName("appstudio"),
+		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := NewSubSpace(sr, parentSpace)
 
 	// when
-	subSubSpace := NewSubSpace(sr, subSpace)
+	subSubSpace := NewSubSpace(sr2, subSpace)
 
 	// then
-	expectedSubSubSpace := spacetest.NewSpace(test.HostOperatorNs, SubSpaceName(subSpace, sr),
+	expectedSubSubSpace := spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("%s-%s", parentSpace.Name, sr2.UID[:5]),
 		spacetest.WithSpecParentSpace(subSpace.GetName()),
 		spacetest.WithTierName("appstudio"),
 		spacetest.WithSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}),
@@ -79,4 +83,5 @@ func TestNewSubSubSpace(t *testing.T) {
 
 	// also assert that names don't grow in length as we increase nesting
 	assert.Equal(t, len(subSpace.Name), len(subSubSpace.Name))
+	assert.NotEqual(t, subSpace.Name, subSubSpace.Name)
 }
