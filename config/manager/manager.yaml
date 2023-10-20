@@ -40,8 +40,8 @@ spec:
             - "--logtostderr=true"
             - "--v=3"
           ports:
-            - containerPort: 8443
-              name: https
+            - name: https
+              containerPort: 8443
         - name: manager
           command:
           - host-operator
