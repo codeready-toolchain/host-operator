@@ -20,6 +20,8 @@ objects:
         templateRef: ${MAINTAINER_TEMPL_REF}
       contributor:
         templateRef: ${CONTRIBUTOR_TEMPL_REF}
+    spaceRequestConfig:
+      serviceAccountName: ${SERVICE_ACCOUNT_NAME}
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF
@@ -27,3 +29,4 @@ parameters:
 - name: ADMIN_TEMPL_REF
 - name: MAINTAINER_TEMPL_REF
 - name: CONTRIBUTOR_TEMPL_REF
+- name: SERVICE_ACCOUNT_NAME
