@@ -700,6 +700,11 @@ func (r *Reconciler) ensureSpace(
 		return nil, false, err
 	}
 
+	err = r.updateStatusHomeSpace(ctx, userSignup, space.Name)
+	if err != nil {
+		return nil, false, err
+	}
+
 	logger.Info("Created Space", "name", space.Name, "target_cluster", tCluster, "NSTemplateTier", spaceTier.Name)
 	return space, true, nil
 }
