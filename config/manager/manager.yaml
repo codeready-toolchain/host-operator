@@ -28,7 +28,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: kube-rbac-proxy
-          image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.7.0
+          image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.13.0
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -40,8 +40,8 @@ spec:
             - "--logtostderr=true"
             - "--v=3"
           ports:
-            - containerPort: 8443
-              name: https
+            - name: https
+              containerPort: 8443
         - name: manager
           command:
           - host-operator
