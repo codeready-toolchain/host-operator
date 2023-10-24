@@ -146,10 +146,6 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 	if err != nil {
 		return nil, err
 	}
-	// space is being deleted
-	if util.IsBeingDeleted(space) {
-		return nil, errs.New("space is being deleted")
-	}
 	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
 	spaceBindingLabels := runtimeclient.MatchingLabels{
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.GetName(),
@@ -180,6 +176,14 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 		sbrNamespaceLabel, sbrNamespaceLabelFound := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
 		if !sbrNamespaceLabelFound || sbrNamespaceLabel == "" {
 			return nil, fmt.Errorf("A SpaceBinding for Space %s and MUR %s already exists. But it doesn't have the expected SpaceBindingRequestNamespace label set: %s", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey)
+		}
+		// check if spaceBinding has correct reference to spaceBindingRequest
+		// this should never happen, but you never know ¯\_(ツ)_/¯
+		if sbrLabel != spaceBindingRequest.GetName() {
+			return nil, fmt.Errorf("expected SpaceBindingRequest label: %s, got: %s", spaceBindingRequest.GetName(), sbrLabel)
+		}
+		if sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
+			return nil, fmt.Errorf("expected SpaceBindingRequestNamespace label: %s, got: %s", spaceBindingRequest.GetNamespace(), sbrNamespaceLabel)
 		}
 	}
 
@@ -244,10 +248,6 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 	space, err := r.getSpace(ctx, memberCluster, spaceBindingRequest)
 	if err != nil {
 		return err
-	}
-	// space is being deleted
-	if util.IsBeingDeleted(space) {
-		return errs.New("space is being deleted")
 	}
 
 	// validate MUR
@@ -354,7 +354,10 @@ func (r *Reconciler) getSpace(ctx context.Context, memberCluster cluster.Cluster
 	if err != nil {
 		return nil, errs.Wrap(err, "unable to get space")
 	}
-
+	// space is being deleted
+	if util.IsBeingDeleted(space) {
+		return nil, errs.New("space is being deleted")
+	}
 	return space, nil // all good
 }
 

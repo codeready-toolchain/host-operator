@@ -507,7 +507,48 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 				// then
 				cause := "expected 1 spacebinding for Space jane and MUR jane. But found 2"
-				require.EqualError(t, err, "expected 1 spacebinding for Space jane and MUR jane. But found 2")
+				require.EqualError(t, err, cause)
+				spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+					HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+					HasFinalizer()
+			})
+
+			t.Run("SpaceBindingRequest label doesn't match", func(t *testing.T) {
+				// given
+				spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john")        // there is already a SpaceBinding for the given SBR
+				spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey] = "somerandomname" // this doesn't match the actual SBR name
+				spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey] = sbrForDuplicatedSpaceBinding.GetNamespace()
+				member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+				hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
+				ctrl := newReconciler(t, hostClient, member1)
+
+				// when
+				_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+				// then
+				cause := fmt.Sprintf("expected SpaceBindingRequest label: %s, got: %s", sbrForDuplicatedSpaceBinding.GetName(), "somerandomname")
+				require.EqualError(t, err, cause)
+				spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+					HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+					HasFinalizer()
+			})
+
+			t.Run("SpaceBindingRequestNamespace label doesn't match", func(t *testing.T) {
+				// given
+				spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") /// there is already a SpaceBinding for the given SBR
+				// we add a different name on the spacebinding label
+				spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey] = sbrForDuplicatedSpaceBinding.GetName()
+				spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey] = "somerandomnamespace" // this doesn't match the actual SBR namespace
+				member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+				hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
+				ctrl := newReconciler(t, hostClient, member1)
+
+				// when
+				_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+				// then
+				cause := fmt.Sprintf("expected SpaceBindingRequestNamespace label: %s, got: %s", sbrForDuplicatedSpaceBinding.GetNamespace(), "somerandomnamespace")
+				require.EqualError(t, err, cause)
 				spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 					HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
 					HasFinalizer()
