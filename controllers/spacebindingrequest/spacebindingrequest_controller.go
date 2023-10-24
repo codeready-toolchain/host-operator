@@ -9,7 +9,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -88,23 +87,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if util.IsBeingDeleted(spaceBindingRequest) {
 		logger.Info("spaceBindingRequest is being deleted")
-		return reconcile.Result{}, r.ensureSpaceBindingDeletion(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
+		return reconcile.Result{}, r.ensureSpaceBindingDeletion(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
 	}
 	// Add the finalizer if it is not present
-	if err := r.addFinalizer(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest); err != nil {
+	if err := r.addFinalizer(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	err = r.ensureSpaceBinding(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
+	err = r.ensureSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
 	if err != nil {
-		if errStatus := r.setStatusFailedToCreateSpaceBinding(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err); errStatus != nil {
+		if errStatus := r.setStatusFailedToCreateSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err); errStatus != nil {
 			logger.Error(errStatus, "error updating SpaceBindingRequest status")
 		}
 		return reconcile.Result{}, err
 	}
 
 	// set ready condition on spaceBindingRequest
-	err = r.updateStatus(spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
+	err = r.updateStatus(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
 		Reason: toolchainv1alpha1.SpaceBindingRequestProvisionedReason,
@@ -113,35 +112,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return ctrl.Result{}, err
 }
 
-func (r *Reconciler) ensureSpaceBindingDeletion(logger logr.Logger, memberClusterWithSpaceBindingRequest cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) ensureSpaceBindingDeletion(ctx context.Context, memberClusterWithSpaceBindingRequest cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+	logger := log.FromContext(ctx)
+
 	logger.Info("ensure spacebinding deletion")
 	if !util.HasFinalizer(spaceBindingRequest, toolchainv1alpha1.FinalizerName) {
 		// finalizer was already removed, nothing to delete anymore...
 		return nil
 	}
-	spaceBinding, err := r.getSpaceBinding(spaceBindingRequest, memberClusterWithSpaceBindingRequest)
+	spaceBinding, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest)
 	if err != nil {
 		return err
 	}
-	if isBeingDeleted, err := r.deleteSpaceBinding(logger, spaceBinding); err != nil {
-		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
+	if isBeingDeleted, err := r.deleteSpaceBinding(ctx, spaceBinding); err != nil {
+		return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
 	} else if isBeingDeleted {
-		return r.setStatusTerminating(memberClusterWithSpaceBindingRequest, spaceBindingRequest)
+		return r.setStatusTerminating(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
 	}
 
 	// Remove finalizer from SpaceBindingRequest
 	util.RemoveFinalizer(spaceBindingRequest, toolchainv1alpha1.FinalizerName)
-	if err := memberClusterWithSpaceBindingRequest.Client.Update(context.TODO(), spaceBindingRequest); err != nil {
-		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceBindingRequest, spaceBindingRequest, errs.Wrap(err, "failed to remove finalizer"))
+	if err := memberClusterWithSpaceBindingRequest.Client.Update(ctx, spaceBindingRequest); err != nil {
+		return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, errs.Wrap(err, "failed to remove finalizer"))
 	}
 	logger.Info("removed finalizer")
 	return nil
 }
 
 // getSpaceBinding retrieves the spacebinding created by the spacebindingrequest
-func (r *Reconciler) getSpaceBinding(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster) (*toolchainv1alpha1.SpaceBinding, error) {
+func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster) (*toolchainv1alpha1.SpaceBinding, error) {
 	// find space from namespace labels
-	space, err := r.getSpace(memberCluster, spaceBindingRequest)
+	space, err := r.getSpace(ctx, memberCluster, spaceBindingRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +155,7 @@ func (r *Reconciler) getSpaceBinding(spaceBindingRequest *toolchainv1alpha1.Spac
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.GetName(),
 		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: spaceBindingRequest.Spec.MasterUserRecord,
 	}
-	err = r.Client.List(context.TODO(), spaceBindings, spaceBindingLabels, runtimeclient.InNamespace(r.Namespace))
+	err = r.Client.List(ctx, spaceBindings, spaceBindingLabels, runtimeclient.InNamespace(r.Namespace))
 	if err != nil {
 		return nil, errs.Wrap(err, "unable to list spacebindings")
 	}
@@ -189,11 +190,13 @@ func (r *Reconciler) getSpaceBinding(spaceBindingRequest *toolchainv1alpha1.Spac
 // returns true/nil if the deletion of the spacebinding was triggered
 // returns false/nil if the spacebinding was already deleted
 // return false/err if something went wrong
-func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding) (bool, error) {
+func (r *Reconciler) deleteSpaceBinding(ctx context.Context, spaceBinding *toolchainv1alpha1.SpaceBinding) (bool, error) {
 	// spacebinding not found, was already deleted
 	if spaceBinding == nil {
 		return false, nil
 	}
+
+	logger := log.FromContext(ctx)
 	if util.IsBeingDeleted(spaceBinding) {
 		logger.Info("the spacebinding resource is already being deleted")
 		deletionTimestamp := spaceBinding.GetDeletionTimestamp()
@@ -204,7 +207,7 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	}
 
 	logger.Info("deleting the spacebinding resource", "spacebinding name", spaceBinding.Name)
-	if err := r.Client.Delete(context.TODO(), spaceBinding); err != nil {
+	if err := r.Client.Delete(ctx, spaceBinding); err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil // was already deleted
 		}
@@ -215,28 +218,30 @@ func (r *Reconciler) deleteSpaceBinding(logger logr.Logger, spaceBinding *toolch
 }
 
 // setFinalizers sets the finalizers for the SpaceBindingRequest
-func (r *Reconciler) addFinalizer(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) addFinalizer(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
 	// Add the finalizer if it is not present
 	if !util.HasFinalizer(spaceBindingRequest, toolchainv1alpha1.FinalizerName) {
+		logger := log.FromContext(ctx)
 		logger.Info("adding finalizer on SpaceBindingRequest")
 		util.AddFinalizer(spaceBindingRequest, toolchainv1alpha1.FinalizerName)
-		if err := memberCluster.Client.Update(context.TODO(), spaceBindingRequest); err != nil {
+		if err := memberCluster.Client.Update(ctx, spaceBindingRequest); err != nil {
 			return errs.Wrap(err, "error while adding finalizer")
 		}
 	}
 	return nil
 }
 
-func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+	logger := log.FromContext(ctx)
 	logger.Info("ensuring spacebinding")
 	// create spacebinding if not found for given spaceBindingRequest
-	spaceBinding, err := r.getSpaceBinding(spaceBindingRequest, memberCluster)
+	spaceBinding, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberCluster)
 	if err != nil {
 		return err
 	}
 
 	// find space from namespace labels
-	space, err := r.getSpace(memberCluster, spaceBindingRequest)
+	space, err := r.getSpace(ctx, memberCluster, spaceBindingRequest)
 	if err != nil {
 		return err
 	}
@@ -246,7 +251,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 	}
 
 	// validate MUR
-	mur, err := r.getMUR(spaceBindingRequest)
+	mur, err := r.getMUR(ctx, spaceBindingRequest)
 	if err != nil {
 		return err
 	}
@@ -256,29 +261,29 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, memberCluster cluste
 	}
 
 	// validate Role
-	if err := r.validateRole(spaceBindingRequest, space); err != nil {
+	if err := r.validateRole(ctx, spaceBindingRequest, space); err != nil {
 		return err
 	}
 
 	// spacebinding not found, creating it
 	if spaceBinding == nil {
-		return r.createNewSpaceBinding(logger, memberCluster, spaceBindingRequest, mur, space)
+		return r.createNewSpaceBinding(ctx, memberCluster, spaceBindingRequest, mur, space)
 	}
 
 	logger.Info("SpaceBinding already exists")
-	return r.updateExistingSpaceBinding(logger, spaceBindingRequest, spaceBinding)
+	return r.updateExistingSpaceBinding(ctx, spaceBindingRequest, spaceBinding)
 }
 
 // updateExistingSpaceBinding updates the spacebinding with the config from the spaceBindingRequest.
 // returns true/nil if the spacebinding was updated
 // returns false/nil if the spacebinding was already up-to-date
 // returns false/err if something went wrong or the spacebinding is being deleted
-func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
+func (r *Reconciler) updateExistingSpaceBinding(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, spaceBinding *toolchainv1alpha1.SpaceBinding) error {
 	// check if spacebinding is being deleted
 	if util.IsBeingDeleted(spaceBinding) {
 		return errs.New("cannot update SpaceBinding because it is currently being deleted")
 	}
-	return r.updateSpaceBinding(logger, spaceBinding, spaceBindingRequest)
+	return r.updateSpaceBinding(ctx, spaceBinding, spaceBindingRequest)
 }
 
 // updateSpaceBinding updates the Role from the spaceBindingRequest to the spacebinding object
@@ -286,7 +291,8 @@ func (r *Reconciler) updateExistingSpaceBinding(logger logr.Logger, spaceBinding
 // returns false/nil if everything is up-to-date
 // returns true/nil if spacebinding was updated
 // returns false/err if something went wrong
-func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) updateSpaceBinding(ctx context.Context, spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+	logger := log.FromContext(ctx)
 	logger.Info("update spaceBinding")
 	if spaceBindingRequest.Spec.SpaceRole == spaceBinding.Spec.SpaceRole {
 		// everything is up-to-date let's return
@@ -296,7 +302,7 @@ func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	// update SpaceRole and MUR
 	logger.Info("updating spaceBinding", "spaceBinding.Name", spaceBinding.Name)
 	spaceBinding.Spec.SpaceRole = spaceBindingRequest.Spec.SpaceRole
-	err := r.Client.Update(context.TODO(), spaceBinding)
+	err := r.Client.Update(ctx, spaceBinding)
 	if err != nil {
 		return errs.Wrap(err, "unable to update SpaceRole and MasterUserRecord fields")
 	}
@@ -305,38 +311,29 @@ func (r *Reconciler) updateSpaceBinding(logger logr.Logger, spaceBinding *toolch
 	return nil
 }
 
-func (r *Reconciler) createNewSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {
+func (r *Reconciler) createNewSpaceBinding(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {
 	spaceBinding := spacebinding.NewSpaceBinding(mur, space, spaceBindingRequest.Name)
-	// check if there is already a SpaceBinding created with same name (there could be already a SpaceBinding for the same space and MUR generated by system admins for example)
-	existingSpaceBinding := &toolchainv1alpha1.SpaceBinding{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      spaceBinding.GetName(),
-	}, existingSpaceBinding)
-	if err != nil {
-		// it means there was an error searching for the SB, or most likely a SpaceBinding with the same name doesn't exist.
-		// Let's continue with the creation of the SB from SBR
-		spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey] = spaceBindingRequest.GetName()
-		spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey] = spaceBindingRequest.GetNamespace()
-		logger.Info("creating spacebinding", "spaceBinding.Name", spaceBinding.Name)
-		if err := r.setStatusProvisioning(memberCluster, spaceBindingRequest); err != nil {
-			return err
-		}
-		if err := r.Client.Create(context.TODO(), spaceBinding); err != nil {
-			return errs.Wrap(err, "unable to create SpaceBinding")
-		}
-		logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
-		return nil
-	}
+	// set SBR labels on spacebinding
+	spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey] = spaceBindingRequest.GetName()
+	spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey] = spaceBindingRequest.GetNamespace()
 
-	return fmt.Errorf("SpaceBinding %s already exists for MasterUserRercord %s and Space %s", spaceBinding.GetName(), spaceBindingRequest.Spec.MasterUserRecord, space.GetName())
+	logger := log.FromContext(ctx)
+	logger.Info("creating spacebinding", "spaceBinding.Name", spaceBinding.Name)
+	if err := r.setStatusProvisioning(ctx, memberCluster, spaceBindingRequest); err != nil {
+		return err
+	}
+	if err := r.Client.Create(ctx, spaceBinding); err != nil {
+		return errs.Wrap(err, "unable to create SpaceBinding")
+	}
+	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
+	return nil
 }
 
 // getSpace retrieves the name of the space that provisioned the namespace in which the spacebindingrequest was issued.
-func (r *Reconciler) getSpace(memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (*toolchainv1alpha1.Space, error) {
+func (r *Reconciler) getSpace(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (*toolchainv1alpha1.Space, error) {
 	space := &toolchainv1alpha1.Space{}
 	namespace := &corev1.Namespace{}
-	err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+	err := memberCluster.Client.Get(ctx, types.NamespacedName{
 		Namespace: "",
 		Name:      spaceBindingRequest.Namespace,
 	}, namespace)
@@ -350,7 +347,7 @@ func (r *Reconciler) getSpace(memberCluster cluster.Cluster, spaceBindingRequest
 	}
 
 	// get space object
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
+	err = r.Client.Get(ctx, types.NamespacedName{
 		Namespace: r.Namespace,
 		Name:      spaceName,
 	}, space)
@@ -362,13 +359,13 @@ func (r *Reconciler) getSpace(memberCluster cluster.Cluster, spaceBindingRequest
 }
 
 // getMUR retrieves the MUR specified in the spaceBindingRequest.
-func (r *Reconciler) getMUR(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (*toolchainv1alpha1.MasterUserRecord, error) {
+func (r *Reconciler) getMUR(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) (*toolchainv1alpha1.MasterUserRecord, error) {
 	if spaceBindingRequest.Spec.MasterUserRecord == "" {
 		return nil, fmt.Errorf("MasterUserRecord cannot be blank")
 	}
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	// check that MUR object exists
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
+	err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: r.Namespace,
 		Name:      spaceBindingRequest.Spec.MasterUserRecord,
 	}, mur)
@@ -380,13 +377,13 @@ func (r *Reconciler) getMUR(spaceBindingRequest *toolchainv1alpha1.SpaceBindingR
 }
 
 // validateRole checks if the role is within the allowed spaceroles from the NSTemplateTier
-func (r *Reconciler) validateRole(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, space *toolchainv1alpha1.Space) error {
+func (r *Reconciler) validateRole(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, space *toolchainv1alpha1.Space) error {
 	if spaceBindingRequest.Spec.SpaceRole == "" {
 		return fmt.Errorf("SpaceRole cannot be blank")
 	}
 	// get the tier
 	nsTemplTier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: r.Namespace,
 		Name:      space.Spec.TierName,
 	}, nsTemplTier); err != nil {
@@ -403,8 +400,9 @@ func (r *Reconciler) validateRole(spaceBindingRequest *toolchainv1alpha1.SpaceBi
 	return fmt.Errorf("invalid role '%s' for space '%s'", spaceBindingRequest.Spec.SpaceRole, space.Name)
 }
 
-func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) setStatusTerminating(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
 	return r.updateStatus(
+		ctx,
 		spaceBindingRequest,
 		memberCluster,
 		toolchainv1alpha1.Condition{
@@ -414,8 +412,9 @@ func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceBi
 		})
 }
 
-func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, cause error) error {
+func (r *Reconciler) setStatusTerminatingFailed(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, cause error) error {
 	if err := r.updateStatus(
+		ctx,
 		spaceBindingRequest,
 		memberCluster,
 		toolchainv1alpha1.Condition{
@@ -424,14 +423,16 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, memberCluste
 			Reason:  toolchainv1alpha1.SpaceBindingRequestTerminatingFailedReason,
 			Message: cause.Error(),
 		}); err != nil {
+		logger := log.FromContext(ctx)
 		logger.Error(cause, "unable to terminate SpaceBinding")
 		return err
 	}
 	return cause
 }
 
-func (r *Reconciler) setStatusFailedToCreateSpaceBinding(logger logr.Logger, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, cause error) error {
+func (r *Reconciler) setStatusFailedToCreateSpaceBinding(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, cause error) error {
 	if err := r.updateStatus(
+		ctx,
 		spaceBindingRequest,
 		memberCluster,
 		toolchainv1alpha1.Condition{
@@ -440,14 +441,16 @@ func (r *Reconciler) setStatusFailedToCreateSpaceBinding(logger logr.Logger, mem
 			Reason:  toolchainv1alpha1.SpaceBindingRequestUnableToCreateSpaceBindingReason,
 			Message: cause.Error(),
 		}); err != nil {
+		logger := log.FromContext(ctx)
 		logger.Error(err, "unable to create SpaceBinding")
 		return err
 	}
 	return cause
 }
 
-func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
+func (r *Reconciler) setStatusProvisioning(ctx context.Context, memberCluster cluster.Cluster, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) error {
 	return r.updateStatus(
+		ctx,
 		spaceBindingRequest,
 		memberCluster,
 		toolchainv1alpha1.Condition{
@@ -457,12 +460,12 @@ func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceB
 		})
 }
 
-func (r *Reconciler) updateStatus(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster, conditions ...toolchainv1alpha1.Condition) error {
+func (r *Reconciler) updateStatus(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	spaceBindingRequest.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(spaceBindingRequest.Status.Conditions, conditions...)
 	if !updated {
 		// Nothing changed
 		return nil
 	}
-	return memberCluster.Client.Status().Update(context.TODO(), spaceBindingRequest)
+	return memberCluster.Client.Status().Update(ctx, spaceBindingRequest)
 }
