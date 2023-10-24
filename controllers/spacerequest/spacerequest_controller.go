@@ -205,7 +205,7 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 		}
 		return subSpace, true, nil // a subSpace was created
 	} else if len(subSpaceList.Items) > 1 {
-		err := fmt.Errorf("Found %v matching subspaces", len(subSpaceList.Items))
+		err := fmt.Errorf("Found %v matching subspaces, expected 1", len(subSpaceList.Items))
 		logger.Error(err, "Too many matching subspaces")
 		return nil, false, err
 	}
@@ -366,7 +366,7 @@ func (r *Reconciler) deleteSubSpace(ctx context.Context, parentSpace *toolchainv
 		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
 	}); err != nil {
 		// failed to get subSpace
-		return false, err
+		return false, errs.Wrap(err, "failed to list sub spaces")
 	}
 
 	// should be a unique subspace
