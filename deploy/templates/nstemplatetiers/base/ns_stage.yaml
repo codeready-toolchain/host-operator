@@ -174,7 +174,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-virtualization-namespaces
-    namespace: ${SPACE_NAME}-dev
+    namespace: ${SPACE_NAME}-stage
   spec:
     ingress:
     - from:
