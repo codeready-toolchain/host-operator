@@ -192,7 +192,8 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 		return nil, false, errs.Wrap(err, "failed to retrieve spaces")
 	}
 
-	if len(subSpaceList.Items) == 0 {
+	length := len(subSpaceList.Items)
+	if length == 0 {
 		// no spaces found, let's create it
 		logger.Info("creating subSpace")
 		if err := r.setStatusProvisioning(ctx, memberCluster, spaceRequest); err != nil {
@@ -204,7 +205,7 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 			return nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
 		}
 		return subSpace, true, nil // a subSpace was created
-	} else if len(subSpaceList.Items) > 1 {
+	} else if length > 1 {
 		err := fmt.Errorf("Found %v matching subspaces, expected 1", len(subSpaceList.Items))
 		logger.Error(err, "Too many matching subspaces")
 		return nil, false, err
