@@ -7,7 +7,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
+	err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: r.Namespace,
 		Name:      request.Name,
 	}, space)
@@ -72,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	requeue, requeueAfter, err := r.ensureDeletionIfNeeded(logger, space)
+	requeue, requeueAfter, err := r.ensureDeletionIfNeeded(ctx, space)
 
 	return ctrl.Result{
 		Requeue:      requeue,
@@ -80,10 +79,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}, err
 }
 
-func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, time.Duration, error) {
+func (r *Reconciler) ensureDeletionIfNeeded(ctx context.Context, space *toolchainv1alpha1.Space) (bool, time.Duration, error) {
+	logger := log.FromContext(ctx)
 	bindings := &toolchainv1alpha1.SpaceBindingList{}
 	labelMatch := runtimeclient.MatchingLabels{toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name}
-	if err := r.Client.List(context.TODO(), bindings, runtimeclient.InNamespace(space.Namespace), labelMatch); err != nil {
+	if err := r.Client.List(ctx, bindings, runtimeclient.InNamespace(space.Namespace), labelMatch); err != nil {
 		return false, 0, errs.Wrap(err, "unable to list SpaceBindings")
 	}
 
@@ -101,7 +101,7 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 
 	timeSinceCreation := time.Since(space.GetCreationTimestamp().Time)
 	if timeSinceCreation > deletionTimeThreshold {
-		if err := r.Client.Delete(context.TODO(), space); err != nil {
+		if err := r.Client.Delete(ctx, space); err != nil {
 			return false, 0, errs.Wrap(err, "unable to delete Space")
 		}
 
