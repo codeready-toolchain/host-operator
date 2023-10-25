@@ -52,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
+	err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: r.Namespace,
 		Name:      request.Name,
 	}, space)
@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	return ctrl.Result{}, r.Client.Update(context.TODO(), space)
+	return ctrl.Result{}, r.Client.Update(ctx, space)
 }
 
 func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
