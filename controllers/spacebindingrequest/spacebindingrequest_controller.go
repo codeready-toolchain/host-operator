@@ -168,22 +168,10 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 
 	// check if existing spacebinding was created from spaceBindingRequest
 	if len(spaceBindings.Items) == 1 {
-		// check if it has the expected spaceBindingRequest labels
-		sbrLabel, sbrLabelFound := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
-		if !sbrLabelFound || sbrLabel == "" {
-			return nil, fmt.Errorf("A SpaceBinding for Space %s and MUR %s already exists. But it doesn't have the expected SpaceBindingRequest label set: %s", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, toolchainv1alpha1.SpaceBindingRequestLabelKey)
-		}
-		sbrNamespaceLabel, sbrNamespaceLabelFound := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
-		if !sbrNamespaceLabelFound || sbrNamespaceLabel == "" {
-			return nil, fmt.Errorf("A SpaceBinding for Space %s and MUR %s already exists. But it doesn't have the expected SpaceBindingRequestNamespace label set: %s", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey)
-		}
-		// check if spaceBinding has correct reference to spaceBindingRequest
-		// this should never happen, but you never know ¯\_(ツ)_/¯
-		if sbrLabel != spaceBindingRequest.GetName() {
-			return nil, fmt.Errorf("expected SpaceBindingRequest label: %s, got: %s", spaceBindingRequest.GetName(), sbrLabel)
-		}
-		if sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
-			return nil, fmt.Errorf("expected SpaceBindingRequestNamespace label: %s, got: %s", spaceBindingRequest.GetNamespace(), sbrNamespaceLabel)
+		sbrLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
+		sbrNamespaceLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
+		if sbrLabel != spaceBindingRequest.GetName() || sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
+			return nil, fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
 		}
 	}
 
