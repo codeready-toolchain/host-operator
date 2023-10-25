@@ -111,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if tier.Spec.SpaceRequestConfig != nil {
+	if tier.Spec.SpaceRequestConfig != nil && tier.Spec.SpaceRequestConfig.ServiceAccountName != "" {
 		// ensure there is a secret that provides admin access to each provisioned namespaces of the subSpace
 		if err := r.ensureSecretForProvisionedNamespaces(ctx, memberClusterWithSpaceRequest, spaceRequest, subSpace, tier.Spec.SpaceRequestConfig.ServiceAccountName); err != nil {
 			return reconcile.Result{}, r.setStatusFailedToCreateSubSpace(ctx, memberClusterWithSpaceRequest, spaceRequest, err)
@@ -175,7 +175,7 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 		return nil, nil, false, errs.New("parentSpace is being deleted")
 	}
 
-	var tier toolchainv1alpha1.NSTemplateTier
+	var tier *toolchainv1alpha1.NSTemplateTier
 
 	// validate tierName
 	if tier, err = r.validateNSTemplateTier(ctx, spaceRequest.Spec.TierName); err != nil {
@@ -198,14 +198,14 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 				// failed to create subSpace
 				return nil, nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
 			}
-			return subSpace, &tier, true, nil // a subSpace was created
+			return subSpace, tier, true, nil // a subSpace was created
 		}
 		// failed to create subSpace
 		return nil, nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
 	}
 	logger.Info("subSpace already exists")
 	updated, err := r.updateExistingSubSpace(ctx, spaceRequest, subSpace)
-	return subSpace, &tier, updated, err
+	return subSpace, tier, updated, err
 }
 
 func (r *Reconciler) createNewSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, error) {
@@ -239,9 +239,9 @@ func (r *Reconciler) updateExistingSubSpace(ctx context.Context, spaceRequest *t
 }
 
 // validateNSTemplateTier checks if the provided tierName in the spaceRequest exists and is valid
-func (r *Reconciler) validateNSTemplateTier(ctx context.Context, tierName string) (toolchainv1alpha1.NSTemplateTier, error) {
+func (r *Reconciler) validateNSTemplateTier(ctx context.Context, tierName string) (*toolchainv1alpha1.NSTemplateTier, error) {
 	if tierName == "" {
-		return toolchainv1alpha1.NSTemplateTier{}, fmt.Errorf("tierName cannot be blank")
+		return &toolchainv1alpha1.NSTemplateTier{}, fmt.Errorf("tierName cannot be blank")
 	}
 	// check if requested tier exists
 	tier := &toolchainv1alpha1.NSTemplateTier{}
@@ -250,12 +250,12 @@ func (r *Reconciler) validateNSTemplateTier(ctx context.Context, tierName string
 		Name:      tierName,
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
-			return *tier, err
+			return tier, err
 		}
 		// Error reading the object - requeue the request.
-		return *tier, errs.Wrap(err, "unable to get the current NSTemplateTier")
+		return tier, errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
-	return *tier, nil
+	return tier, nil
 }
 
 // updateSubSpace updates the tierName and targetClusterRoles from the spaceRequest to the subSpace object

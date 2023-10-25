@@ -21,7 +21,7 @@ objects:
       contributor:
         templateRef: ${CONTRIBUTOR_TEMPL_REF}
     spaceRequestConfig:
-      serviceAccountName: ${SERVICE_ACCOUNT_NAME}
+      serviceAccountName: namespace-manager
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF
@@ -29,4 +29,3 @@ parameters:
 - name: ADMIN_TEMPL_REF
 - name: MAINTAINER_TEMPL_REF
 - name: CONTRIBUTOR_TEMPL_REF
-- name: SERVICE_ACCOUNT_NAME

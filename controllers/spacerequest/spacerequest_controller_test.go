@@ -392,6 +392,42 @@ func TestCreateSpaceRequest(t *testing.T) {
 		})
 	})
 
+	appstudioTier.Spec.SpaceRequestConfig.ServiceAccountName = "manager"
+	t.Run("failure service account not present", func(t *testing.T) {
+		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
+			spacerequesttest.WithTierName("appstudio"),
+			spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+		t.Run("subSpace is provisioned", func(t *testing.T) {
+			// given
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
+			})
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
+			// then
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "Post \"https://api.member-1:6433/api/v1/namespaces/jane-env/serviceaccounts/manager/token\": gock: cannot match any request")
+		})
+	})
+
+	appstudioTier.Spec.SpaceRequestConfig.ServiceAccountName = "namespace-manager"
 	t.Run("failure", func(t *testing.T) {
 		// given
 		sr := spacerequesttest.NewSpaceRequest("jane",

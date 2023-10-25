@@ -117,6 +117,9 @@ var AppStudioTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 			TemplateRef: "appstudio-viewer-123456new",
 		},
 	},
+	SpaceRequestConfig: &toolchainv1alpha1.SpaceRequestConfig{
+		ServiceAccountName: "namespace-manager",
+	},
 }
 
 // Base1nsTier returns a "base1ns" NSTemplateTier with template refs in the given spec
