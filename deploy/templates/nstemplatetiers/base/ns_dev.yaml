@@ -72,7 +72,7 @@ objects:
     - type: "Container"
       default:
         cpu: 1000m
-        memory: 750Mi
+        memory: 1024Mi
       defaultRequest:
         cpu: 10m
         memory: 64Mi
