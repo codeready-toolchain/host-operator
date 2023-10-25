@@ -120,7 +120,7 @@ func (r *Reconciler) ensureSpaceBindingDeletion(ctx context.Context, memberClust
 		// finalizer was already removed, nothing to delete anymore...
 		return nil
 	}
-	spaceBinding, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest)
+	spaceBinding, _, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest)
 	if err != nil {
 		return err
 	}
@@ -140,11 +140,11 @@ func (r *Reconciler) ensureSpaceBindingDeletion(ctx context.Context, memberClust
 }
 
 // getSpaceBinding retrieves the spacebinding created by the spacebindingrequest
-func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster) (*toolchainv1alpha1.SpaceBinding, error) {
+func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest, memberCluster cluster.Cluster) (*toolchainv1alpha1.SpaceBinding, *toolchainv1alpha1.Space, error) {
 	// find space from namespace labels
 	space, err := r.getSpace(ctx, memberCluster, spaceBindingRequest)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
 	spaceBindingLabels := runtimeclient.MatchingLabels{
@@ -153,17 +153,17 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 	}
 	err = r.Client.List(ctx, spaceBindings, spaceBindingLabels, runtimeclient.InNamespace(r.Namespace))
 	if err != nil {
-		return nil, errs.Wrap(err, "unable to list spacebindings")
+		return nil, space, errs.Wrap(err, "unable to list spacebindings")
 	}
 
 	// spacebinding not found
 	if len(spaceBindings.Items) == 0 {
-		return nil, nil
+		return nil, space, nil
 	}
 
 	// more than one spacebinding
 	if len(spaceBindings.Items) > 1 {
-		return nil, fmt.Errorf("expected 1 spacebinding for Space %s and MUR %s. But found %d", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, len(spaceBindings.Items))
+		return nil, space, fmt.Errorf("expected 1 spacebinding for Space %s and MUR %s. But found %d", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, len(spaceBindings.Items))
 	}
 
 	// check if existing spacebinding was created from spaceBindingRequest
@@ -171,11 +171,11 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 		sbrLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
 		sbrNamespaceLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
 		if sbrLabel != spaceBindingRequest.GetName() || sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
-			return nil, fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
+			return nil, space, fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
 		}
 	}
 
-	return &spaceBindings.Items[0], nil // all good
+	return &spaceBindings.Items[0], space, nil // all good
 }
 
 // deleteSpaceBinding deletes a given spacebinding object in case deletion was not issued already.
@@ -227,13 +227,7 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 	logger := log.FromContext(ctx)
 	logger.Info("ensuring spacebinding")
 	// create spacebinding if not found for given spaceBindingRequest
-	spaceBinding, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberCluster)
-	if err != nil {
-		return err
-	}
-
-	// find space from namespace labels
-	space, err := r.getSpace(ctx, memberCluster, spaceBindingRequest)
+	spaceBinding, space, err := r.getSpaceBinding(ctx, spaceBindingRequest, memberCluster)
 	if err != nil {
 		return err
 	}
