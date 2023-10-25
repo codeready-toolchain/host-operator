@@ -12,7 +12,7 @@ objects:
       hard:
         count/deployments.apps: "30"
         count/deploymentconfigs.apps: "30"
-        count/pods: "150"
+        count/pods: "300"
     selector:
       annotations: null
       labels:
