@@ -63,7 +63,7 @@ func TestNewSubSubSpace(t *testing.T) {
 		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := NewSubSpace(sr, parentSpace)
-	sr2 := spacerequesttest.NewSpaceRequest("jane2", subSpace.GetName() + "-tenant",
+	sr2 := spacerequesttest.NewSpaceRequest("jane2", subSpace.GetName()+"-tenant",
 		spacerequesttest.WithTierName("appstudio"),
 		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 
