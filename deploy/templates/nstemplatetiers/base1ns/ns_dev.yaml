@@ -199,7 +199,7 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    name: allow-from-openshift-virtualization-os-images
+    name: allow-from-openshift-virtualization-namespaces
     namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
@@ -207,6 +207,10 @@ objects:
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: openshift-virtualization-os-images
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: openshift-cnv
     podSelector: {}
     policyTypes:
     - Ingress
