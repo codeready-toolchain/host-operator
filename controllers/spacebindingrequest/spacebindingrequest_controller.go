@@ -231,6 +231,10 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 	if err != nil {
 		return err
 	}
+	// space is being deleted
+	if util.IsBeingDeleted(space) {
+		return errs.New("space is being deleted")
+	}
 
 	// validate MUR
 	mur, err := r.getMUR(ctx, spaceBindingRequest)
@@ -336,10 +340,7 @@ func (r *Reconciler) getSpace(ctx context.Context, memberCluster cluster.Cluster
 	if err != nil {
 		return nil, errs.Wrap(err, "unable to get space")
 	}
-	// space is being deleted
-	if util.IsBeingDeleted(space) {
-		return nil, errs.New("space is being deleted")
-	}
+
 	return space, nil // all good
 }
 
