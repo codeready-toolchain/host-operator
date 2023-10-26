@@ -347,12 +347,8 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, memberClusterWithS
 		// finalizer was already removed, nothing to delete anymore...
 		return nil
 	}
-	// find parent space from namespace labels
-	parentSpace, err := r.getParentSpace(ctx, memberClusterWithSpaceRequest, spaceRequest)
-	if err != nil {
-		return err
-	}
-	if isBeingDeleted, err := r.deleteSubSpace(ctx, parentSpace, spaceRequest); err != nil {
+
+	if isBeingDeleted, err := r.deleteSubSpace(ctx, spaceRequest); err != nil {
 		return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceRequest, spaceRequest, err)
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(ctx, memberClusterWithSpaceRequest, spaceRequest); err != nil {
@@ -374,7 +370,7 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, memberClusterWithS
 // returns true/nil if the deletion of the subSpace was triggered
 // returns false/nil if the subSpace was already deleted
 // return false/err if something went wrong
-func (r *Reconciler) deleteSubSpace(ctx context.Context, parentSpace *toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
+func (r *Reconciler) deleteSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
 	subSpace, err := r.getSubSpace(ctx, spaceRequest)
 	if err != nil {
 		return false, err
