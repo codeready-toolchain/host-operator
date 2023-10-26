@@ -61,11 +61,11 @@ func TestNewSubSubSpace(t *testing.T) {
 	sr := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
 		spacerequesttest.WithTierName("appstudio"),
 		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-	sr2 := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
-		spacerequesttest.WithTierName("appstudio"),
-		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 	subSpace := NewSubSpace(sr, parentSpace)
+	sr2 := spacerequesttest.NewSpaceRequest("jane2", subSpace.GetName() + "-tenant",
+		spacerequesttest.WithTierName("appstudio"),
+		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 
 	// when
 	subSubSpace := NewSubSpace(sr2, subSpace)
@@ -75,8 +75,8 @@ func TestNewSubSubSpace(t *testing.T) {
 		spacetest.WithSpecParentSpace(subSpace.GetName()),
 		spacetest.WithTierName("appstudio"),
 		spacetest.WithSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}),
-		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
-		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
+		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr2.GetName()),
+		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr2.GetNamespace()),
 		spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, subSpace.GetName()),
 	)
 	assert.Equal(t, expectedSubSubSpace, subSubSpace)
