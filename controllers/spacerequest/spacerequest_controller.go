@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -161,6 +160,33 @@ func (r *Reconciler) addFinalizer(ctx context.Context, memberCluster cluster.Clu
 	return nil
 }
 
+// fetches the subspace corresponding to the space request given.
+//
+// returns:
+//   - nil, err if an error occurred retrieving spaces or more than one matching subspace was found
+//   - nil, nil if no subspaces exist
+//   - space, nil if a matching space was found
+func (r *Reconciler) getSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
+	subSpaceList := &toolchainv1alpha1.SpaceList{}
+	if err := r.Client.List(ctx, subSpaceList,
+		runtimeclient.InNamespace(r.Namespace),
+		runtimeclient.MatchingLabels{
+			toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
+			toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
+		}); err != nil {
+		return nil, errs.Wrap(err, "failed to list subspaces")
+	}
+
+	length := len(subSpaceList.Items)
+	if length >= 2 {
+		return nil, errs.Errorf("Expected 1 matching subspace for spaceRequest %v in namespace %v, found %d", spaceRequest.GetName(), spaceRequest.GetNamespace(), length)
+	} else if length == 0 {
+		return nil, nil
+	}
+
+	return &subSpaceList.Items[0], nil
+}
+
 func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, bool, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("ensuring subSpace")
@@ -181,19 +207,12 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 	}
 
 	// create if not found on the expected target cluster
-	subSpaceList := &toolchainv1alpha1.SpaceList{}
-	if err := r.Client.List(ctx, subSpaceList,
-		client.InNamespace(r.Namespace),
-		client.MatchingLabels{
-			toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
-			toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
-		}); err != nil {
-		// failed to list subSpaces
-		return nil, false, errs.Wrap(err, "failed to retrieve spaces")
+	subSpace, err := r.getSubSpace(ctx, spaceRequest)
+	if err != nil {
+		return nil, false, err
 	}
 
-	length := len(subSpaceList.Items)
-	if length == 0 {
+	if subSpace == nil {
 		// no spaces found, let's create it
 		logger.Info("creating subSpace")
 		if err := r.setStatusProvisioning(ctx, memberCluster, spaceRequest); err != nil {
@@ -205,13 +224,8 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 			return nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
 		}
 		return subSpace, true, nil // a subSpace was created
-	} else if length > 1 {
-		err := fmt.Errorf("Found %v matching subspaces, expected 1", len(subSpaceList.Items))
-		logger.Error(err, "Too many matching subspaces")
-		return nil, false, err
 	}
 
-	subSpace := &subSpaceList.Items[0]
 	logger.Info("subSpace already exists")
 	updated, err := r.updateExistingSubSpace(ctx, spaceRequest, subSpace)
 	return subSpace, updated, err
@@ -361,29 +375,19 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, memberClusterWithS
 // returns false/nil if the subSpace was already deleted
 // return false/err if something went wrong
 func (r *Reconciler) deleteSubSpace(ctx context.Context, parentSpace *toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
-	spaceList := &toolchainv1alpha1.SpaceList{}
-	if err := r.Client.List(ctx, spaceList, client.InNamespace(r.Namespace), client.MatchingLabels{
-		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
-		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
-	}); err != nil {
-		// failed to get subSpace
-		return false, errs.Wrap(err, "failed to list sub spaces")
-	}
-
-	// should be a unique subspace
-	length := len(spaceList.Items)
-	logger := log.FromContext(ctx).WithValues("parentSpace", parentSpace.GetName(), "spaceRequest", spaceRequest.GetName())
-	if length == 0 {
-		// the subspace has already been deleted
-		return false, nil
-	} else if length > 1 {
-		err := fmt.Errorf("too many subspaces")
-		logger.Info(err.Error())
+	subSpace, err := r.getSubSpace(ctx, spaceRequest)
+	if err != nil {
 		return false, err
 	}
 
+	// should be a unique subspace
+	if subSpace == nil {
+		// the subspace has already been deleted
+		return false, nil
+	}
+
 	// deleting subSpace
-	return r.deleteExistingSubSpace(ctx, &spaceList.Items[0])
+	return r.deleteExistingSubSpace(ctx, subSpace)
 }
 
 // deleteExistingSubSpace deletes a given space object in case deletion was not issued already.

@@ -603,7 +603,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "failed to retrieve spaces: mock error")
+			require.EqualError(t, err, "failed to list subspaces: mock error")
 		})
 
 		t.Run("listing spaces with label selectors returns more than one result", func(t *testing.T) {
@@ -625,7 +625,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "Found 2 matching subspaces, expected 1")
+			require.EqualError(t, err, "Expected 1 matching subspace for spaceRequest jane in namespace jane-tenant, found 2")
 		})
 
 		t.Run("parent space is being deleted", func(t *testing.T) {
@@ -1118,29 +1118,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "failed to list sub spaces: mock error")
-		})
-
-		t.Run("listing subspaces returns more than one space", func(t *testing.T) {
-			// given
-			subSpace1 := spacetest.NewSpace(test.HostOperatorNs, "foo",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
-				spacetest.WithSpecParentSpace("jane"))
-			subSpace2 := spacetest.NewSpace(test.HostOperatorNs, "bar",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
-				spacetest.WithSpecParentSpace("jane"))
-			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace1, subSpace2)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "too many subspaces")
+			require.EqualError(t, err, "failed to list subspaces: mock error")
 		})
 
 		t.Run("unable to delete subSpace", func(t *testing.T) {
