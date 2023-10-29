@@ -10,13 +10,13 @@ objects:
   spec:
     quota:
       hard:
-        limits.cpu: 20000m
+        limits.cpu: 40000m
         limits.memory: ${MEMORY_LIMIT}
-        limits.ephemeral-storage: 7Gi
-        requests.cpu: 1750m
+        limits.ephemeral-storage: 15Gi
+        requests.cpu: 6000m
         requests.memory: ${MEMORY_REQUEST}
         requests.storage: 40Gi
-        requests.ephemeral-storage: 7Gi
+        requests.ephemeral-storage: 15Gi
         count/persistentvolumeclaims: "5"
     selector:
       annotations: null
@@ -153,6 +153,6 @@ parameters:
   # 12 hours
   value: "43200"
 - name: MEMORY_LIMIT
-  value: "7Gi"
+  value: "28Gi"
 - name: MEMORY_REQUEST
-  value: "7Gi"
+  value: "28Gi"
