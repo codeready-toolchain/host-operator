@@ -20,7 +20,7 @@ func TestNewSpace(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	// when
-	space := NewSpace(userSignup, test.MemberClusterName, "johny", "advanced")
+	space := NewSpace(userSignup, test.MemberClusterName, "johny", "advanced", false)
 
 	// then
 	expectedSpace := spacetest.NewSpace(test.HostOperatorNs, "johny",

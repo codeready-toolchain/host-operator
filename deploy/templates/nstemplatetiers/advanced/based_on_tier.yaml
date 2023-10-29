@@ -1,8 +1,8 @@
 from: base
 parameters:
 - name: MEMORY_LIMIT
-  value: "16Gi"
+  value: "32Gi"
 - name: MEMORY_REQUEST
-  value: "16Gi"
+  value: "32Gi"
 - name: IDLER_TIMEOUT_SECONDS
   value: 0
