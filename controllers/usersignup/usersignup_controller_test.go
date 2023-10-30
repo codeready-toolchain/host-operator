@@ -4669,6 +4669,33 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 	})
 }
 
+func TestHomeSpace(t *testing.T) {
+	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	// given
+	defer counter.Reset()
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+		commonsignup.WithTargetCluster("member1"),
+		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
+		commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey),
+		commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name),
+	)
+	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, baseNSTemplateTier, base2NSTemplateTier, deactivate30Tier, deactivate80Tier, event)
+
+	// when
+	res, err := r.Reconcile(context.TODO(), req)
+
+	// then verify that the Space exists or not depending on the skip space creation annotation
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+
+}
+
 func (r *Reconciler) setSpaceToReady(name string) error {
 	space := toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
