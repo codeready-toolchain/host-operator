@@ -476,14 +476,14 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasFinalizer()
 		})
 
-		t.Run("SpaceBinding managed by this SpaceBindingRequest CR", func(t *testing.T) {
-			// we have an SBR that will try to create the same SpaceBinding
+		t.Run("SpaceBinding not managed by this SpaceBindingRequest CR", func(t *testing.T) {
+			// given
+			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
+			// this SBR will fail for the conflict with the already existing SpaceBinding
 			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
 				spacebindingrequesttest.WithMUR(janeMur.Name),
 				spacebindingrequesttest.WithSpaceRole("admin"))
 
-			// given
-			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
 			ctrl := newReconciler(t, hostClient, member1)
