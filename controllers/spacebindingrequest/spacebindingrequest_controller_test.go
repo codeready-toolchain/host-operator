@@ -459,10 +459,10 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 			// given
 			spaceBinding1 := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
-			spaceBinding2 := *spaceBinding1                                                 // there is another spacebinding (this should not happen)
+			spaceBinding2 := spaceBinding1.DeepCopy()                                       // there is another spacebinding (this should not happen)
 			spaceBinding2.Name = "somerandom name"                                          // the name doesn't matter since spacebindings are retrieved using lables
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding1, &spaceBinding2)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding1, spaceBinding2)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
