@@ -37,6 +37,15 @@ func WithSpaceRole(spaceRole string) Option {
 	}
 }
 
+func WithLabel(key, value string) Option {
+	return func(space *toolchainv1alpha1.SpaceBindingRequest) {
+		if space.ObjectMeta.Labels == nil {
+			space.ObjectMeta.Labels = map[string]string{}
+		}
+		space.ObjectMeta.Labels[key] = value
+	}
+}
+
 func WithDeletionTimestamp() Option {
 	return func(spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) {
 		now := metav1.NewTime(time.Now())
