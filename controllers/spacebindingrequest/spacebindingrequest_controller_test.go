@@ -451,7 +451,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasFinalizer()
 		})
 
-		t.Run("SpaceBinding for given MUR and Space already exists ", func(t *testing.T) {
+		t.Run("There are more than one SpaceBinding for the given MUR and Space", func(t *testing.T) {
 			// we have an SBR that will try to create the same SpaceBinding
 			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
 				spacebindingrequesttest.WithMUR(janeMur.Name),
