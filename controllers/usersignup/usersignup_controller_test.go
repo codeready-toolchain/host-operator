@@ -252,6 +252,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			case "with skip space creation annotation set to true":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					DoesNotExist()
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("")
 			default:
 				assert.Fail(t, "unknown testcase")
 			}

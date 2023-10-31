@@ -47,4 +47,17 @@ func TestUpdateStatus(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "failed to create namespace: oopsy woopsy", err.Error())
 	})
+
+	t.Run("home space status not updated", func(t *testing.T) {
+		// given
+		spaceName := "foo"
+		userSignup.Status.HomeSpace = "foo"
+
+		// when
+		err := statusUpdater.updateStatusHomeSpace(context.TODO(), userSignup, spaceName)
+
+		// then
+		require.Nil(t, err)
+	})
+
 }
