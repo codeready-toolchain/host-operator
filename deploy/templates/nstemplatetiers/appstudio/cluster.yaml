@@ -10,9 +10,9 @@ objects:
   spec:
     quota:
       hard:
-        count/deployments.apps: "30"
-        count/deploymentconfigs.apps: "30"
-        count/pods: "300"
+        count/deployments.apps: ${{DEPLOYMENT_QUOTA}}
+        count/deploymentconfigs.apps: ${{DEPLOYMENT_QUOTA}}
+        count/pods: ${{POD_QUOTA}}
     selector:
       annotations: null
       labels:
@@ -25,8 +25,8 @@ objects:
   spec:
     quota:
       hard:
-        count/replicasets.apps: "30"
-        count/replicationcontrollers: "30"
+        count/replicasets.apps: ${{REPLICASET_QUOTA}}
+        count/replicationcontrollers: ${{REPLICASET_QUOTA}}
     selector:
       annotations: null
       labels:
@@ -39,8 +39,8 @@ objects:
   spec:
     quota:
       hard:
-        count/ingresses.extensions: "30"
-        count/routes.route.openshift.io: "30"
+        count/ingresses.extensions: ${{ROUTE_QUOTA}}
+        count/routes.route.openshift.io: ${{ROUTE_QUOTA}}
     selector:
       annotations: null
       labels:
@@ -69,7 +69,7 @@ objects:
   spec:
     quota:
       hard:
-        count/services: "30"
+        count/services: ${{SERVICE_QUOTA}}
     selector:
       annotations: null
       labels:
@@ -95,7 +95,7 @@ objects:
   spec:
     quota:
       hard:
-        count/secrets: "100"
+        count/secrets: ${{SECRET_QUOTA}}"
     selector:
       annotations: null
       labels:
@@ -108,7 +108,7 @@ objects:
   spec:
     quota:
       hard:
-        count/configmaps: "100"
+        count/configmaps: ${{CONFIGMAP_QUOTA}}
     selector:
       annotations: null
       labels:
@@ -126,3 +126,18 @@ parameters:
 - name: IDLER_TIMEOUT_SECONDS
   # No Idling
   value: "0"
+# Quota
+- name: REPLICASET_QUOTA
+  value: "30"
+- name: DEPLOYMENT_QUOTA
+  value: "30"
+- name: POD_QUOTA
+  value: "300"
+- name: ROUTE_QUOTA
+  value: "30"
+- name: SERVICE_QUOTA
+  value: "30"
+- name: CONFIGMAP_QUOTA
+  value: "100"
+- name: SECRET_QUOTA
+  value: "100"
