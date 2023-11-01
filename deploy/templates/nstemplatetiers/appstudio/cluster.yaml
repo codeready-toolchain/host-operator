@@ -95,7 +95,7 @@ objects:
   spec:
     quota:
       hard:
-        count/secrets: ${{SECRET_QUOTA}}"
+        count/secrets: ${{SECRET_QUOTA}}
     selector:
       annotations: null
       labels:
