@@ -57,6 +57,7 @@ func TestUpdateStatus(t *testing.T) {
 		err := statusUpdater.updateStatusHomeSpace(context.TODO(), userSignup, spaceName)
 
 		// then
+		// if the UserSignup would be updated, then the function would return an error because we didn't add the UserSignup to the FakeClient as part of the setup (there is nothing to be updated), thus we expect no error returned
 		require.Nil(t, err)
 	})
 
