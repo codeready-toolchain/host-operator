@@ -27,7 +27,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 		statusUpdater := StatusUpdater{Client: hostClient}
 
 		// when
-		err := statusUpdater.updateStatusConditions(event, c1)
+		err := statusUpdater.updateStatusConditions(context.TODO(), event, c1)
 
 		// then
 		require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 		statusUpdater := StatusUpdater{Client: hostClient}
 
 		// when
-		err := statusUpdater.updateStatusConditions(event, c2)
+		err := statusUpdater.updateStatusConditions(context.TODO(), event, c2)
 
 		// then
 		require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 		}
 
 		// when
-		err := statusUpdater.updateStatusConditions(event, c2)
+		err := statusUpdater.updateStatusConditions(context.TODO(), event, c2)
 
 		// then
 		require.EqualError(t, err, "mock error")
