@@ -27,7 +27,7 @@ func NewSynchronizer(logger logr.Logger, getMembersFunc cluster.GetMemberCluster
 
 // SyncMemberConfigs retrieves member operator configurations and syncs the appropriate configuration to each member cluster
 // returns a map of any errors encountered indexed by cluster name
-func (s *Synchronizer) SyncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]string {
+func (s *Synchronizer) SyncMemberConfigs(ctx context.Context, sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]string {
 	toolchainConfig := sourceConfig.DeepCopy()
 
 	// get configs for member toolchainclusters
@@ -50,7 +50,7 @@ func (s *Synchronizer) SyncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 			delete(membersWithSpecificConfig, toolchainCluster.Name)
 		}
 
-		if err := SyncMemberConfig(memberConfigSpec, toolchainCluster); err != nil {
+		if err := SyncMemberConfig(ctx, memberConfigSpec, toolchainCluster); err != nil {
 			s.logger.Error(err, "failed to sync MemberOperatorConfig", "cluster_name", toolchainCluster.Name)
 			syncErrors[toolchainCluster.Name] = err.Error()
 		}
@@ -65,9 +65,9 @@ func (s *Synchronizer) SyncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 	return syncErrors
 }
 
-func SyncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpec, memberCluster *cluster.CachedToolchainCluster) error {
+func SyncMemberConfig(ctx context.Context, memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpec, memberCluster *cluster.CachedToolchainCluster) error {
 	memberConfig := &toolchainv1alpha1.MemberOperatorConfig{}
-	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: configResourceName}, memberConfig); err != nil {
+	if err := memberCluster.Client.Get(ctx, types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: configResourceName}, memberConfig); err != nil {
 		if errors.IsNotFound(err) {
 			// MemberOperatorConfig does not exist - create it
 			memberConfig := &toolchainv1alpha1.MemberOperatorConfig{
@@ -77,7 +77,7 @@ func SyncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpe
 				},
 				Spec: memberConfigSpec,
 			}
-			return memberCluster.Client.Create(context.TODO(), memberConfig)
+			return memberCluster.Client.Create(ctx, memberConfig)
 		}
 		// Error reading the object - try again on the next reconcile
 		return err
@@ -86,5 +86,5 @@ func SyncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpe
 	// MemberOperatorConfig exists - update spec
 	memberConfig.Spec = memberConfigSpec
 
-	return memberCluster.Client.Update(context.TODO(), memberConfig)
+	return memberCluster.Client.Update(ctx, memberConfig)
 }
