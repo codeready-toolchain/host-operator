@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logger "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -48,7 +47,7 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=notifications/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := logger.FromContext(ctx)
+	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling Notification")
 
 	// Fetch the Notification instance
