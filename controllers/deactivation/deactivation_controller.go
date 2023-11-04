@@ -12,7 +12,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -60,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, mur)
+	err = r.Client.Get(ctx, request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -86,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Get the associated usersignup
 	usersignup := &toolchainv1alpha1.UserSignup{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: mur.Namespace,
 		Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 	}, usersignup); err != nil {
@@ -117,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Get the tier associated with the MasterUserRecord, we'll observe the deactivation timeout period from the tier spec
 	userTier := &toolchainv1alpha1.UserTier{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: request.Namespace, Name: mur.Spec.TierName}, userTier); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: mur.Spec.TierName}, userTier); err != nil {
 		logger.Error(err, "unable to get the deactivationTimeoutDays from UserTier", "name", mur.Spec.TierName)
 		return reconcile.Result{}, err
 	}
@@ -126,7 +125,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
 	if deactivationTimeoutDays == 0 {
 		// If the usersignup was already set to deactivating then reset it to false
-		if err := r.resetDeactivatingState(logger, usersignup); err != nil {
+		if err := r.resetDeactivatingState(ctx, usersignup); err != nil {
 			return reconcile.Result{}, err
 		}
 		logger.Info("User belongs to a tier that does not have a deactivation timeout. The user will not be automatically deactivated")
@@ -150,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Example: promotion of a user after 28 days from a user tier with deactivationTimeoutDays = 30 to one with 90, and where deactivatingNotificationDays = 3
 		//   Usersignup would have spec.states[Deactivating] = true but there are now 62 days left before deactivation so the deactivating notification should be sent again
 		//   when it is 3 days left until deactivation
-		if err := r.resetDeactivatingState(logger, usersignup); err != nil {
+		if err := r.resetDeactivatingState(ctx, usersignup); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -166,7 +165,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		states.SetDeactivating(usersignup, true)
 
 		logger.Info("setting usersignup state to deactivating")
-		if err := r.Client.Update(context.TODO(), usersignup); err != nil {
+		if err := r.Client.Update(ctx, usersignup); err != nil {
 			logger.Error(err, "failed to update usersignup")
 			return reconcile.Result{}, err
 		}
@@ -212,7 +211,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	states.SetDeactivated(usersignup, true)
 
-	if err := r.Client.Update(context.TODO(), usersignup); err != nil {
+	if err := r.Client.Update(ctx, usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
 	}
@@ -222,11 +221,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) resetDeactivatingState(logger logr.Logger, usersignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) resetDeactivatingState(ctx context.Context, usersignup *toolchainv1alpha1.UserSignup) error {
 	if states.Deactivating(usersignup) {
 		states.SetDeactivating(usersignup, false)
-		if err := r.Client.Update(context.TODO(), usersignup); err != nil {
-			logger.Error(err, "failed to reset usersignup deactivating state")
+		if err := r.Client.Update(ctx, usersignup); err != nil {
+			log.FromContext(ctx).Error(err, "failed to reset usersignup deactivating state")
 			return err
 		}
 	}
