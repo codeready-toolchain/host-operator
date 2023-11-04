@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// fetch the NSTemplateTier tier
 	tier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(context.TODO(), request.NamespacedName, tier); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, tier); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("NSTemplateTier not found")
 			return reconcile.Result{}, nil
@@ -68,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create a new entry in the `status.history` if needed
-	if added, err := r.ensureStatusUpdateRecord(logger, tier); err != nil {
+	if added, err := r.ensureStatusUpdateRecord(ctx, tier); err != nil {
 		logger.Error(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
 		return reconcile.Result{}, errs.Wrap(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
 	} else if added {
@@ -81,28 +80,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // ensureStatusUpdateRecord adds a new entry in the `status.updates` with the current date/time
 // if needed and the hash of the NSTemplateTier
 // returns `true` if an entry was added, `err` if something wrong happened
-func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+func (r *Reconciler) ensureStatusUpdateRecord(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	hash, err := hash.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return false, errs.Wrapf(err, "unable to append an entry in the `status.updates` for NSTemplateTier '%s'", tier.Name)
 	}
 	// if there was no previous status:
 	if len(tier.Status.Updates) == 0 {
-		return true, r.addNewTierUpdate(tier, hash)
+		return true, r.addNewTierUpdate(ctx, tier, hash)
 	}
+
 	// check whether the entry was already added
+	logger := log.FromContext(ctx)
 	if tier.Status.Updates[len(tier.Status.Updates)-1].Hash == hash {
 		logger.Info("current tier template already exists in tier.status.updates")
 		return false, nil
 	}
 	logger.Info("Adding a new entry in tier.status.updates")
-	return true, r.addNewTierUpdate(tier, hash)
+	return true, r.addNewTierUpdate(ctx, tier, hash)
 }
 
-func (r *Reconciler) addNewTierUpdate(tier *toolchainv1alpha1.NSTemplateTier, hash string) error {
+func (r *Reconciler) addNewTierUpdate(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier, hash string) error {
 	tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
 		StartTime: metav1.Now(),
 		Hash:      hash,
 	})
-	return r.Client.Status().Update(context.TODO(), tier)
+	return r.Client.Status().Update(ctx, tier)
 }
