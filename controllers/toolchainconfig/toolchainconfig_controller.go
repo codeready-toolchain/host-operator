@@ -117,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		getMembersFunc: r.GetMembersFunc,
 	}
 
-	if syncErrs := sync.SyncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
+	if syncErrs := sync.SyncMemberConfigs(ctx, toolchainConfig); len(syncErrs) > 0 {
 		for cluster, errMsg := range syncErrs {
 			err := fmt.Errorf(errMsg)
 			reqLogger.Error(err, "error syncing configuration to member cluster", "cluster", cluster)
