@@ -32,14 +32,14 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller reconciler with the Manager
 // Watches the Space resources and the ToolchainStatus CRD
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("spacecompletion").
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-			handler.EnqueueRequestsFromMapFunc(pending.NewSpaceMapper(mgr.GetClient()).MapToOldestPending)).
+			handler.EnqueueRequestsFromMapFunc(pending.NewSpaceMapper(mgr.GetClient()).BuildMapToOldestPending(ctx))).
 		Complete(r)
 }
 
