@@ -16,6 +16,7 @@ import (
 	spacebindingrequesttest "github.com/codeready-toolchain/host-operator/test/spacebindingrequest"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	spacebindingcommon "github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
@@ -450,6 +451,54 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasFinalizer()
 		})
 
+		t.Run("There are more than one SpaceBinding for the given MUR and Space", func(t *testing.T) {
+			// we have an SBR that will try to create the same SpaceBinding
+			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR(janeMur.Name),
+				spacebindingrequesttest.WithSpaceRole("admin"))
+
+			// given
+			spaceBinding1 := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
+			spaceBinding2 := spaceBinding1.DeepCopy()                                       // there is another spacebinding (this should not happen)
+			spaceBinding2.Name = "somerandom name"                                          // the name doesn't matter since spacebindings are retrieved using lables
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding1, spaceBinding2)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+			// then
+			cause := "expected 1 spacebinding for Space jane and MUR jane. But found 2"
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
+		})
+
+		t.Run("SpaceBinding not managed by this SpaceBindingRequest CR", func(t *testing.T) {
+			// given
+			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
+			// this SBR will fail for the conflict with the already existing SpaceBinding
+			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR(janeMur.Name),
+				spacebindingrequesttest.WithSpaceRole("admin"))
+
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+			// then
+			cause := fmt.Sprintf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", janeSpace.GetName(), janeMur.GetName())
+			require.EqualError(t, err, cause)
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasConditions(spacebindingrequesttestcommon.UnableToCreateSpaceBinding(cause)).
+				HasFinalizer()
+		})
+
 	})
 }
 
@@ -595,6 +644,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", sbrNamespace.GetName(),
 				spacebindingrequesttest.WithDeletionTimestamp(),
 				spacebindingrequesttest.WithFinalizer(),
+				spacebindingrequesttest.WithMUR(janeMur.Name),
 			) // sbr is being deleted
 			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr))
 			spaceBinding.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-121 * time.Second)} // is being deleted since more than 2 minutes
@@ -618,6 +668,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			sbr := spacebindingrequesttest.NewSpaceBindingRequest("jane", sbrNamespace.GetName(),
 				spacebindingrequesttest.WithDeletionTimestamp(),
 				spacebindingrequesttest.WithFinalizer(),
+				spacebindingrequesttest.WithMUR(janeMur.Name),
 			) // sbr is being deleted
 			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
@@ -651,7 +702,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				return member1Client.Client.Update(ctx, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t)
+			hostClient := test.NewFakeClient(t, janeSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when

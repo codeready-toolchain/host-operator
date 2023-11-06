@@ -36,6 +36,7 @@ var expectedProdTiers = map[string]bool{
 	"baseextendedidling": true,
 	"test":               false,
 	"appstudio":          false,
+	"appstudiolarge":     true,
 	"appstudio-env":      false,
 }
 

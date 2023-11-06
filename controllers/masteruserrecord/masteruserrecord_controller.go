@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -78,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, mur)
+	err := r.Client.Get(ctx, request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -93,11 +92,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If the MUR is not being deleted, create or synchronize UserAccounts.
 	if !coputil.IsBeingDeleted(mur) {
 		// Add the finalizer if it is not present
-		if err := r.addFinalizer(logger, mur, murFinalizerName); err != nil {
+		if err := r.addFinalizer(ctx, mur, murFinalizerName); err != nil {
 			return reconcile.Result{}, err
 		}
 		logger.Info("ensuring user accounts")
-		membersWithUserAccounts, err := r.ensureUserAccounts(logger, mur)
+		membersWithUserAccounts, err := r.ensureUserAccounts(ctx, mur)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -107,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, nil
 			}
 		}
-		requeueTime, err := r.ensureUserAccountsAreNotPresent(logger, mur, r.membersWithoutUserAccount(membersWithUserAccounts))
+		requeueTime, err := r.ensureUserAccountsAreNotPresent(ctx, mur, r.membersWithoutUserAccount(membersWithUserAccounts))
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeueTime > 0 {
@@ -115,15 +114,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		// just in case there was no change in the set of UserAccounts and there was no provisioned
 		if len(membersWithUserAccounts) == 0 {
-			if _, err := alignReadiness(logger, r.Scheme, r.Client, mur); err != nil {
+			if _, err := alignReadiness(ctx, r.Scheme, r.Client, mur); err != nil {
 				return reconcile.Result{}, err
 			}
-			return reconcile.Result{}, r.Client.Status().Update(context.TODO(), mur)
+			return reconcile.Result{}, r.Client.Status().Update(ctx, mur)
 		}
 
 		// If the MUR is being deleted, delete the UserAccounts in members.
 	} else if coputil.HasFinalizer(mur, murFinalizerName) {
-		requeueTime, err := r.manageCleanUp(logger, mur)
+		requeueTime, err := r.manageCleanUp(ctx, mur)
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeueTime > 0 {
@@ -134,11 +133,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) ensureUserAccountsAreNotPresent(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetClusters map[string]cluster.Cluster) (time.Duration, error) {
+func (r *Reconciler) ensureUserAccountsAreNotPresent(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, targetClusters map[string]cluster.Cluster) (time.Duration, error) {
 	for clusterName, memberCluster := range targetClusters {
-		requeueTime, err := r.deleteUserAccount(logger, memberCluster, mur)
+		requeueTime, err := r.deleteUserAccount(ctx, memberCluster, mur)
 		if err != nil {
-			return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
+			return 0, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", clusterName)
 		} else if requeueTime > 0 {
 			return requeueTime, nil
@@ -157,14 +156,14 @@ func (r *Reconciler) membersWithoutUserAccount(membersWithUserAccounts map[strin
 	return membersWithout
 }
 
-func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (map[string]bool, error) {
+func (r *Reconciler) ensureUserAccounts(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord) (map[string]bool, error) {
 	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
-	if err := r.Client.List(context.TODO(), spaceBindings,
+	if err := r.Client.List(ctx, spaceBindings,
 		runtimeclient.InNamespace(mur.GetNamespace()),
 		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
 		}); err != nil {
-		return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
+		return nil, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 			"unable to list SpaceBindings for the MasterUserRecord")
 	}
 	// let's keep the list of target clusters the UserAccounts should be provisioned to in a map - the value defines if the account was just created or updated
@@ -172,15 +171,15 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 	for _, binding := range spaceBindings.Items {
 		if !coputil.IsBeingDeleted(&binding) { // nolint:gosec
 			space := &toolchainv1alpha1.Space{}
-			if err := r.Client.Get(context.TODO(), namespacedName(mur.Namespace, binding.Spec.Space), space); err != nil {
-				return nil, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
+			if err := r.Client.Get(ctx, namespacedName(mur.Namespace, binding.Spec.Space), space); err != nil {
+				return nil, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"unable to get Space '%s' for the SpaceBinding '%s'", binding.Spec.Space, binding.Name)
 			}
 			if !coputil.IsBeingDeleted(space) && space.Spec.TargetCluster != "" {
 				// todo - right now we provision only one UserAccount. It's provisioned in the same cluster where the default space is created
 				// todo - as soon as the other components (reg-service & proxy) are updated to support more UserAccounts per MUR, then this should be changed as well
 				if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] {
-					if createdOrUpdated, err := r.ensureUserAccount(logger, mur, space.Spec.TargetCluster); err != nil || createdOrUpdated {
+					if createdOrUpdated, err := r.ensureUserAccount(ctx, mur, space.Spec.TargetCluster); err != nil || createdOrUpdated {
 						targetClusters[space.Spec.TargetCluster] = true
 						return targetClusters, err
 					}
@@ -193,12 +192,14 @@ func (r *Reconciler) ensureUserAccounts(logger logr.Logger, mur *toolchainv1alph
 	return targetClusters, nil
 }
 
-func (r *Reconciler) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
+func (r *Reconciler) addFinalizer(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
+	logger := log.FromContext(ctx)
+
 	// Add the finalizer if it is not present
 	if !coputil.HasFinalizer(mur, finalizer) {
 		coputil.AddFinalizer(mur, finalizer)
-		if err := r.Client.Update(context.TODO(), mur); err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
+		if err := r.Client.Update(ctx, mur); err != nil {
+			return r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
 				"failed while updating with added finalizer")
 		}
 		logger.Info("MasterUserRecord now has finalizer")
@@ -212,11 +213,11 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.Mas
 // If the UserAccount resource already exists, then this latter is synchronized using the given `murAccount` and the associated `mur` status is also updated to reflect
 // the UserAccount specs.
 // Returns bool as the first argument if the UserAccount was either created or updated
-func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, targetCluster string) (bool, error) {
+func (r *Reconciler) ensureUserAccount(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, targetCluster string) (bool, error) {
 	// get & check member cluster
 	memberCluster, found := r.MemberClusters[targetCluster]
 	if !found {
-		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason),
+		return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason),
 			fmt.Errorf("unknown target member cluster '%s'", targetCluster),
 			"failed to get the member cluster '%s'", targetCluster)
 	}
@@ -224,7 +225,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha
 	// get UserAccount from member
 	nsdName := namespacedName(memberCluster.OperatorNamespace, mur.Name)
 	userAccount := &toolchainv1alpha1.UserAccount{}
-	if err := memberCluster.Client.Get(context.TODO(), nsdName, userAccount); err != nil {
+	if err := memberCluster.Client.Get(ctx, nsdName, userAccount); err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, mur)
@@ -232,21 +233,22 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha
 			// Remove this after all users have been migrated to new IdP client
 			userAccount.Spec.OriginalSub = mur.Spec.OriginalSub
 
-			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
+			if err := memberCluster.Client.Create(ctx, userAccount); err != nil {
+				return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", targetCluster)
 			}
-			return true, updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+			return true, updateStatusConditions(ctx, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
-		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
+		return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
 			"failed to get userAccount '%s' from cluster '%s'", mur.Name, targetCluster)
 	}
 	// if the UserAccount is being deleted (by accident?), then we should wait until is has been totally deleted, and this controller will recreate it again
+	logger := log.FromContext(ctx)
 	if coputil.IsBeingDeleted(userAccount) {
 		logger.Info("UserAccount is being deleted. Waiting until deletion is complete", "member_cluster", memberCluster.Name)
 
-		return true, updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
+		return true, updateStatusConditions(ctx, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
 	}
 
 	sync := Synchronizer{
@@ -257,31 +259,31 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, mur *toolchainv1alpha
 		logger:        logger,
 		scheme:        r.Scheme,
 	}
-	updated, err := sync.synchronizeSpec()
+	updated, err := sync.synchronizeSpec(ctx)
 	if err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
-		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
+		return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
 			"update of the UserAccount.spec in the cluster '%s' failed", targetCluster)
 	}
-	if err := sync.synchronizeStatus(); err != nil {
+	if err := sync.synchronizeStatus(ctx); err != nil {
 		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", targetCluster)
 		// note: if we got an error while updating the status, then we probably can't update it here neither.
-		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
+		return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
 	}
 	// nothing done and no error occurred
 	logger.Info("user account on member cluster was already present", "target_cluster", targetCluster, "updated", updated)
 	return updated, nil
 }
 
-type statusUpdater func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error
+type statusUpdater func(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, message string) error
 
 // wrapErrorWithStatusUpdate wraps the error and update the user account status. If the update failed then logs the error.
-func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, updateStatus statusUpdater, err error, format string, args ...interface{}) error {
+func (r *Reconciler) wrapErrorWithStatusUpdate(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, updateStatus statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	if err := updateStatus(logger, mur, err.Error()); err != nil {
-		logger.Error(err, "status update failed")
+	if err := updateStatus(ctx, mur, err.Error()); err != nil {
+		log.FromContext(ctx).Error(err, "status update failed")
 	}
 	if format != "" {
 		return errs.Wrapf(err, format, args...)
@@ -290,9 +292,9 @@ func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, mur *toolchai
 }
 
 func (r *Reconciler) setStatusFailed(reason string) statusUpdater {
-	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+	return func(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		return updateStatusConditions(
-			logger,
+			ctx,
 			r.Client,
 			mur,
 			toBeNotReady(reason, message))
@@ -300,7 +302,7 @@ func (r *Reconciler) setStatusFailed(reason string) statusUpdater {
 }
 
 func (r *Reconciler) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) statusUpdater {
-	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+	return func(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		cond := toolchainv1alpha1.Condition{Type: condType}
 		for _, con := range mur.Status.Conditions {
 			if con.Type == condType {
@@ -309,27 +311,29 @@ func (r *Reconciler) useExistingConditionOfType(condType toolchainv1alpha1.Condi
 			}
 		}
 		cond.Message = message
-		return updateStatusConditions(logger, r.Client, mur, cond)
+		return updateStatusConditions(ctx, r.Client, mur, cond)
 	}
 }
 
-func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
-	if requeue, err := r.ensureUserAccountsAreNotPresent(logger, mur, r.MemberClusters); err != nil || requeue > 0 {
+func (r *Reconciler) manageCleanUp(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+	if requeue, err := r.ensureUserAccountsAreNotPresent(ctx, mur, r.MemberClusters); err != nil || requeue > 0 {
 		return requeue, err
 	}
 	// Remove finalizer from MasterUserRecord
 	coputil.RemoveFinalizer(mur, murFinalizerName)
 	if err := r.Client.Update(context.Background(), mur); err != nil {
-		return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
+		return 0, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
 	domain := metrics.GetEmailDomain(mur)
+	logger := log.FromContext(ctx)
 	counter.DecrementMasterUserRecordCount(logger, domain)
 	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil
 }
 
-func (r *Reconciler) deleteUserAccount(logger logr.Logger, memberCluster cluster.Cluster, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+func (r *Reconciler) deleteUserAccount(ctx context.Context, memberCluster cluster.Cluster, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+	logger := log.FromContext(ctx)
 	requeueTime := 10 * time.Second
 
 	userAcc := &toolchainv1alpha1.UserAccount{}
@@ -344,16 +348,16 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, memberCluster cluster
 
 	// Get the User associated with the UserAccount
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: mur.Name}
-	if err := memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
+	if err := memberCluster.Client.Get(ctx, namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info(fmt.Sprintf("UserAccount is not present in '%s' - making sure that it's not in the MasterUserRecord.Status", memberCluster.Name))
-			return 0, sync.removeAccountFromStatus()
+			return 0, sync.removeAccountFromStatus(ctx)
 		}
 		return 0, err
 	}
 
 	if coputil.IsBeingDeleted(userAcc) {
-		if err := sync.synchronizeStatus(); err != nil {
+		if err := sync.synchronizeStatus(ctx); err != nil {
 			return 0, err
 		}
 		// if the UserAccount is being deleted, allow up to 1 minute of retries before reporting an error
@@ -364,7 +368,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, memberCluster cluster
 		return requeueTime, nil
 	}
 	propagationPolicy := metav1.DeletePropagationForeground
-	err := memberCluster.Client.Delete(context.TODO(), userAcc, &runtimeclient.DeleteOptions{
+	err := memberCluster.Client.Delete(ctx, userAcc, &runtimeclient.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 	if err != nil {
@@ -408,7 +412,9 @@ func toBeProvisionedNotificationCreated() toolchainv1alpha1.Condition {
 }
 
 // updateStatusConditions updates user account status conditions with the new conditions
-func updateStatusConditions(logger logr.Logger, cl runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
+func updateStatusConditions(ctx context.Context, cl runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
+	logger := log.FromContext(ctx)
+
 	var updated bool
 	mur.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, newConditions...)
 	if !updated {
@@ -417,7 +423,7 @@ func updateStatusConditions(logger logr.Logger, cl runtimeclient.Client, mur *to
 		return nil
 	}
 	logger.Info("updating MUR status conditions", "generation", mur.Generation, "resource_version", mur.ResourceVersion)
-	err := cl.Status().Update(context.TODO(), mur)
+	err := cl.Status().Update(ctx, mur)
 	logger.Info("updated MUR status conditions", "generation", mur.Generation, "resource_version", mur.ResourceVersion)
 	return err
 }
