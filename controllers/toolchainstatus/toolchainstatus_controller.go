@@ -269,7 +269,7 @@ func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolcha
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
 func (r *Reconciler) synchronizeWithCounter(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	if err := counter.Synchronize(r.Client, toolchainStatus); err != nil {
+	if err := counter.Synchronize(ctx, r.Client, toolchainStatus); err != nil {
 		logger := log.FromContext(ctx)
 		logger.Error(err, "unable to synchronize with the counter")
 		return false
