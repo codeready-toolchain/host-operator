@@ -159,12 +159,12 @@ func GetCounts() (Counts, error) {
 //
 // If the cached counter is initialized and ToolchainStatus contains already some numbers
 // then it updates the ToolchainStatus numbers with the one taken from the cached counter
-func Synchronize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func Synchronize(ctx context.Context, cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
 
 	// initialize the cached counters (if needed)
-	if err := initialize(cl, toolchainStatus); err != nil {
+	if err := initialize(ctx, cl, toolchainStatus); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	return -1
 }
 
-func initialize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func initialize(ctx context.Context, cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// skip if cached counters are already initialized
 	if cachedCounts.initialized {
 		return nil
@@ -238,7 +238,7 @@ func initialize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.Tool
 	if config.Metrics().ForceSynchronization() ||
 		!usersPerActivationAndDomainMetricKeyExists ||
 		!masterUserRecordsPerDomainMetricExists {
-		return initializeFromResources(cl, toolchainStatus.Namespace)
+		return initializeFromResources(ctx, cl, toolchainStatus.Namespace)
 	}
 	// otherwise, initialize the cached counters from the ToolchainStatus resource.
 	return initializeFromToolchainStatus(toolchainStatus)
@@ -246,18 +246,18 @@ func initialize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.Tool
 
 // initialize the cached counters from the UserSignup and MasterUserRecord resources.
 // this func lists all UserSignup and MasterUserRecord resources
-func initializeFromResources(cl runtimeclient.Client, namespace string) error {
+func initializeFromResources(ctx context.Context, cl runtimeclient.Client, namespace string) error {
 	log.Info("initializing counters from resources")
 	usersignups := &toolchainv1alpha1.UserSignupList{}
-	if err := cl.List(context.TODO(), usersignups, runtimeclient.InNamespace(namespace)); err != nil {
+	if err := cl.List(ctx, usersignups, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	if err := cl.List(context.TODO(), murs, runtimeclient.InNamespace(namespace)); err != nil {
+	if err := cl.List(ctx, murs, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	spaces := &toolchainv1alpha1.SpaceList{}
-	if err := cl.List(context.TODO(), spaces, runtimeclient.InNamespace(namespace)); err != nil {
+	if err := cl.List(ctx, spaces, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	reset()

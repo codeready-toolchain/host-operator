@@ -418,7 +418,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	require.NoError(t, err)
 
 	// when
-	err = counter.Synchronize(fakeClient, toolchainStatus)
+	err = counter.Synchronize(context.TODO(), fakeClient, toolchainStatus)
 
 	// then
 	require.NoError(t, err)
@@ -505,7 +505,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func() {
 			defer waitForFinished.Done()
 			latch.Wait()
-			err := counter.Synchronize(fakeClient, toolchainStatus)
+			err := counter.Synchronize(context.TODO(), fakeClient, toolchainStatus)
 			require.NoError(t, err)
 		}()
 	}
@@ -513,7 +513,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	// when
 	latch.Done()
 	waitForFinished.Wait()
-	err := counter.Synchronize(fakeClient, toolchainStatus)
+	err := counter.Synchronize(context.TODO(), fakeClient, toolchainStatus)
 
 	// then
 	require.NoError(t, err)
