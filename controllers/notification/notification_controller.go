@@ -8,7 +8,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -53,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the Notification instance
 	notification := &toolchainv1alpha1.Notification{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, notification)
+	err := r.Client.Get(ctx, request.NamespacedName, notification)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -73,12 +72,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// if is sent, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(notification.Status.Conditions, toolchainv1alpha1.NotificationSent)
 	if found && completeCond.Status == corev1.ConditionTrue {
-		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, config.Notifications().DurationBeforeNotificationDeletion(), notification, completeCond)
+		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(ctx, config.Notifications().DurationBeforeNotificationDeletion(), notification, completeCond)
 		if deleted {
 			return reconcile.Result{}, err
 		}
 		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification, r.setStatusNotificationDeletionFailed, err, "failed to delete notification")
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(ctx, notification, r.setStatusNotificationDeletionFailed, err, "failed to delete notification")
 		}
 		return reconcile.Result{
 			Requeue:      true,
@@ -97,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				"notification spec", notification.Spec,
 			)
 
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(ctx, notification,
 				r.setStatusNotificationDeliveryError, err, "failed to send notification")
 		}
 		reqLogger.Info("Notification has been sent")
@@ -108,58 +107,60 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: config.Notifications().DurationBeforeNotificationDeletion(),
-	}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
+	}, r.updateStatus(ctx, notification, r.setStatusNotificationSent)
 }
 
 // checkTransitionTimeAndDelete checks if the last transition time has surpassed
 // the duration before the notification should be deleted. If so, the notification is deleted.
 // Returns bool indicating if the notification was deleted, the time before the notification
 // can be deleted and error
-func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, durationBeforeNotificationDeletion time.Duration, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) checkTransitionTimeAndDelete(ctx context.Context, durationBeforeNotificationDeletion time.Duration, notification *toolchainv1alpha1.Notification,
 	completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+	logger := log.FromContext(ctx)
 
-	log.Info("the Notification is sent so we can deal with its deletion")
+	logger.Info("the Notification is sent so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
 	if timeSinceCompletion >= durationBeforeNotificationDeletion {
-		log.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
+		logger.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
 			"durationBeforeNotificationDeletion", durationBeforeNotificationDeletion.String())
-		if err := r.Client.Delete(context.TODO(), notification, &runtimeclient.DeleteOptions{}); err != nil {
+		if err := r.Client.Delete(ctx, notification, &runtimeclient.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete Notification object '%s'", notification.Name)
 		}
 		return true, 0, nil
 	}
 	diff := durationBeforeNotificationDeletion - timeSinceCompletion
-	log.Info("the Notification has been completed for shorter time than 'durationBeforeNotificationDeletion', so it's going to be reconciled again",
+	logger.Info("the Notification has been completed for shorter time than 'durationBeforeNotificationDeletion', so it's going to be reconciled again",
 		"durationBeforeNotificationDeletion", durationBeforeNotificationDeletion.String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
-type statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error
+type statusUpdater func(ctx context.Context, notification *toolchainv1alpha1.Notification, message string) error
 
-func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) wrapErrorWithStatusUpdate(ctx context.Context, notification *toolchainv1alpha1.Notification,
 	statusUpdater statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	if err := statusUpdater(notification, err.Error()); err != nil {
-		logger.Error(err, "status update failed")
+	if err := statusUpdater(ctx, notification, err.Error()); err != nil {
+		log.FromContext(ctx).Error(err, "status update failed")
 	}
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *Reconciler) updateStatusConditions(notification *toolchainv1alpha1.Notification, newConditions ...toolchainv1alpha1.Condition) error {
+func (r *Reconciler) updateStatusConditions(ctx context.Context, notification *toolchainv1alpha1.Notification, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	notification.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(notification.Status.Conditions, newConditions...)
 	if !updated {
 		// Nothing changed
 		return nil
 	}
-	return r.Client.Status().Update(context.TODO(), notification)
+	return r.Client.Status().Update(ctx, notification)
 }
 
-func (r *Reconciler) setStatusNotificationDeletionFailed(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationDeletionFailed(ctx context.Context, notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
+		ctx,
 		notification,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.NotificationDeletionError,
@@ -169,8 +170,9 @@ func (r *Reconciler) setStatusNotificationDeletionFailed(notification *toolchain
 		})
 }
 
-func (r *Reconciler) setStatusNotificationDeliveryError(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationDeliveryError(ctx context.Context, notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
+		ctx,
 		notification,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.NotificationSent,
@@ -180,8 +182,9 @@ func (r *Reconciler) setStatusNotificationDeliveryError(notification *toolchainv
 		})
 }
 
-func (r *Reconciler) setStatusNotificationSent(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationSent(ctx context.Context, notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
+		ctx,
 		notification,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.NotificationSent,
@@ -191,11 +194,11 @@ func (r *Reconciler) setStatusNotificationSent(notification *toolchainv1alpha1.N
 		})
 }
 
-func (r *Reconciler) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) updateStatus(ctx context.Context, notification *toolchainv1alpha1.Notification,
 	statusUpdater statusUpdater) error {
 
-	if err := statusUpdater(notification, ""); err != nil {
-		logger.Error(err, "status update failed")
+	if err := statusUpdater(ctx, notification, ""); err != nil {
+		log.FromContext(ctx).Error(err, "status update failed")
 		return err
 	}
 
