@@ -20,7 +20,6 @@ import (
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -786,12 +786,14 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		memberClient := commontest.NewFakeClient(t)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
-		statusUpdater := func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+		statusUpdater := func(ctx context.Context, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
 
 		// when
-		err := cntrl.wrapErrorWithStatusUpdate(testLog, mur, statusUpdater,
+		ctx := context.Background()
+		log.IntoContext(ctx, testLog)
+		err := cntrl.wrapErrorWithStatusUpdate(ctx, mur, statusUpdater,
 			apierros.NewBadRequest("oopsy woopsy"), "failed to create %s", "user bob")
 
 		// then
