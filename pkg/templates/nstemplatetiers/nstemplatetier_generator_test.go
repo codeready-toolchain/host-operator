@@ -97,7 +97,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 
 			// then
 			require.NoError(t, err)
@@ -169,11 +169,11 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := commontest.NewFakeClient(t)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 			require.NoError(t, err)
 
 			// when calling CreateOrUpdateResources a second time
-			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err = nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 
 			// then
 			require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := commontest.NewFakeClient(t)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 			require.NoError(t, err)
 
 			// given a new set of tier templates (same content but new revisions, which is what we'll want to check here)
@@ -251,7 +251,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when calling CreateOrUpdateResources a second time
-			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err = nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 
 			// then
 			require.NoError(t, err)
@@ -356,7 +356,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 			clt := commontest.NewFakeClient(t)
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to init NSTemplateTier generator: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
@@ -376,7 +376,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the '\\w+' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
@@ -400,7 +400,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create or update the 'advanced' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
@@ -421,7 +421,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
