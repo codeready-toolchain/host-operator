@@ -283,7 +283,7 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 	}
 	getSpaceFunc := func(spaceName string) (*toolchainv1alpha1.Space, error) {
 		spaceFound := &toolchainv1alpha1.Space{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{
+		err := r.Client.Get(ctx, types.NamespacedName{
 			Namespace: r.Namespace,
 			Name:      spaceName,
 		}, spaceFound)
