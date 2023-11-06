@@ -47,9 +47,15 @@ func TestUpdateStatus(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "failed to create namespace: oopsy woopsy", err.Error())
 	})
+}
 
+func TestUpdateHomeSpaceStatus(t *testing.T) {
 	t.Run("home space status not updated", func(t *testing.T) {
 		// given
+		userSignup := &toolchainv1alpha1.UserSignup{}
+
+		statusUpdater := StatusUpdater{Client: test.NewFakeClient(t)}
+
 		spaceName := "foo"
 		userSignup.Status.HomeSpace = "foo"
 
@@ -57,8 +63,26 @@ func TestUpdateStatus(t *testing.T) {
 		err := statusUpdater.updateStatusHomeSpace(context.TODO(), userSignup, spaceName)
 
 		// then
-		// if the UserSignup would be updated, then the function would return an error because we didn't add the UserSignup to the FakeClient as part of the setup (there is nothing to be updated), thus we expect no error returned
+		// if the UserSignup would be updated, then the function would return an error because
+		// we didn't add the UserSignup to the FakeClient as part of the setup
+		// (there is nothing to be updated), thus we expect no error returned
 		require.Nil(t, err)
+	})
+
+	t.Run("home space status updated", func(t *testing.T) {
+		// given
+		userSignup := &toolchainv1alpha1.UserSignup{}
+
+		statusUpdater := StatusUpdater{Client: test.NewFakeClient(t)}
+
+		spaceName := "foo"
+
+		// when
+		err := statusUpdater.updateStatusHomeSpace(context.TODO(), userSignup, spaceName)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, " \"\" is invalid: metadata.name: Required value: name is required", err.Error())
 	})
 
 }
