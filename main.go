@@ -389,7 +389,7 @@ func main() { // nolint:gocyclo
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
 		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
+		if err := nstemplatetiers.CreateOrUpdateResources(stopChannel, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
