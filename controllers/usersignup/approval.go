@@ -1,6 +1,8 @@
 package usersignup
 
 import (
+	"context"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -30,7 +32,7 @@ func (c targetCluster) getClusterName() string {
 // If the user is not approved manually, then it loads ToolchainConfig to check if automatic approval is enabled or not. If it is then it checks
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
-func getClusterIfApproved(cl runtimeclient.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
+func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
@@ -52,7 +54,7 @@ func getClusterIfApproved(cl runtimeclient.Client, userSignup *toolchainv1alpha1
 	// in case a preferredCluster is not set, let's ensure it picks a member cluster with the 'tenant' cluster-role
 	clusterRoles := []string{cluster.RoleLabel(cluster.Tenant)}
 
-	clusterName, err := clusterManager.GetOptimalTargetCluster(capacity.OptimalTargetClusterFilter{
+	clusterName, err := clusterManager.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
 		PreferredCluster:         preferredCluster,
 		ToolchainStatusNamespace: userSignup.Namespace,
 		ClusterRoles:             clusterRoles,
