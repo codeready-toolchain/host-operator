@@ -13,11 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -44,8 +42,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceBindingRequest{}, memberCluster.Cache),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingRequestToSpaceBinding(r.Client)))
 	}
 	return b.Complete(r)
 }
@@ -110,7 +107,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if mur.ObjectMeta.OwnerReferences == nil || len(mur.ObjectMeta.OwnerReferences) == 0 {
 		return ctrl.Result{}, errs.New("MasterUserRecord has no UserSignup owner reference")
 	}
-
 	usersignup := mur.ObjectMeta.OwnerReferences[0]
 	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == usersignup.Name {
 		return reconcile.Result{}, nil
