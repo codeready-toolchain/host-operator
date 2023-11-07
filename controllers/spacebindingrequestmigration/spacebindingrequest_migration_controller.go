@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequest"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -23,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// Reconciler reconciles a SpaceBindingRequest object
+// Reconciler reconciles a SpaceBindingRequestMigration object
 type Reconciler struct {
 	Client         runtimeclient.Client
 	Scheme         *runtime.Scheme
@@ -39,9 +38,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// SpaceBindingRequest owns spacebindings so events will be triggered for those from the host cluster.
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceBindingRequest{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
-			handler.EnqueueRequestsFromMapFunc(spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()),
-		)
+		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}}, &handler.EnqueueRequestForObject{})
 
 	// Watch SpaceBindingRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
@@ -110,6 +107,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// the controller will convert only spacebindings created by system admins using the sandbox-cli.
 	// If the creator label on the space matches the usersignup reference on the MUR then this is the owner of the space
 	// and the spacebinding should not be migrated.
+	if mur.ObjectMeta.OwnerReferences == nil || len(mur.ObjectMeta.OwnerReferences) == 0 {
+		return ctrl.Result{}, errs.New("MasterUserRecord has no UserSignup owner reference")
+	}
+
 	usersignup := mur.ObjectMeta.OwnerReferences[0]
 	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == usersignup.Name {
 		return reconcile.Result{}, nil

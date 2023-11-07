@@ -332,7 +332,7 @@ func main() { // nolint:gocyclo
 			MemberClusters: clusterScopedMemberClusters,
 			Scheme:         mgr.GetScheme(),
 		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequestMigration")
 			os.Exit(1)
 		}
 	}
