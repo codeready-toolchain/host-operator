@@ -88,7 +88,7 @@ type OptimalTargetClusterFilter struct {
 //
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 // In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
-func (b *ClusterManager) GetOptimalTargetCluster(optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
+func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
 	config, err := toolchainconfig.GetToolchainConfig(b.client)
 	if err != nil {
 		return "", errors.Wrapf(err, "unable to get ToolchainConfig")
@@ -100,7 +100,7 @@ func (b *ClusterManager) GetOptimalTargetCluster(optimalClusterFilter OptimalTar
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := b.client.Get(context.TODO(), types.NamespacedName{Namespace: optimalClusterFilter.ToolchainStatusNamespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
+	if err := b.client.Get(ctx, types.NamespacedName{Namespace: optimalClusterFilter.ToolchainStatusNamespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
 	optimalTargetClusters := getOptimalTargetClusters(optimalClusterFilter.PreferredCluster, b.getMemberClusters, optimalClusterFilter.ClusterRoles, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))

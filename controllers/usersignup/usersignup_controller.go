@@ -403,7 +403,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		return err
 	}
 
-	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.ClusterManager)
+	approved, targetCluster, err := getClusterIfApproved(ctx, r.Client, userSignup, r.ClusterManager)
 	logger.Info("ensuring MUR", "approved", approved, "target_cluster", targetCluster, "error", err)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
