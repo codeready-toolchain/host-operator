@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type Synchronizer struct {
@@ -32,11 +33,11 @@ type Synchronizer struct {
 }
 
 // synchronizeSpec synchronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
-func (s *Synchronizer) synchronizeSpec() (bool, error) {
+func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs")
-		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
+		if err := updateStatusConditions(ctx, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return false, err
 		}
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
@@ -55,7 +56,7 @@ func (s *Synchronizer) synchronizeSpec() (bool, error) {
 		}
 		s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 
-		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
+		err := s.memberCluster.Client.Update(ctx, s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
 			return false, err
@@ -73,28 +74,28 @@ func (s *Synchronizer) isSynchronized() bool {
 		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
 		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 }
-func (s *Synchronizer) removeAccountFromStatus() error {
+func (s *Synchronizer) removeAccountFromStatus(ctx context.Context) error {
 	for i := range s.record.Status.UserAccounts {
 		if s.record.Status.UserAccounts[i].Cluster.Name == s.memberCluster.Name {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts[:i], s.record.Status.UserAccounts[i+1:]...)
 			if !util.IsBeingDeleted(s.record) {
-				if _, err := alignReadiness(s.logger, s.scheme, s.hostClient, s.record); err != nil {
+				if _, err := alignReadiness(ctx, s.scheme, s.hostClient, s.record); err != nil {
 					return err
 				}
 			}
 			s.logger.Info("updating MUR status")
-			return s.hostClient.Status().Update(context.TODO(), s.record)
+			return s.hostClient.Status().Update(ctx, s.record)
 		}
 	}
 	return nil
 }
 
-func (s *Synchronizer) synchronizeStatus() error {
+func (s *Synchronizer) synchronizeStatus(ctx context.Context) error {
 	recordStatusUserAcc, index := getUserAccountStatus(s.memberCluster.Name, s.record)
 
 	expectedRecordStatus := *(&recordStatusUserAcc).DeepCopy()
 	expectedRecordStatus.UserAccountStatus = s.memberUserAcc.Status
-	expectedRecordStatus, err := s.withClusterDetails(expectedRecordStatus)
+	expectedRecordStatus, err := s.withClusterDetails(ctx, expectedRecordStatus)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		ready, err := alignReadiness(s.logger, s.scheme, s.hostClient, s.record)
+		ready, err := alignReadiness(ctx, s.scheme, s.hostClient, s.record)
 		if err != nil {
 			return err
 		}
@@ -118,7 +119,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.alignDisabled()
 		}
 
-		err = s.hostClient.Status().Update(context.TODO(), s.record)
+		err = s.hostClient.Status().Update(ctx, s.record)
 		if err != nil {
 			// if there is an error during status update then we "roll back" all the status changes we did above
 			// (don't add new user account status if it was added or don't change it if it's updated)
@@ -133,20 +134,20 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 	// Align readiness even if the user account statuses were not changed.
 	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
-	_, err = alignReadiness(s.logger, s.scheme, s.hostClient, s.record)
+	_, err = alignReadiness(ctx, s.scheme, s.hostClient, s.record)
 	if err != nil {
 		return err
 	}
 	s.logger.Info("updating MUR status")
-	return s.hostClient.Status().Update(context.TODO(), s.record)
+	return s.hostClient.Status().Update(ctx, s.record)
 }
 
 // withClusterDetails returns the given user account status with additional information about
 // the target cluster such as API endpoint and Console URL if not set yet
-func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
+func (s *Synchronizer) withClusterDetails(ctx context.Context, status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
+		if err := s.hostClient.Get(ctx, types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
 			return status, errs.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
@@ -188,7 +189,7 @@ func (s *Synchronizer) alignDisabled() {
 }
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
-func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
+func alignReadiness(ctx context.Context, scheme *runtime.Scheme, hostClient runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
 	// Lookup the UserSignup
 	for _, uaStatus := range mur.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -222,7 +223,7 @@ func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runti
 		}
 		opts := runtimeclient.MatchingLabels(labels)
 		notificationList := &toolchainv1alpha1.NotificationList{}
-		if err := hostClient.List(context.TODO(), notificationList, opts); err != nil {
+		if err := hostClient.List(ctx, notificationList, opts); err != nil {
 			return false, err
 		}
 		// if there is no existing notification with these labels
@@ -239,7 +240,7 @@ func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runti
 
 			// Lookup the UserSignup
 			userSignup := &toolchainv1alpha1.UserSignup{}
-			err = hostClient.Get(context.TODO(), types.NamespacedName{
+			err = hostClient.Get(ctx, types.NamespacedName{
 				Namespace: mur.Namespace,
 				Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 			}, userSignup)
@@ -259,7 +260,7 @@ func alignReadiness(logger logr.Logger, scheme *runtime.Scheme, hostClient runti
 				return false, err
 			}
 		} else {
-			logger.Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
+			log.FromContext(ctx).Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
 				toolchainv1alpha1.NotificationTypeProvisioned, mur.Name, notificationList.Items[0]))
 		}
 		mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, toBeProvisionedNotificationCreated())

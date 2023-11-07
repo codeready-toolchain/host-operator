@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -163,7 +164,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	createdOrUpdated, err := sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
 
 	// then
 	require.NoError(t, err)
@@ -189,7 +190,7 @@ func TestSynchronizeAnnotation(t *testing.T) {
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	createdOrUpdated, err := sync.synchronizeSpec()
+	createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
 
 	// then
 	require.NoError(t, err)
@@ -217,7 +218,7 @@ func TestSynchronizeStatus(t *testing.T) {
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -234,7 +235,7 @@ func TestSynchronizeStatus(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.Error(t, err)
@@ -271,7 +272,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		sync, memberClient := prepareSynchronizer(t, updatingUserAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -287,7 +288,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 		// when
 		preSyncTime := metav1.Now()
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -305,7 +306,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.Error(t, err)
@@ -336,7 +337,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -353,7 +354,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.Error(t, err)
@@ -387,7 +388,9 @@ func TestAlignReadiness(t *testing.T) {
 		},
 	}
 
-	log := zap.New(zap.UseDevMode(true))
+	l := zap.New(zap.UseDevMode(true))
+	ctx := context.TODO()
+	log.IntoContext(ctx, l)
 
 	t.Run("ready propagated and notification created", func(t *testing.T) {
 		// given
@@ -396,7 +399,7 @@ func TestAlignReadiness(t *testing.T) {
 
 		// when
 		preAlignTime := metav1.Now()
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -420,7 +423,7 @@ func TestAlignReadiness(t *testing.T) {
 
 		// when
 		preAlignTime := metav1.Now()
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -443,7 +446,7 @@ func TestAlignReadiness(t *testing.T) {
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -467,7 +470,7 @@ func TestAlignReadiness(t *testing.T) {
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -489,7 +492,7 @@ func TestAlignReadiness(t *testing.T) {
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -511,7 +514,7 @@ func TestAlignReadiness(t *testing.T) {
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -533,7 +536,7 @@ func TestAlignReadiness(t *testing.T) {
 		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -559,7 +562,7 @@ func TestAlignReadiness(t *testing.T) {
 
 			// when
 			preAlignTime := metav1.Now()
-			ready, err := alignReadiness(log, s, hostClient, mur)
+			ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 			// then
 			require.NoError(t, err)
@@ -583,7 +586,7 @@ func TestAlignReadiness(t *testing.T) {
 
 		// when
 		preAlignTime := metav1.Now()
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -614,7 +617,7 @@ func TestAlignReadiness(t *testing.T) {
 
 		// when
 		preAlignTime := metav1.Now()
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -635,7 +638,7 @@ func TestAlignReadiness(t *testing.T) {
 
 		// when
 		preAlignTime := metav1.Now()
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.NoError(t, err)
@@ -657,7 +660,7 @@ func TestAlignReadiness(t *testing.T) {
 		}
 
 		// when
-		ready, err := alignReadiness(log, s, hostClient, mur)
+		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
 		require.Error(t, err)
@@ -698,7 +701,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		createdOrUpdated, err := sync.synchronizeSpec()
+		createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
 
 		// then
 		require.Error(t, err)
@@ -728,7 +731,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
 			// when
-			err := sync.synchronizeStatus()
+			err := sync.synchronizeStatus(context.TODO())
 
 			// then
 			require.Error(t, err)
@@ -746,7 +749,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{additionalUserAcc}
 
 			// when
-			err := sync.synchronizeStatus()
+			err := sync.synchronizeStatus(context.TODO())
 
 			// then
 			require.Error(t, err)
@@ -765,7 +768,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{toBeModified}
 
 			// when
-			err := sync.synchronizeStatus()
+			err := sync.synchronizeStatus(context.TODO())
 
 			// then
 			require.Error(t, err)
@@ -808,7 +811,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 					}
 
 					// when
-					err := sync.synchronizeStatus()
+					err := sync.synchronizeStatus(context.TODO())
 
 					// then
 					assert.Error(t, err)
@@ -838,7 +841,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 
 		// when
-		err := sync.removeAccountFromStatus()
+		err := sync.removeAccountFromStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -858,7 +861,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 
 		// when
-		err := sync.removeAccountFromStatus()
+		err := sync.removeAccountFromStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -877,7 +880,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 
 		// when
-		err := sync.removeAccountFromStatus()
+		err := sync.removeAccountFromStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -916,7 +919,7 @@ func TestRoutes(t *testing.T) {
 		}
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -950,7 +953,7 @@ func TestRoutes(t *testing.T) {
 		}
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.NoError(t, err)
@@ -984,7 +987,7 @@ func TestRoutes(t *testing.T) {
 		}
 
 		// when
-		err := sync.synchronizeStatus()
+		err := sync.synchronizeStatus(context.TODO())
 
 		// then
 		require.Error(t, err)

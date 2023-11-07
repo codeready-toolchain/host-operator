@@ -22,6 +22,7 @@ import (
 
 func TestGetClusterIfApproved(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	signup := commonsignup.NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -52,7 +53,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -75,7 +76,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -101,7 +102,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -119,7 +120,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		clusters := NewGetMemberClusters()
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -134,7 +135,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -149,7 +150,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -165,7 +166,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -184,7 +185,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -204,7 +205,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -222,7 +223,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -242,7 +243,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
@@ -263,7 +264,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
 
 			// then
 			require.EqualError(t, err, "unable to get the optimal target cluster: unable to read ToolchainStatus resource: some error")

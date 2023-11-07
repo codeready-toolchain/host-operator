@@ -24,6 +24,7 @@ import (
 
 func TestGetOptimalTargetCluster(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	toolchainStatus := NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 100,
@@ -50,6 +51,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -72,6 +74,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -94,6 +97,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			})
@@ -115,6 +119,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -138,6 +143,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -160,6 +166,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member1",
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -183,6 +190,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -206,6 +214,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -228,6 +237,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -250,6 +260,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
@@ -275,6 +286,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
@@ -301,6 +313,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
@@ -323,6 +336,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",                                   // request specifically this member eve if it doesn't match the cluster-roles from below
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)}, // set
@@ -348,6 +362,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 			// when
 			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+				ctx,
 				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: commontest.HostOperatorNs,
 				},
@@ -372,6 +387,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 			// when
 			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+				ctx,
 				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: commontest.HostOperatorNs,
 				},
@@ -386,6 +402,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	for _, limit := range []int{800, 1000, 1234, 2500, 10000} {
 		t.Run(fmt.Sprintf("for the given limit of max number of spaces per cluster: %d", limit), func(t *testing.T) {
 
@@ -432,6 +449,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								// when
 								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+									ctx,
 									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: commontest.HostOperatorNs,
 									},
@@ -446,6 +464,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								// and when calling it with the other cluster as preferred
 								clusterName, err = clusterBalancer.GetOptimalTargetCluster(
+									ctx,
 									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: commontest.HostOperatorNs,
 										PreferredCluster:         "member3",
@@ -470,6 +489,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 							t.Run(fmt.Sprintf("cycle %d user %d for member3", cycle, i), func(t *testing.T) {
 								// when
 								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+									ctx,
 									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: commontest.HostOperatorNs,
 									},
@@ -484,6 +504,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								// and when calling it with the other cluster as preferred
 								clusterName, err = clusterBalancer.GetOptimalTargetCluster(
+									ctx,
 									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: commontest.HostOperatorNs,
 										PreferredCluster:         "member2",
@@ -500,6 +521,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 					// when
 					clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+						ctx,
 						capacity.OptimalTargetClusterFilter{
 							ToolchainStatusNamespace: commontest.HostOperatorNs,
 						},
@@ -524,6 +546,7 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 
 	// when
 	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		context.TODO(),
 		capacity.OptimalTargetClusterFilter{
 			ToolchainStatusNamespace: commontest.HostOperatorNs,
 		},

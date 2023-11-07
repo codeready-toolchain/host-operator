@@ -37,7 +37,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			)
 
 			// when
-			syncErrors := s.SyncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(context.TODO(), toolchainConfig)
 
 			// then
 			require.Empty(t, syncErrors)
@@ -54,7 +54,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			)
 
 			// when
-			syncErrors := s.SyncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(context.TODO(), toolchainConfig)
 
 			// then
 			require.Empty(t, syncErrors)
@@ -66,7 +66,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to a member failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -78,7 +78,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			)
 
 			// when
-			syncErrors := s.SyncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(context.TODO(), toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 1)
@@ -88,11 +88,11 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to multiple members failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCl2 := test.NewFakeClient(t)
-			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl2.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client2 error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -104,7 +104,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			)
 
 			// when
-			syncErrors := s.SyncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(context.TODO(), toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 2)
@@ -124,7 +124,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			)
 
 			// when
-			syncErrors := s.SyncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(context.TODO(), toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 1)
@@ -143,7 +143,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(context.TODO(), memberConfig.Spec, memberCluster)
 
 			// then
 			require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(context.TODO(), memberConfig.Spec, memberCluster)
 
 			// then
 			require.NoError(t, err)
@@ -176,14 +176,14 @@ func TestSyncMemberConfig(t *testing.T) {
 		t.Run("client get error", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(context.TODO(), memberConfig.Spec, memberCluster)
 
 			// then
 			require.EqualError(t, err, "client error")
@@ -196,14 +196,14 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
-			memberCl.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			memberCl.MockUpdate = func(_ context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("client update error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(context.TODO(), memberConfig.Spec, memberCluster)
 
 			// then
 			require.EqualError(t, err, "client update error")
