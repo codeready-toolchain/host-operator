@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// get the home namespace from space
 	defaultNamespace := getDefaultNamespace(space.Status.ProvisionedNamespaces)
 
-	// create the SpaceBindingRequest resource
+	// construct a SpaceBindingRequest object
 	sbrName := mur.GetName() + "-" + spaceRole
 	sbr := &toolchainv1alpha1.SpaceBindingRequest{
 		ObjectMeta: metav1.ObjectMeta{
