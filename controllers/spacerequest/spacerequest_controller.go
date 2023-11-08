@@ -79,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Fetch the SpaceRequest
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
-	memberClusterWithSpaceRequest, found, err := cluster.LookupMember(r.MemberClusters, types.NamespacedName{
+	memberClusterWithSpaceRequest, found, err := cluster.LookupMember(ctx, r.MemberClusters, types.NamespacedName{
 		Namespace: request.Namespace,
 		Name:      request.Name,
 	}, spaceRequest)
