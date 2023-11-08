@@ -21,6 +21,7 @@ import (
 
 func TestGetOldestSignupPendingApproval(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	withoutStateLabel := commonsignup.NewUserSignup()
 	notReady := commonsignup.NewUserSignup(commonsignup.WithStateLabel("not-ready"))
 	pending := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
@@ -31,7 +32,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, notReady, pending, approved, deactivated, banned)
 
 	// when
-	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+	foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 	// then
 	assert.Len(t, cache.sortedObjectNames, 1)
@@ -40,7 +41,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 
 	t.Run("won't return any since all are approved", func(t *testing.T) {
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Empty(t, cache.sortedObjectNames)
@@ -54,7 +55,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Len(t, cache.sortedObjectNames, 1)
@@ -62,7 +63,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 
 		t.Run("should keep unapproved resource", func(t *testing.T) {
 			// when
-			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+			foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 			// then
 			assert.Len(t, cache.sortedObjectNames, 1)
@@ -73,6 +74,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 
 func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	withoutStateLabel := spacetest.NewSpace(test.HostOperatorNs, "without-state")
 	pending := spacetest.NewSpace(test.HostOperatorNs, "pending", spacetest.WithStateLabel("pending"))
 	clusterAssigned := spacetest.NewSpace(test.HostOperatorNs, "cluster-assigned", spacetest.WithStateLabel("cluster-assigned"))
@@ -80,7 +82,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending, clusterAssigned)
 
 	// when
-	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+	foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 	// then
 	require.Len(t, cache.sortedObjectNames, 1)
@@ -89,7 +91,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 
 	t.Run("won't return any since all have cluster assigned", func(t *testing.T) {
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Empty(t, cache.sortedObjectNames)
@@ -103,7 +105,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Len(t, cache.sortedObjectNames, 1)
@@ -111,7 +113,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 
 		t.Run("should keep pending resource", func(t *testing.T) {
 			// when
-			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+			foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 			// then
 			assert.Len(t, cache.sortedObjectNames, 1)
@@ -134,6 +136,7 @@ func assignCluster(t *testing.T, cl *test.FakeClient, sp *toolchainv1alpha1.Spac
 
 func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	withoutStateLabel := commonsignup.NewUserSignup()
 	// we need to create the UserSignups with different timestamp in the range of seconds because
 	// the k8s resource keeps the time in RFC3339 format where the smallest unit are seconds.
@@ -143,7 +146,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
-	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+	foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 	// then
 	assert.Len(t, cache.sortedObjectNames, 3)
@@ -157,7 +160,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Len(t, cache.sortedObjectNames, 2)
@@ -166,7 +169,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 
 		t.Run("should keep one UserSignup since the pending4 hasn't been loaded yet and previous ones were removed", func(t *testing.T) {
 			// when
-			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+			foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 			// then
 			assert.Len(t, cache.sortedObjectNames, 1)
@@ -175,7 +178,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 
 			t.Run("should load the pending4 resource", func(t *testing.T) {
 				// when
-				foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+				foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 				// then
 				assert.Len(t, cache.sortedObjectNames, 1)
@@ -187,6 +190,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 
 func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	withoutStateLabel := spacetest.NewSpace(test.HostOperatorNs, "without-state")
 	// we need to create the Spaces with different timestamp in the range of seconds because
 	// the k8s resource keeps the time in RFC3339 format where the smallest unit are seconds.
@@ -196,7 +200,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
-	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+	foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 	// then
 	assert.Len(t, cache.sortedObjectNames, 3)
@@ -210,7 +214,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+		foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 		// then
 		assert.Len(t, cache.sortedObjectNames, 2)
@@ -219,7 +223,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 
 		t.Run("should keep one Space since the pending4 hasn't been loaded yet and previous ones were removed", func(t *testing.T) {
 			// when
-			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+			foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 			// then
 			assert.Len(t, cache.sortedObjectNames, 1)
@@ -228,7 +232,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 
 			t.Run("should load the pending4 resource", func(t *testing.T) {
 				// when
-				foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+				foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 				// then
 				assert.Len(t, cache.sortedObjectNames, 1)
@@ -240,6 +244,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 
 func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups)
 
 	var latch sync.WaitGroup
@@ -261,14 +266,14 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 				pending2,
 			}
 			for _, signup := range allSingups {
-				err := cl.Create(context.TODO(), signup)
+				err := cl.Create(ctx, signup)
 				require.NoError(t, err)
 			}
 
 			for _, pending := range []*toolchainv1alpha1.UserSignup{pending1, pending2} {
 				go func(toApprove *toolchainv1alpha1.UserSignup) {
 					defer waitForFinished.Done()
-					oldestPendingApproval := cache.getOldestPendingObject(test.HostOperatorNs)
+					oldestPendingApproval := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 					require.NotNil(t, oldestPendingApproval)
 					approve(t, cl, toApprove)
 				}(pending)
@@ -281,7 +286,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 	waitForFinished.Wait()
 
 	// when
-	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
+	foundPending := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
 
 	// then
 	assert.Nil(t, foundPending)
