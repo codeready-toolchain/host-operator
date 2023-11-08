@@ -8,7 +8,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,14 +31,14 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller reconciler with the Manager
 // Watches the Space resources and the ToolchainStatus CRD
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("spacecompletion").
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-			handler.EnqueueRequestsFromMapFunc(pending.NewSpaceMapper(mgr.GetClient()).MapToOldestPending)).
+			handler.EnqueueRequestsFromMapFunc(pending.NewSpaceMapper(mgr.GetClient()).BuildMapToOldestPending(ctx))).
 		Complete(r)
 }
 
@@ -74,14 +73,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	if changed, err := r.ensureFields(logger, space); err != nil || !changed {
+	if changed, err := r.ensureFields(ctx, space); err != nil || !changed {
 		return reconcile.Result{}, err
 	}
 
 	return ctrl.Result{}, r.Client.Update(ctx, space)
 }
 
-func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) ensureFields(ctx context.Context, space *toolchainv1alpha1.Space) (bool, error) {
+	logger := log.FromContext(ctx)
+
 	if space.Spec.TierName == "" {
 		config, err := toolchainconfig.GetToolchainConfig(r.Client)
 		if err != nil {
@@ -93,7 +94,7 @@ func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.S
 	}
 
 	if space.Spec.TargetCluster == "" {
-		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster(capacity.OptimalTargetClusterFilter{
+		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
 			ToolchainStatusNamespace: space.Namespace,
 			ClusterRoles:             space.Spec.TargetClusterRoles,
 		})

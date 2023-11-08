@@ -6,7 +6,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// fetch the SocialEvent resource
 	event := &toolchainv1alpha1.SocialEvent{}
-	if err := r.Client.Get(context.TODO(), request.NamespacedName, event); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, event); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("SocialEvent not found")
 			return reconcile.Result{}, nil
@@ -60,14 +59,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current SocialEvent")
 	}
 
-	if err := r.checkTier(logger, event); err != nil {
+	if err := r.checkTier(ctx, event); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// count the number of UserSignups with the `toolchain.dev.openshift.com/social-event` label matching the SocialEvent.Name
 	// and update the SocialEvent.Status.ActivationCount accordingly
 	usersignups := &toolchainv1alpha1.UserSignupList{}
-	if err := r.Client.List(context.TODO(), usersignups,
+	if err := r.Client.List(ctx, usersignups,
 		runtimeclient.InNamespace(r.Namespace),
 		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SocialEventUserSignupLabelKey: event.Name,
@@ -77,37 +76,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	logger.Info("approved usersignups with activation code", "count", len(usersignups.Items))
 	event.Status.ActivationCount = len(usersignups.Items)
-	if err := r.Client.Status().Update(context.TODO(), event); err != nil {
+	if err := r.Client.Status().Update(ctx, event); err != nil {
 		return reconcile.Result{}, errs.Wrap(err, "unable to update status with activation count")
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {
+func (r *Reconciler) checkTier(ctx context.Context, event *toolchainv1alpha1.SocialEvent) error {
 	// fetch the UserTier specified in the SocialEvent
 	userTier := &toolchainv1alpha1.UserTier{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.UserTier,
 	}, userTier); err != nil {
 		if errors.IsNotFound(err) {
-			return r.StatusUpdater.userTierNotFound(logger, event)
+			return r.StatusUpdater.userTierNotFound(ctx, event)
 		}
 		// Error reading the object - requeue the request.
-		return r.StatusUpdater.unableToGetUserTier(logger, event, err)
+		return r.StatusUpdater.unableToGetUserTier(ctx, event, err)
 	}
 
 	// fetch the NSTemplateTier specified in the SocialEvent
 	spaceTier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.SpaceTier,
 	}, spaceTier); err != nil {
 		if errors.IsNotFound(err) {
-			return r.StatusUpdater.spaceTierNotFound(logger, event)
+			return r.StatusUpdater.spaceTierNotFound(ctx, event)
 		}
 		// Error reading the object - requeue the request.
-		return r.StatusUpdater.unableToGetSpaceTier(logger, event, err)
+		return r.StatusUpdater.unableToGetSpaceTier(ctx, event, err)
 	}
-	return r.StatusUpdater.ready(event)
+	return r.StatusUpdater.ready(ctx, event)
 }

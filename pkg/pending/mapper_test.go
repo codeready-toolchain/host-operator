@@ -17,6 +17,7 @@ import (
 
 func TestMapperReturnsOldest(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	pendingSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
 	approvedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
 	deactivatedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
@@ -31,7 +32,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewUserSignupMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestPending(NewToolchainStatus())
+		requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -44,7 +45,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewSpaceMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestPending(NewToolchainStatus())
+		requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -55,6 +56,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 
 func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	banned := commonsignup.NewUserSignup(commonsignup.WithStateLabel("banned"))
 	approved := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
 	deactivated := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
@@ -62,7 +64,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestPending(NewToolchainStatus())
+	requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)
@@ -70,6 +72,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 
 func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	// given
+	ctx := context.TODO()
 	cl := test.NewFakeClient(t)
 	cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 		return fmt.Errorf("some error")
@@ -77,7 +80,7 @@ func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestPending(NewToolchainStatus())
+	requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)

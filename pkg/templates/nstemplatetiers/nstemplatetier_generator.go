@@ -29,7 +29,7 @@ var log = logf.Log.WithName("templates")
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
+func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
 
 	// initialize tier generator, loads templates from assets
 	generator, err := newNSTemplateTierGenerator(s, client, namespace, assets)
@@ -38,7 +38,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, nam
 	}
 
 	// create the TierTemplate resources
-	err = generator.createTierTemplates()
+	err = generator.createTierTemplates(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to create TierTemplates")
 	}
@@ -297,14 +297,13 @@ func (t *tierGenerator) newTierTemplates(basedOnTierFileRevision string, tierDat
 }
 
 // createTierTemplates creates all TierTemplate resources from the tier map
-func (t *tierGenerator) createTierTemplates() error {
-
+func (t *tierGenerator) createTierTemplates(ctx context.Context) error {
 	// create the templates
 	for _, tierTmpls := range t.templatesByTier {
 		for _, tierTmpl := range tierTmpls.tierTemplates {
 			log.Info("creating TierTemplate", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
-			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
+			if err := t.client.Create(ctx, tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
 			}
 			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)

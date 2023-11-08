@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -110,6 +111,6 @@ func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1al
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
-	err := counter.Synchronize(cl, toolchainStatus)
+	err := counter.Synchronize(context.TODO(), cl, toolchainStatus)
 	require.NoError(t, err)
 }
