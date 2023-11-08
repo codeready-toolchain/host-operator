@@ -1,10 +1,13 @@
 package pending
 
 import (
+	"context"
+
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -34,8 +37,14 @@ func NewPendingObjectsMapper(client runtimeclient.Client, objectType runtimeclie
 	}
 }
 
-func (b ObjectsMapper) MapToOldestPending(obj runtimeclient.Object) []reconcile.Request {
-	pendingObject := b.unapprovedCache.getOldestPendingObject(obj.GetNamespace())
+func (b ObjectsMapper) BuildMapToOldestPending(ctx context.Context) handler.MapFunc {
+	return func(obj runtimeclient.Object) []reconcile.Request {
+		return b.MapToOldestPending(ctx, obj)
+	}
+}
+
+func (b ObjectsMapper) MapToOldestPending(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+	pendingObject := b.unapprovedCache.getOldestPendingObject(ctx, obj.GetNamespace())
 	if pendingObject == nil {
 		return []reconcile.Request{}
 	}
