@@ -619,18 +619,6 @@ spec:
                             description: Defines the flag that determines whether
                               to deploy the Webhook
                             type: boolean
-                          secret:
-                            description: Defines all secrets related to webhook configuration
-                            properties:
-                              ref:
-                                description: Reference is the name of the secret resource
-                                  to look up
-                                type: string
-                              virtualMachineAccessKey:
-                                description: The key in the secret values map that
-                                  contains a comma-separated list of SSH keys
-                                type: string
-                            type: object
                         type: object
                     type: object
                   specificPerMemberCluster:
@@ -771,19 +759,6 @@ spec:
                               description: Defines the flag that determines whether
                                 to deploy the Webhook
                               type: boolean
-                            secret:
-                              description: Defines all secrets related to webhook
-                                configuration
-                              properties:
-                                ref:
-                                  description: Reference is the name of the secret
-                                    resource to look up
-                                  type: string
-                                virtualMachineAccessKey:
-                                  description: The key in the secret values map that
-                                    contains a comma-separated list of SSH keys
-                                  type: string
-                              type: object
                           type: object
                       type: object
                     description: A map of cluster-specific member operator configurations

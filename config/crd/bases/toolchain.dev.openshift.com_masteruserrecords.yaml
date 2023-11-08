@@ -176,23 +176,11 @@ spec:
                     cluster:
                       description: Cluster is the cluster in which the user exists
                       properties:
-                        apiEndpoint:
-                          description: APIEndpoint is the API Endpoint of the cluster
-                          type: string
-                        cheDashboardURL:
-                          description: CheDashboardURL is the Che Dashboard URL of
-                            the cluster if Che is installed
-                          type: string
-                        consoleURL:
-                          description: ConsoleURL is the web console URL of the cluster
-                          type: string
                         name:
                           description: Name is the name of the corresponding ToolchainCluster
                             resource
                           type: string
                       required:
-                      - apiEndpoint
-                      - consoleURL
                       - name
                       type: object
                     conditions:
