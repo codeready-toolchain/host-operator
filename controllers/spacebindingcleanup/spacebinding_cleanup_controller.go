@@ -150,7 +150,7 @@ func (r *Reconciler) deleteSpaceBindingRequest(ctx context.Context, sbrAssociate
 	logger := log.FromContext(ctx)
 
 	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
-	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(r.MemberClusters, types.NamespacedName{
+	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(ctx, r.MemberClusters, types.NamespacedName{
 		Namespace: sbrAssociated.namespace,
 		Name:      sbrAssociated.name,
 	}, spaceBindingRequest)
