@@ -48,6 +48,12 @@ spec:
           spec:
             description: SpaceRequestSpec defines the desired state of Space
             properties:
+              disableInheritance:
+                description: "DisableInheritance indicates whether or not SpaceBindings
+                  from the parent-spaces are automatically inherited to all sub-spaces
+                  in the tree. \n Set to True to disable SpaceBinding inheritance
+                  from the parent-spaces. Default is False."
+                type: boolean
               targetClusterRoles:
                 description: TargetClusterRoles one or more label keys that define
                   a set of clusters where the Space can be provisioned. The target
