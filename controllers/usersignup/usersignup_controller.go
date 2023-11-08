@@ -42,7 +42,7 @@ import (
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	unapprovedMapper := pending.NewUserSignupMapper(mgr.GetClient())
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.UserSignup{}, builder.WithPredicates(UserSignupChangedPredicate{})).
@@ -58,7 +58,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
+			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.BuildMapToOldestPending(ctx)),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
 				client: mgr.GetClient(),
 			})).
