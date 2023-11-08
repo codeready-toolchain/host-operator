@@ -35,8 +35,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// only from member clusters (see watches below)
 	// SpaceBindingRequest owns spacebindings so events will be triggered for those from the host cluster.
 	b := ctrl.NewControllerManagedBy(mgr).
-		For(&toolchainv1alpha1.SpaceBindingRequest{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}}, &handler.EnqueueRequestForObject{})
+		For(&toolchainv1alpha1.SpaceBinding{})
 
 	// Watch SpaceBindingRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
@@ -107,6 +106,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if mur.ObjectMeta.OwnerReferences == nil || len(mur.ObjectMeta.OwnerReferences) == 0 {
 		return ctrl.Result{}, errs.New("MasterUserRecord has no UserSignup owner reference")
 	}
+	// skip spaces with no creator label
+	if _, ok := space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey]; !ok {
+		// let's log an error, since this should not happen in production
+		logger.Error(errs.New("space has no SpaceCreatorLabelKey set"), "the spacebindings for this space will not be migrated", "space name", space.Name)
+		return ctrl.Result{}, nil
+	}
 	usersignup := mur.ObjectMeta.OwnerReferences[0]
 	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == usersignup.Name {
 		return reconcile.Result{}, nil
@@ -116,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	spaceRole := spaceBinding.Spec.SpaceRole
 
 	// get member cluster name where the space was provisioned
-	targetCluster := space.Status.TargetCluster
+	targetCluster := space.Spec.TargetCluster
 	memberCluster, memberClusterFound := r.MemberClusters[targetCluster]
 	if !memberClusterFound {
 		return ctrl.Result{}, errs.New(fmt.Sprintf("unable to find member cluster: %s", targetCluster))
