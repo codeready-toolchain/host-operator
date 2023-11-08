@@ -271,9 +271,11 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 				case "with skip space creation annotation set to true":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("")
 				default:
 					assert.Fail(t, "unknown testcase")
 				}
@@ -480,6 +482,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace(userSignup.Name)
 
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{

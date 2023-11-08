@@ -361,9 +361,12 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 			if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
 			} else if created {
+				err = r.updateStatusHomeSpace(ctx, userSignup, space.Name)
+				if err != nil {
+					return true, err
+				}
 				return true, nil
 			}
-
 			if err = r.ensureSpaceBinding(ctx, userSignup, mur, space); err != nil {
 				return true, err
 			}
@@ -379,6 +382,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		logger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name))
 	}
+
 	return false, nil
 }
 
@@ -696,11 +700,6 @@ func (r *Reconciler) ensureSpace(
 	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(ctx, space)
-	if err != nil {
-		return nil, false, err
-	}
-
-	err = r.updateStatusHomeSpace(ctx, userSignup, space.Name)
 	if err != nil {
 		return nil, false, err
 	}
