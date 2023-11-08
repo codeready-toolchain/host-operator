@@ -441,7 +441,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "error while adding finalizer: mock error")
 		})
 
-		t.Run("error while adding finalizer", func(t *testing.T) {
+		t.Run("error while updating status", func(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
