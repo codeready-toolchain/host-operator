@@ -150,6 +150,7 @@ func main() { // nolint:gocyclo
 	// END : hack to redirect klogv1 calls to klog v2
 
 	printVersion()
+	ctx := ctrl.SetupSignalHandler()
 
 	namespace, err := commonconfig.GetWatchNamespace()
 	if err != nil {
@@ -280,7 +281,7 @@ func main() { // nolint:gocyclo
 		Scheme:         mgr.GetScheme(),
 		SegmentClient:  segmentClient,
 		ClusterManager: capacity.NewClusterManager(commoncluster.GetMemberClusters, mgr.GetClient()),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
 		os.Exit(1)
 	}
@@ -348,7 +349,7 @@ func main() { // nolint:gocyclo
 		Client:         mgr.GetClient(),
 		Namespace:      namespace,
 		ClusterManager: capacity.NewClusterManager(commoncluster.GetMemberClusters, mgr.GetClient()),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
 		os.Exit(1)
 	}
@@ -380,17 +381,15 @@ func main() { // nolint:gocyclo
 	}
 	//+kubebuilder:scaffold:builder
 
-	stopChannel := ctrl.SetupSignalHandler()
-
 	go func() {
 		setupLog.Info("Starting cluster health checker & creating/updating the NSTemplateTier resources once cache is sync'd")
-		if !mgr.GetCache().WaitForCacheSync(stopChannel) {
+		if !mgr.GetCache().WaitForCacheSync(ctx) {
 			setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
 
 		setupLog.Info("Starting ToolchainCluster health checks.")
-		toolchaincluster.StartHealthChecks(stopChannel, mgr, namespace, 10*time.Second)
+		toolchaincluster.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
@@ -403,7 +402,7 @@ func main() { // nolint:gocyclo
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
 		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(stopChannel, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
+		if err := nstemplatetiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
@@ -429,7 +428,7 @@ func main() { // nolint:gocyclo
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(stopChannel); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
