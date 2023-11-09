@@ -106,6 +106,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
+	// TODO remove this section (and the referenced function) after migration has completed
+	// FROM HERE ---------
+	migrated, err := r.migrateUserSignupClaimsIfNecessary(ctx, userSignup)
+	if err != nil {
+		// Error during migration - requeue the request
+		return reconcile.Result{}, err
+	}
+
+	if migrated {
+		// If migration occurred, then queue the UserSignup for reconciliation again
+		return reconcile.Result{Requeue: true}, nil
+	}
+	// TO HERE ^^^^^^^^^^^^
+
 	if util.IsBeingDeleted(userSignup) {
 		logger.Info("The UserSignup is being deleted")
 		return reconcile.Result{}, nil
@@ -188,6 +202,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(ctx, config, userSignup)
+}
+
+// migrateUserSignupClaimsIfNecessary is a temporary function that will set the UserSignup's IdentityClaims based on the
+// existing property values
+func (r *Reconciler) migrateUserSignupClaimsIfNecessary(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+
+	if userSignup.Spec.IdentityClaims.Sub == "" {
+		userSignup.Spec.IdentityClaims.Sub = userSignup.Spec.Userid
+		userSignup.Spec.IdentityClaims.FamilyName = userSignup.Spec.FamilyName
+		userSignup.Spec.IdentityClaims.GivenName = userSignup.Spec.GivenName
+		userSignup.Spec.IdentityClaims.OriginalSub = userSignup.Spec.OriginalSub
+		userSignup.Spec.IdentityClaims.PreferredUsername = userSignup.Spec.Username
+		userSignup.Spec.IdentityClaims.Company = userSignup.Spec.Company
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.UserID = val
+		}
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.AccountID = val
+		}
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.Email = val
+		}
+
+		if err := r.Client.Update(ctx, userSignup); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // handleDeactivatedUserSignup defines the workflow for deactivated users
