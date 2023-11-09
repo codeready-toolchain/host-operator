@@ -389,8 +389,7 @@ func TestAlignReadiness(t *testing.T) {
 	}
 
 	l := zap.New(zap.UseDevMode(true))
-	ctx := context.TODO()
-	log.IntoContext(ctx, l)
+	ctx := log.IntoContext(context.TODO(), l)
 
 	t.Run("ready propagated and notification created", func(t *testing.T) {
 		// given
