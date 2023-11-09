@@ -106,6 +106,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
+	if util.IsBeingDeleted(userSignup) {
+		logger.Info("The UserSignup is being deleted")
+		return reconcile.Result{}, nil
+	}
+
 	// TODO remove this section (and the referenced function) after migration has completed
 	// FROM HERE ---------
 	migrated, err := r.migrateUserSignupClaimsIfNecessary(ctx, userSignup)
@@ -119,11 +124,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{Requeue: true}, nil
 	}
 	// TO HERE ^^^^^^^^^^^^
-
-	if util.IsBeingDeleted(userSignup) {
-		logger.Info("The UserSignup is being deleted")
-		return reconcile.Result{}, nil
-	}
 
 	if userSignup.GetLabels() == nil {
 		userSignup.Labels = make(map[string]string)
