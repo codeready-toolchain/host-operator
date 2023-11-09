@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Fetch the SpaceBindingRequest
 	// search on all member clusters
 	spaceBindingRequest := &toolchainv1alpha1.SpaceBindingRequest{}
-	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(r.MemberClusters, types.NamespacedName{
+	memberClusterWithSpaceBindingRequest, found, err := cluster.LookupMember(ctx, r.MemberClusters, types.NamespacedName{
 		Namespace: request.Namespace,
 		Name:      request.Name,
 	}, spaceBindingRequest)
