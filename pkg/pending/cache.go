@@ -17,7 +17,7 @@ import (
 
 var log = logf.Log.WithName("pending_object_cache")
 
-type ListPendingObjects func(cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error)
+type ListPendingObjects func(ctx context.Context, cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error)
 
 type cache struct {
 	sync.RWMutex
@@ -27,22 +27,22 @@ type cache struct {
 	listPendingObjects ListPendingObjects
 }
 
-func (c *cache) getOldestPendingObject(namespace string) runtimeclient.Object {
+func (c *cache) getOldestPendingObject(ctx context.Context, namespace string) runtimeclient.Object {
 	c.Lock()
 	defer c.Unlock()
-	oldest := c.getFirstExisting(namespace)
+	oldest := c.getFirstExisting(ctx, namespace)
 	if oldest == nil {
-		c.loadLatest()
-		oldest = c.getFirstExisting(namespace)
+		c.loadLatest(ctx)
+		oldest = c.getFirstExisting(ctx, namespace)
 	}
 	return oldest
 }
 
-func (c *cache) loadLatest() { //nolint:unparam
+func (c *cache) loadLatest(ctx context.Context) { //nolint:unparam
 	labels := map[string]string{toolchainv1alpha1.StateLabelKey: toolchainv1alpha1.StateLabelValuePending}
 	opts := runtimeclient.MatchingLabels(labels)
 
-	pendingObjects, err := c.listPendingObjects(c.client, opts)
+	pendingObjects, err := c.listPendingObjects(ctx, c.client, opts)
 	if err != nil {
 		err = errs.Wrapf(err, "unable to list %s resources with label '%s' having value '%s'",
 			c.objectType.GetObjectKind().GroupVersionKind().Kind, toolchainv1alpha1.StateLabelKey, toolchainv1alpha1.StateLabelValuePending)
@@ -58,31 +58,31 @@ func (c *cache) loadLatest() { //nolint:unparam
 	}
 }
 
-func (c *cache) getFirstExisting(namespace string) runtimeclient.Object {
+func (c *cache) getFirstExisting(ctx context.Context, namespace string) runtimeclient.Object {
 	if len(c.sortedObjectNames) == 0 {
 		return nil
 	}
 	name := c.sortedObjectNames[0]
 	firstExisting := c.objectType.DeepCopyObject().(runtimeclient.Object)
-	if err := c.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: name}, firstExisting); err != nil {
+	if err := c.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, firstExisting); err != nil {
 		if apierrors.IsNotFound(err) {
 			c.sortedObjectNames = c.sortedObjectNames[1:]
-			return c.getFirstExisting(namespace)
+			return c.getFirstExisting(ctx, namespace)
 		}
 		log.Error(err, fmt.Sprintf("could not get the oldest unapproved '%T'", c.objectType))
 		return nil
 	}
 	if firstExisting.GetLabels()[toolchainv1alpha1.StateLabelKey] != toolchainv1alpha1.StateLabelValuePending {
 		c.sortedObjectNames = c.sortedObjectNames[1:]
-		return c.getFirstExisting(namespace)
+		return c.getFirstExisting(ctx, namespace)
 	}
 
 	return firstExisting
 }
 
-var listPendingUserSignups ListPendingObjects = func(cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error) {
+var listPendingUserSignups ListPendingObjects = func(ctx context.Context, cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error) {
 	userSignupList := &toolchainv1alpha1.UserSignupList{}
-	if err := cl.List(context.TODO(), userSignupList, labelListOption); err != nil {
+	if err := cl.List(ctx, userSignupList, labelListOption); err != nil {
 		return nil, err
 	}
 	objects := make([]runtimeclient.Object, len(userSignupList.Items))
@@ -93,9 +93,9 @@ var listPendingUserSignups ListPendingObjects = func(cl runtimeclient.Client, la
 	return objects, nil
 }
 
-var listPendingSpaces ListPendingObjects = func(cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error) {
+var listPendingSpaces ListPendingObjects = func(ctx context.Context, cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error) {
 	spaceList := &toolchainv1alpha1.SpaceList{}
-	if err := cl.List(context.TODO(), spaceList, labelListOption); err != nil {
+	if err := cl.List(ctx, spaceList, labelListOption); err != nil {
 		return nil, err
 	}
 	objects := make([]runtimeclient.Object, len(spaceList.Items))
