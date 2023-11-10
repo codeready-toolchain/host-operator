@@ -27,12 +27,12 @@ type Cluster struct {
 // returns memberCluster/false/error in case the Object was NOT found on any of the given member clusters and there was an error while trying to read one or more of the memberclusters
 //
 // CAVEAT: if the object was not found and there is an error reading from more than one member cluster, only the last read error will be returned.
-func LookupMember(memberClusters map[string]Cluster, namespacedName types.NamespacedName, object runtimeclient.Object) (Cluster, bool, error) {
+func LookupMember(ctx context.Context, memberClusters map[string]Cluster, namespacedName types.NamespacedName, object runtimeclient.Object) (Cluster, bool, error) {
 	var memberClusterWithObject Cluster
 	var getError error
 	var found bool
 	for _, memberCluster := range memberClusters {
-		err := memberCluster.Client.Get(context.TODO(), namespacedName, object)
+		err := memberCluster.Client.Get(ctx, namespacedName, object)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				// Error reading the object
