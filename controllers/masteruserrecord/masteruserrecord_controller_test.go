@@ -791,8 +791,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		ctx := context.Background()
-		log.IntoContext(ctx, testLog)
+		ctx := log.IntoContext(context.TODO(), testLog)
 		err := cntrl.wrapErrorWithStatusUpdate(ctx, mur, statusUpdater,
 			apierros.NewBadRequest("oopsy woopsy"), "failed to create %s", "user bob")
 
