@@ -33,7 +33,7 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	janeSpace := spacetest.NewSpace(test.HostOperatorNs, "jane",
-		spacetest.WithStatusTargetCluster("member-1"),
+		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
 			Name: "jane-tenant",
 			Type: "default",
@@ -238,7 +238,8 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 
 		t.Run("member cluster not found", func(t *testing.T) {
 			spaceWithInvalidTargetCluster := spacetest.NewSpace(test.HostOperatorNs, "jane",
-				spacetest.WithStatusTargetCluster("invalid"),
+				spacetest.WithSpecTargetCluster("invalid"),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "jane"),
 			)
 			sb := spacebindingtest.NewSpaceBinding(johnMur.Name, spaceWithInvalidTargetCluster.Name, "admin", janeMur.Name)
 			hostClient := test.NewFakeClient(t, sb, spaceWithInvalidTargetCluster, johnMur)
