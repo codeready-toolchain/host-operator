@@ -189,7 +189,7 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 	}
 
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
-	log.IntoContext(ctx, logger)
+	ctx = log.IntoContext(ctx, logger)
 	// look-up the NSTemplateTier used by this Space
 	tmplTier := &toolchainv1alpha1.NSTemplateTier{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
