@@ -2434,11 +2434,12 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			}
 		}
 
-		// when
-		_, err := r.Reconcile(context.TODO(), req)
-
-		// Reconcile again, as the first reconcile performs a temporary migration.
+		// Reconcile as the first reconcile performs a temporary migration.
 		// FIXME remove after migration complete
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// when
 		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
@@ -2536,11 +2537,12 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 		))
 
-		// when
-		_, err := r.Reconcile(context.TODO(), req)
-
-		// Reconcile again, as the first reconcile performs a temporary migration.
+		// Reconcile as the first reconcile performs a temporary migration.
 		// FIXME remove after migration complete
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// when
 		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
@@ -2731,10 +2733,12 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		err := r.setSpaceToReady(mur.Name) // given space is ready
 		require.NoError(t, err)
-		_, err = r.Reconcile(context.TODO(), req)
 
-		// Reconcile again, as the first reconcile performs a temporary migration.
+		// Reconcile as the first reconcile performs a temporary migration.
 		// FIXME remove after migration complete
+		_, err = r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
 		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
@@ -2931,11 +2935,12 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 		}),
 	))
 
-	// when
-	_, err := r.Reconcile(context.TODO(), req)
-
-	// Reconcile again, as the first reconcile performs a temporary migration.
+	// Reconcile as the first reconcile performs a temporary migration.
 	// FIXME remove after migration complete
+	_, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+
+	// when
 	_, err = r.Reconcile(context.TODO(), req)
 
 	// then
@@ -3398,6 +3403,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			// Reconcile again, as the first reconcile performs a temporary migration.
 			// FIXME remove after migration complete
 			_, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
 
 			// when
 			_, err = r.Reconcile(context.TODO(), req)
@@ -3510,6 +3516,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	// Reconcile as the first reconcile performs a temporary migration.
 	// FIXME remove after migration complete
 	_, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
 
 	// when
 	_, err = r.Reconcile(context.TODO(), req)
