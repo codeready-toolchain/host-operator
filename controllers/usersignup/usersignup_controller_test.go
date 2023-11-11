@@ -58,6 +58,49 @@ var event = testsocialevent.NewSocialEvent(test.HostOperatorNs, commonsocialeven
 	testsocialevent.WithUserTier(deactivate80Tier.Name),
 	testsocialevent.WithSpaceTier(base2NSTemplateTier.Name))
 
+func TestUserSignupMigration(t *testing.T) {
+	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
+
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually())
+
+	// Clear the identity claims
+	userSignup.Spec.IdentityClaims = toolchainv1alpha1.IdentityClaimsEmbedded{}
+
+	// Set some other properties
+	userSignup.Spec.GivenName = "John"
+	userSignup.Spec.FamilyName = "Smith"
+	userSignup.Spec.Company = "Acme"
+	userSignup.Spec.OriginalSub = uuid.Must(uuid.NewV4()).String()
+
+	userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "123456"
+	userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "999988"
+
+	// Reconcile so that the migration can occur
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+
+	// Reload the UserSignup
+	reloaded := &toolchainv1alpha1.UserSignup{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, reloaded)
+	require.NoError(t, err)
+
+	// Confirm the migration
+	require.Equal(t, userSignup.Spec.Username, reloaded.Spec.IdentityClaims.PreferredUsername)
+	require.Equal(t, userSignup.Spec.Company, reloaded.Spec.IdentityClaims.Company)
+	require.Equal(t, userSignup.Spec.FamilyName, reloaded.Spec.IdentityClaims.FamilyName)
+	require.Equal(t, userSignup.Spec.GivenName, reloaded.Spec.IdentityClaims.GivenName)
+	require.Equal(t, userSignup.Spec.Userid, reloaded.Spec.IdentityClaims.Sub)
+	require.Equal(t, userSignup.Spec.OriginalSub, reloaded.Spec.IdentityClaims.OriginalSub)
+	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], reloaded.Spec.IdentityClaims.UserID)
+	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], reloaded.Spec.IdentityClaims.AccountID)
+}
+
 func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
