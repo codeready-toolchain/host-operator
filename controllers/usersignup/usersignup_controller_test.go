@@ -76,14 +76,25 @@ func TestUserSignupMigration(t *testing.T) {
 	userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "123456"
 	userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "999988"
 
-	// Reconcile so that the migration can occur
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+	// First reconcile so that we can check that an error is returned if the client update fails
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+	fakeClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		return fmt.Errorf("some error")
+	}
 
-	// when
+	// Reconcile and confirm we get an error
 	_, err := r.Reconcile(context.TODO(), req)
+	require.Error(t, err)
+
+	// Reconcile so that the migration can occur
+	r, req, _ = prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
+
+	// Confirm requeue
+	require.True(t, res.Requeue)
 
 	// Reload the UserSignup
 	reloaded := &toolchainv1alpha1.UserSignup{}
@@ -99,6 +110,7 @@ func TestUserSignupMigration(t *testing.T) {
 	require.Equal(t, userSignup.Spec.OriginalSub, reloaded.Spec.IdentityClaims.OriginalSub)
 	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], reloaded.Spec.IdentityClaims.UserID)
 	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], reloaded.Spec.IdentityClaims.AccountID)
+
 }
 
 func TestUserSignupCreateMUROk(t *testing.T) {
