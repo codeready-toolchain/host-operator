@@ -310,8 +310,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
 	logger := logf.Log.WithName("test")
-	ctx := context.Background()
-	log.IntoContext(ctx, logger)
+	ctx := log.IntoContext(context.TODO(), logger)
 
 	t.Run("no error provided", func(t *testing.T) {
 		statusUpdater := func(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
