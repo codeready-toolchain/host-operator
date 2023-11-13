@@ -178,9 +178,8 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			// the spacebinding has a spacebindingrequest
 			sbrForJohn := spacebindingrequesttest.NewSpaceBindingRequest("john-admin", "jane-tenant", spacebindingrequesttest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "somevalue"))
 			sbForJohnWithSBR := spacebindingtest.NewSpaceBinding(johnMur.Name, janeSpace.Name, "admin", janeMur.GetName(), spacebindingtest.WithSpaceBindingRequest(sbrForJohn))
-			// let's not load the mur object
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrForJohn), "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, janeMur, janeSpace, sbForJohnWithSBR)
+			hostClient := test.NewFakeClient(t, janeMur, janeSpace, johnMur, sbForJohnWithSBR)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
