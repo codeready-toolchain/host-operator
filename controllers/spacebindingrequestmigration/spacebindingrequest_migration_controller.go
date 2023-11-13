@@ -30,14 +30,11 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
-	// since it's mandatory to add a primary resource when creating a new controller,
-	// we add the SpaceBindingRequest CR even if there should be no reconciles triggered from the host cluster,
-	// only from member clusters (see watches below)
-	// SpaceBindingRequest owns spacebindings so events will be triggered for those from the host cluster.
+	// Watch SpaceBindings from host cluster.
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceBinding{})
 
-	// Watch SpaceBindingRequests in all member clusters and all namespaces.
+	// Watch SpaceBindingRequests in all member clusters and all namespaces and map those to their respective SpaceBinding resources.
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceBindingRequest{}, memberCluster.Cache),
