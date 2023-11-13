@@ -1,5 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/filariow/toolchain-common v0.0.0-20231109092757-dcf23040f369
+
 require (
 	github.com/codeready-toolchain/api v0.0.0-20231107202930-b028ae440a26
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20231017151548-4fd4e48ab6b7
