@@ -134,7 +134,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Name:      sbrName,
 			Namespace: defaultNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.SpaceCreatorLabelKey:                 "spacebindingrequestmigration",
 				toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.GetName(),
 				toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.GetName(),
 			},
