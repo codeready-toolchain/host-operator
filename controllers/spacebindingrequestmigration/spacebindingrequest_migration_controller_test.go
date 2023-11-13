@@ -203,6 +203,7 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			// the spacebinding is being deleted
 			sbForJohn := spacebindingtest.NewSpaceBinding(johnMur.Name, janeSpace.Name, "admin", janeMur.GetName(), spacebindingtest.WithDeletionTimestamp())
 			hostClient := test.NewFakeClient(t, janeMur, janeSpace, sbForCreator, johnMur, sbForJohn)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
