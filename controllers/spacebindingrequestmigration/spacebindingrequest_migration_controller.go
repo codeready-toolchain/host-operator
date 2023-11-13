@@ -133,10 +133,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      sbrName,
 			Namespace: defaultNamespace,
-			Labels: map[string]string{
-				toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.GetName(),
-				toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.GetName(),
-			},
 		},
 		Spec: toolchainv1alpha1.SpaceBindingRequestSpec{
 			MasterUserRecord: mur.GetName(),
