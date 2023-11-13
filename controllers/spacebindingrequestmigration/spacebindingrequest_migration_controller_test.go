@@ -115,7 +115,7 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
-			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForBatman))
 
 			// then
 			require.NoError(t, err)
