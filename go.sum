@@ -136,10 +136,8 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20231018174322-a2004884afce h1:QWo6mVpEvyeeu1RF4qY+l56s28BFgihr2qQskgCev4A=
-github.com/codeready-toolchain/api v0.0.0-20231018174322-a2004884afce/go.mod h1:bImSKnxrpNmCmW/YEGiiZnZqJm3kAmfP5hW4YndK0hE=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20231017151548-4fd4e48ab6b7 h1:zCHPxkQbOFqONzKeQQNiAM6e0oNz1WfZFcFzDuuvxGs=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20231017151548-4fd4e48ab6b7/go.mod h1:SnZewh0DLwAELKLsW+R6NKaKmiRBuMI1iMYSkfyZG6A=
+github.com/codeready-toolchain/api v0.0.0-20231110023259-430f79b80551 h1:nleju7MctERebFf1yomYCmJ+59Qcw1sF1m7SyH2mUjA=
+github.com/codeready-toolchain/api v0.0.0-20231110023259-430f79b80551/go.mod h1:bImSKnxrpNmCmW/YEGiiZnZqJm3kAmfP5hW4YndK0hE=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -455,6 +453,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/reflectwalk v1.0.0 h1:9D+8oIskB4VJBN5SFlmc27fSlIBZaov1Wpk/IfikLNY=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
+github.com/mmulholla/toolchain-common v0.0.0-20231113172419-7984c8ddb116 h1:BZdI/TtmgnrIpfsaTK/hLtbpyZLrOK5n01J+3LU6y0E=
+github.com/mmulholla/toolchain-common v0.0.0-20231113172419-7984c8ddb116/go.mod h1:tW7JJUb5SnFb6tOZ4vrRkbbukUR+mcBqQfwzchzNAsU=
 github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 github.com/moby/term v0.0.0-20210610120745-9d4ed1856297/go.mod h1:vgPCkQMyxTZ7IDy8SXRufE172gr8+K/JE/7hHFxHW3A=
 github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6/go.mod h1:E2VnQOmVuvZB6UYnnDB0qG5Nq/1tD9acaOpo6xmt0Kw=
