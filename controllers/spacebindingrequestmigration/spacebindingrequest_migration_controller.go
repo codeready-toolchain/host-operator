@@ -160,7 +160,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return ctrl.Result{}, errs.Wrapf(err, "unable to create SpaceBindingRequest")
 			}
 
-			// delete the SpaceBinding
+			// delete the SpaceBinding. The SpaceBindingRequest controller will create a new SpaceBinding for the SBR we created above.
 			if err := r.Client.Delete(ctx, spaceBinding); err != nil {
 				return ctrl.Result{}, errs.Wrapf(err, "unable to delete the SpaceBinding")
 			}
