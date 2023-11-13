@@ -115,7 +115,7 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
-			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForBatman))
 
 			// then
 			require.NoError(t, err)
@@ -178,9 +178,8 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			// the spacebinding has a spacebindingrequest
 			sbrForJohn := spacebindingrequesttest.NewSpaceBindingRequest("john-admin", "jane-tenant", spacebindingrequesttest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "somevalue"))
 			sbForJohnWithSBR := spacebindingtest.NewSpaceBinding(johnMur.Name, janeSpace.Name, "admin", janeMur.GetName(), spacebindingtest.WithSpaceBindingRequest(sbrForJohn))
-			// let's not load the mur object
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrForJohn), "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, janeMur, janeSpace, sbForJohnWithSBR)
+			hostClient := test.NewFakeClient(t, janeMur, janeSpace, johnMur, sbForJohnWithSBR)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
@@ -202,8 +201,8 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			// the spacebinding is being deleted
-			hostClient := test.NewFakeClient(t, janeMur, janeSpace, sbForCreator, sbForJohn)
-			ctrl := newReconciler(t, hostClient, member1)
+			sbForJohn := spacebindingtest.NewSpaceBinding(johnMur.Name, janeSpace.Name, "admin", janeMur.GetName(), spacebindingtest.WithDeletionTimestamp())
+			hostClient := test.NewFakeClient(t, janeMur, janeSpace, sbForCreator, johnMur, sbForJohn)
 
 			// when
 			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
