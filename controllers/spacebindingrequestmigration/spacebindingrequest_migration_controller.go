@@ -152,14 +152,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return ctrl.Result{}, errs.Wrapf(err, "unable to create SpaceBindingRequest")
 			}
 
-			// delete the SpaceBinding. The SpaceBindingRequest controller will create a new SpaceBinding for the SBR we created above.
-			if err := r.Client.Delete(ctx, spaceBinding); err != nil {
-				return ctrl.Result{}, errs.Wrapf(err, "unable to delete the SpaceBinding")
-			}
-			return ctrl.Result{}, nil
+			// let's requeue after we created the SBR, so that in next loop the migrated SpaceBinding object will be deleted
+			return ctrl.Result{Requeue: true}, nil
 		}
 		// Error reading the object
 		return ctrl.Result{}, err
+	}
+
+	// if the SBR was found ( was created from the previous reconcile loop), we can now delete the SpaceBinding object
+	if err := r.Client.Delete(ctx, spaceBinding); err != nil {
+		return ctrl.Result{}, errs.Wrapf(err, "unable to delete the SpaceBinding")
 	}
 
 	return ctrl.Result{}, nil

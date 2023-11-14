@@ -54,20 +54,40 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
-			_, err = ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
 
 			// then
 			require.NoError(t, err)
-			// spaceBindingRequest with expected name, namespace and spec
+			require.True(t, res.Requeue) // requeue should be triggered once SBR is created
+			// spaceBindingRequest with expected name, namespace and spec should be created
 			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, "jane-tenant", johnMur.Name+"-admin", member1.Client).
 				HasSpecSpaceRole("admin").
 				HasSpecMasterUserRecord(johnMur.Name)
-			// the spacebinding was deleted
+			// the migrated spacebinding is still there, it will be deleted at the next reconcile loop
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, johnMur.Name, janeSpace.Name, hostClient).
-				DoesNotExist()
+				Exists()
 			// the spacebinding for the space creator is still there
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
 				Exists()
+
+			t.Run("the next reconcile deletes the migrated spacebinding", func(t *testing.T) {
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(sbForJohn))
+
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue) // no requeue this time
+				// the migrated spacebinding was deleted
+				spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, johnMur.Name, janeSpace.Name, hostClient).
+					DoesNotExist()
+				// spaceBindingRequest with expected name, namespace and spec is still there
+				spacebindingrequesttest.AssertThatSpaceBindingRequest(t, "jane-tenant", johnMur.Name+"-admin", member1.Client).
+					HasSpecSpaceRole("admin").
+					HasSpecMasterUserRecord(johnMur.Name)
+				// the spacebinding for the space creator is still there
+				spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
+					Exists()
+			})
 		})
 
 		t.Run("skip space creator spacebinding ", func(t *testing.T) {
