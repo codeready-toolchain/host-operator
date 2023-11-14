@@ -1,6 +1,8 @@
 package space
 
 import (
+	"fmt"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,5 +61,18 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 
 // SubSpaceName generates a name for a subSpace based on parentSpace name and spacerequest UID.
 func SubSpaceName(parentSpace *toolchainv1alpha1.Space, spacerequest *toolchainv1alpha1.SpaceRequest) string {
-	return parentSpace.GetName() + string(spacerequest.UID[:5]) // we only get the first 5 chars from UID so we can keep the name within the length limits
+	parentSpaceName := parentSpace.GetName()
+
+	// if the parent space is itself a subspace, then we need to strip its UID
+	// suffix to prevent length limitations from kicking in
+	if parentSpace.Spec.ParentSpace != "" && len(parentSpaceName) > 6 {
+		// take off 6 characters to include the dash.  for example,
+		// "parentspace-12345" becomes "parentspace" when we strip the
+		// 5-character UID suffix and the "-"
+		parentSpaceName = string(parentSpaceName[:len(parentSpaceName)-6])
+	}
+
+	// only get the first 5 chars from the spacerequest's UID so we can keep
+	// the name within length limits.
+	return fmt.Sprintf("%v-%v", parentSpaceName, string(spacerequest.UID[:5]))
 }
