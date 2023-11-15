@@ -1,6 +1,7 @@
 package usertiers
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -24,7 +25,7 @@ var log = logf.Log.WithName("usertiers")
 
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
+func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
 
 	// initialize tier generator, loads templates from assets
 	generator, err := newUserTierGenerator(s, client, namespace, assets)
@@ -33,7 +34,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, nam
 	}
 
 	// create the UserTier resources
-	err = generator.createUserTiers()
+	err = generator.createUserTiers(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to create UserTiers")
 	}
@@ -177,7 +178,7 @@ func (t *tierGenerator) initUserTiers() error {
 }
 
 // createUserTiers creates the UserTier resources from the tier map
-func (t *tierGenerator) createUserTiers() error {
+func (t *tierGenerator) createUserTiers(ctx context.Context) error {
 	applyCl := commonclient.NewApplyClient(t.client)
 
 	for tierName, tierData := range t.templatesByTier {
@@ -200,7 +201,7 @@ func (t *tierGenerator) createUserTiers() error {
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
 
-		updated, err := applyCl.ApplyObject(tier, commonclient.ForceUpdate(true))
+		updated, err := applyCl.ApplyObject(ctx, tier, commonclient.ForceUpdate(true))
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' UserTier", tierName)
 		}
