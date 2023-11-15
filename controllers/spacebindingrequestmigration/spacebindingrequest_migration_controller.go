@@ -141,7 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// check if SpaceBindingRequest doesn't exist already
-	err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+	err = memberCluster.Client.Get(ctx, types.NamespacedName{
 		Namespace: defaultNamespace,
 		Name:      sbrName,
 	}, &toolchainv1alpha1.SpaceBindingRequest{})
