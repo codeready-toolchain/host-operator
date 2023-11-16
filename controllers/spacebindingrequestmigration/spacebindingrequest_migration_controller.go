@@ -100,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// the controller will convert only spacebindings created by system admins using the sandbox-cli.
 	// If the creator label on the space matches the usersignup reference on the MUR then this is the owner of the space
 	// and the spacebinding should not be migrated.
-	if mur.ObjectMeta.OwnerReferences == nil || len(mur.ObjectMeta.OwnerReferences) == 0 {
+	if len(mur.ObjectMeta.OwnerReferences) == 0 {
 		return ctrl.Result{}, errs.New("MasterUserRecord has no UserSignup owner reference")
 	}
 	// skip spaces with no creator label
