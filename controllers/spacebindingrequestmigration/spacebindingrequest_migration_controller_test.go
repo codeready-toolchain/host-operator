@@ -286,6 +286,27 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			// space binding request should not be there
 			require.EqualError(t, err, "MasterUserRecord has no UserSignup owner reference")
 		})
+
+		t.Run("mur has invalid ownership", func(t *testing.T) {
+			murWithInvalidOwnership := masteruserrecord.NewMasterUserRecord(t, "jane")
+			murWithInvalidOwnership.ObjectMeta.OwnerReferences = []v1.OwnerReference{
+				{
+					APIVersion: "toolchain.dev.openshift.com/v1alpha1",
+					Kind:       "BannedUser",
+					Name:       "jane",
+				},
+			}
+			sb := spacebindingtest.NewSpaceBinding(murWithInvalidOwnership.Name, janeSpace.Name, "admin", janeMur.Name)
+			hostClient := test.NewFakeClient(t, sb, janeSpace, murWithInvalidOwnership)
+			ctrl := newReconciler(t, hostClient)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sb))
+
+			// then
+			// space binding request should not be there
+			require.EqualError(t, err, "owner reference for mur toolchain-host-operator/jane is of kind BannedUser. Expected UserSignup")
+		})
 	})
 }
 

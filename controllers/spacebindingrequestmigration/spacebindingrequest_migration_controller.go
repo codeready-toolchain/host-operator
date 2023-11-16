@@ -109,7 +109,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(errs.New("space has no SpaceCreatorLabelKey set"), "the spacebindings for this space will not be migrated", "space name", space.Name)
 		return ctrl.Result{}, nil
 	}
+
 	usersignup := mur.ObjectMeta.OwnerReferences[0]
+	if usersignup.Kind != "UserSignup" {
+		return ctrl.Result{}, errs.New(fmt.Sprintf("owner reference for mur %s is of kind %s. Expected UserSignup", murName, usersignup.Kind))
+	}
 	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == usersignup.Name {
 		return reconcile.Result{}, nil
 	}
