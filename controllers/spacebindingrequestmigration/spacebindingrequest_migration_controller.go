@@ -164,7 +164,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// if the SBR was found ( was created from the previous reconcile loop), we can now delete the SpaceBinding object
-	if err := r.Client.Delete(ctx, spaceBinding); err != nil {
+	if err := r.Client.Delete(ctx, spaceBinding); err != nil && !errors.IsNotFound(err) {
 		return ctrl.Result{}, errs.Wrapf(err, "unable to delete the SpaceBinding")
 	}
 
