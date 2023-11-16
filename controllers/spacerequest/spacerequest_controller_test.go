@@ -441,6 +441,25 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "error while adding finalizer: mock error")
 		})
 
+		t.Run("error while updating status", func(t *testing.T) {
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
+					return fmt.Errorf("mock error")
+				}
+				return member1Client.Status().Update(ctx, obj, opts...)
+			}
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "error updating status: mock error")
+		})
+
 		t.Run("unable to get parent space name", func(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -566,6 +585,49 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to create subSpace: mock error")
 		})
+
+		t.Run("error listing spaces", func(t *testing.T) {
+			// given
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
+				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
+					return fmt.Errorf("mock error")
+				}
+				return hostClient.Client.List(ctx, list, opts...)
+			}
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "failed to list subspaces: mock error")
+		})
+
+		t.Run("listing spaces with label selectors returns more than one result", func(t *testing.T) {
+			// given
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			subSpace1 := spacetest.NewSpace(test.HostOperatorNs, "foo",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
+				spacetest.WithSpecParentSpace(parentSpace.GetName()))
+			subSpace2 := spacetest.NewSpace(test.HostOperatorNs, "bar",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
+				spacetest.WithSpecParentSpace(parentSpace.GetName()))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace1, subSpace2)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "Expected 1 matching subspace for spaceRequest jane in namespace jane-tenant, found 2")
+		})
+
 		t.Run("parent space is being deleted", func(t *testing.T) {
 			// given
 			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "jane",
@@ -1037,6 +1099,26 @@ func TestDeleteSpaceRequest(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "failed to remove finalizer: mock error")
+		})
+
+		t.Run("unable to list subspaces", func(t *testing.T) {
+			// given
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
+				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
+					return fmt.Errorf("mock error")
+				}
+				return member1Client.Client.List(ctx, list, opts...)
+			}
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "failed to list subspaces: mock error")
 		})
 
 		t.Run("unable to delete subSpace", func(t *testing.T) {

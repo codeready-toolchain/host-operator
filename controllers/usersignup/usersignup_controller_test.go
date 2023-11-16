@@ -2723,6 +2723,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		err := r.setSpaceToReady(mur.Name) // given space is ready
 		require.NoError(t, err)
+
 		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
@@ -3378,6 +3379,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		}
 
 		t.Run("first reconcile", func(t *testing.T) {
+
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
 			require.Error(t, err)

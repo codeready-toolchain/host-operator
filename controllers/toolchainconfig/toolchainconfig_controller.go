@@ -138,7 +138,7 @@ func (r *Reconciler) ensureRegistrationService(ctx context.Context, toolchainCon
 	// create all objects that are within the template, and update only when the object has changed.
 	var updated []string
 	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.ApplyObject(toolchainObject, applycl.SetOwner(toolchainConfig))
+		createdOrUpdated, err := cl.ApplyObject(ctx, toolchainObject, applycl.SetOwner(toolchainConfig))
 		if err != nil {
 			return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
 		}
