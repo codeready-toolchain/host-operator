@@ -28,7 +28,7 @@ func TestMapSpaceBindingRequestToSpaceBinding(t *testing.T) {
 
 	t.Run("should return SpaceBinding requests for SpaceBindingRequest", func(t *testing.T) {
 		// when
-		requests := spacebindingrequestmigration.MapSpaceBindingRequestToSpaceBinding(cl)(spaceBindingRequest)
+		requests := spacebindingrequestmigration.MapSpaceBindingRequestToSpaceBinding(cl, test.HostOperatorNs)(spaceBindingRequest)
 
 		// then
 		require.Len(t, requests, 1)

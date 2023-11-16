@@ -38,7 +38,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceBindingRequest{}, memberCluster.Cache),
-			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingRequestToSpaceBinding(r.Client)))
+			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingRequestToSpaceBinding(r.Client, r.Namespace)))
 	}
 	return b.Complete(r)
 }

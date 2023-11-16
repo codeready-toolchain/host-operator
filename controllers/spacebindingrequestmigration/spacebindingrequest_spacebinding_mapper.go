@@ -4,7 +4,6 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -13,16 +12,11 @@ import (
 )
 
 // MapSpaceBindingRequestToSpaceBinding returns an event for the spacebinding that owns.
-func MapSpaceBindingRequestToSpaceBinding(cl runtimeclient.Client) func(spaceBindingREquest runtimeclient.Object) []reconcile.Request {
-	mapperLog := ctrl.Log.WithName("NSTemplateTierToSpaceMapper")
+func MapSpaceBindingRequestToSpaceBinding(cl runtimeclient.Client, watchNamespace string) func(spaceBindingRequest runtimeclient.Object) []reconcile.Request {
+	mapperLog := ctrl.Log.WithName("SpaceBindingRequestToSpaceBinding")
 	return func(obj runtimeclient.Object) []reconcile.Request {
-		watchNamespace, err := commonconfig.GetWatchNamespace()
-		if err != nil {
-			mapperLog.Error(err, "cannot get watch namespace")
-			return []reconcile.Request{}
-		}
 		spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
-		err = cl.List(context.TODO(), spaceBindings,
+		err := cl.List(context.TODO(), spaceBindings,
 			runtimeclient.InNamespace(watchNamespace),
 			runtimeclient.MatchingLabels{
 				toolchainv1alpha1.SpaceBindingRequestLabelKey:          obj.GetName(),
