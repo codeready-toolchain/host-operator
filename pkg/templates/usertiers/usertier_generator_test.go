@@ -48,7 +48,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 
 			// when
-			err := usertiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 
 			// then
 			require.NoError(t, err)
@@ -77,11 +77,11 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := commontest.NewFakeClient(t)
 
 			// when
-			err := usertiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 			require.NoError(t, err)
 
 			// when calling CreateOrUpdateResources a second time
-			err = usertiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+			err = usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 
 			// then
 			require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 			clt := commontest.NewFakeClient(t)
 			// when
-			err := usertiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
+			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to create UserTier generator: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
@@ -137,7 +137,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 				// when
-				err := usertiers.CreateOrUpdateResources(s, clt, namespace, assets)
+				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, "unable to create UserTiers: unable to create or update the '\\w+' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: an error", err.Error())
@@ -161,7 +161,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				testassets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 				// when
-				err := usertiers.CreateOrUpdateResources(s, clt, namespace, testassets)
+				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unable to create UserTiers: unable to create or update the 'advanced' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: unable to update the resource")
