@@ -444,7 +444,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 		switch {
 		case len(secretList.Items) == 0:
 			// create the secret for this namespace
-			clientConfig, err := r.generateKubeConfig(subSpaceTargetCluster, namespace.Name)
+			clientConfig, err := r.generateKubeConfig(ctx, subSpaceTargetCluster, namespace.Name)
 			if err != nil {
 				return err
 			}
@@ -500,9 +500,9 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 	return nil
 }
 
-func (r *Reconciler) generateKubeConfig(subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
+func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
 	// create a token request for the admin service account
-	token, err := restclient.CreateTokenRequest(subSpaceTargetCluster.RESTClient, types.NamespacedName{
+	token, err := restclient.CreateTokenRequest(ctx, subSpaceTargetCluster.RESTClient, types.NamespacedName{
 		Namespace: namespace,
 		Name:      toolchainv1alpha1.AdminServiceAccountName,
 	}, TokenRequestExpirationSeconds)
