@@ -4,7 +4,7 @@ replace github.com/codeready-toolchain/toolchain-common => github.com/mmulholla/
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20231110023259-430f79b80551
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20231017151548-4fd4e48ab6b7
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20231113200037-9a9f915098e3
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
