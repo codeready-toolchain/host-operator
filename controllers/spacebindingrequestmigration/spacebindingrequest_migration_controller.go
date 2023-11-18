@@ -96,25 +96,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound MUR")
 	}
 
-	// skip workspace creator spacebinding
-	// the controller will convert only spacebindings created by system admins using the sandbox-cli.
-	// If the creator label on the space matches the usersignup reference on the MUR then this is the owner of the space
-	// and the spacebinding should not be migrated.
-	if len(mur.ObjectMeta.OwnerReferences) == 0 {
-		return ctrl.Result{}, errs.New("MasterUserRecord has no UserSignup owner reference")
+	// error when mur has no owner label (should not happen in prod)
+	if _, ok := mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey]; !ok {
+		return ctrl.Result{}, errs.New("mur has no MasterUserRecordOwnerLabelKey set")
 	}
-	// skip spaces with no creator label
+	// error when space has no creator label (should not happen in prod)
 	if _, ok := space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey]; !ok {
-		// let's log an error, since this should not happen in production
-		logger.Error(errs.New("space has no SpaceCreatorLabelKey set"), "the spacebindings for this space will not be migrated", "space name", space.Name)
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, errs.New("space has no SpaceCreatorLabelKey set")
 	}
 
-	usersignup := mur.ObjectMeta.OwnerReferences[0]
-	if usersignup.Kind != "UserSignup" {
-		return ctrl.Result{}, errs.New(fmt.Sprintf("owner reference for mur %s is of kind %s. Expected UserSignup", murName, usersignup.Kind))
-	}
-	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == usersignup.Name {
+	// skip workspace creator spacebinding
+	// the controller will convert only spacebindings created by system admins using the sandbox-cli.
+	// If the creator label on the space matches the  owner label on the MUR then this is the owner of the space
+	// and the spacebinding should not be migrated.
+	if space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] == mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] {
 		return reconcile.Result{}, nil
 	}
 

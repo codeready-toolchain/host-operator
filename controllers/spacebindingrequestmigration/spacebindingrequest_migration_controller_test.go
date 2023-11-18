@@ -40,10 +40,11 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 		}}),
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "jane"),
 	)
-	janeMur := murWithOwnerReference(t, "jane")
+
+	janeMur := masteruserrecord.NewMasterUserRecord(t, "jane", masteruserrecord.WithLabel(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, "jane"))
 	sbForCreator := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", janeMur.Name)
 	// we have a user which was added to the space via sandbox-cli
-	johnMur := murWithOwnerReference(t, "john")
+	johnMur := masteruserrecord.NewMasterUserRecord(t, "john", masteruserrecord.WithLabel(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, "john"))
 	sbForJohn := spacebindingtest.NewSpaceBinding(johnMur.Name, janeSpace.Name, "admin", janeMur.GetName())
 	t.Run("success", func(t *testing.T) {
 
@@ -121,14 +122,8 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 				spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "batman"),
 			)
 			// mur name differs from the space creator label
-			batmanMur := masteruserrecord.NewMasterUserRecord(t, "batman123")
-			batmanMur.ObjectMeta.OwnerReferences = []v1.OwnerReference{
-				{
-					APIVersion: "toolchain.dev.openshift.com/v1alpha1",
-					Kind:       "UserSignup",
-					Name:       "batman", // but the usersignup matches the space creator name
-				},
-			}
+			// but the usersignup matches the space creator name
+			batmanMur := masteruserrecord.NewMasterUserRecord(t, "batman123", masteruserrecord.WithLabel(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, "batman"))
 			sbForBatman := spacebindingtest.NewSpaceBinding(batmanMur.GetName(), batmanSpace.GetName(), "admin", "batman")
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, batmanSpace, batmanMur, sbForBatman)
@@ -273,7 +268,7 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 			require.EqualError(t, err, "unable to find member cluster: invalid")
 		})
 
-		t.Run("mur has no ownership", func(t *testing.T) {
+		t.Run("mur has no owner label", func(t *testing.T) {
 			murWithNoOwnership := masteruserrecord.NewMasterUserRecord(t, "jane")
 			sb := spacebindingtest.NewSpaceBinding(murWithNoOwnership.Name, janeSpace.Name, "admin", janeMur.Name)
 			hostClient := test.NewFakeClient(t, sb, janeSpace, murWithNoOwnership)
@@ -284,29 +279,9 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 
 			// then
 			// space binding request should not be there
-			require.EqualError(t, err, "MasterUserRecord has no UserSignup owner reference")
+			require.EqualError(t, err, "mur has no MasterUserRecordOwnerLabelKey set")
 		})
 
-		t.Run("mur has invalid ownership", func(t *testing.T) {
-			murWithInvalidOwnership := masteruserrecord.NewMasterUserRecord(t, "jane")
-			murWithInvalidOwnership.ObjectMeta.OwnerReferences = []v1.OwnerReference{
-				{
-					APIVersion: "toolchain.dev.openshift.com/v1alpha1",
-					Kind:       "BannedUser",
-					Name:       "jane",
-				},
-			}
-			sb := spacebindingtest.NewSpaceBinding(murWithInvalidOwnership.Name, janeSpace.Name, "admin", janeMur.Name)
-			hostClient := test.NewFakeClient(t, sb, janeSpace, murWithInvalidOwnership)
-			ctrl := newReconciler(t, hostClient)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sb))
-
-			// then
-			// space binding request should not be there
-			require.EqualError(t, err, "owner reference for mur toolchain-host-operator/jane is of kind BannedUser. Expected UserSignup")
-		})
 	})
 }
 
