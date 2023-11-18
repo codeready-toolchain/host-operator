@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -133,31 +134,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Name:      sbrName,
 			Namespace: defaultNamespace,
 		},
-		Spec: toolchainv1alpha1.SpaceBindingRequestSpec{
+	}
+
+	result, err := controllerutil.CreateOrUpdate(ctx, memberCluster.Client, sbr, func() error {
+		sbr.Spec = toolchainv1alpha1.SpaceBindingRequestSpec{
 			MasterUserRecord: mur.GetName(),
 			SpaceRole:        spaceRole,
-		},
-	}
-
-	// check if SpaceBindingRequest doesn't exist already
-	err = memberCluster.Client.Get(ctx, types.NamespacedName{
-		Namespace: defaultNamespace,
-		Name:      sbrName,
-	}, &toolchainv1alpha1.SpaceBindingRequest{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// create the sbr resource
-			if err := memberCluster.Client.Create(ctx, sbr); err != nil {
-				return ctrl.Result{}, errs.Wrapf(err, "unable to create SpaceBindingRequest")
-			}
-
-			// let's requeue after we created the SBR, so that in next loop the migrated SpaceBinding object will be deleted
-			return ctrl.Result{Requeue: true}, nil
 		}
-		// Error reading the object
-		return ctrl.Result{}, err
+		return nil
+	})
+
+	if err != nil {
+		// something happened when we tried to read or write the sbr
+		return ctrl.Result{}, errs.Wrapf(err, "Failed to create or update space binding request %v", sbrName)
 	}
 
+	if result == controllerutil.OperationResultCreated {
+		// let's requeue after we created the SBR, so that in next loop the migrated SpaceBinding object will be deleted
+		return ctrl.Result{Requeue: true}, nil
+	}
 	// if the SBR was found ( was created from the previous reconcile loop), we can now delete the SpaceBinding object
 	if err := r.Client.Delete(ctx, spaceBinding); err != nil && !errors.IsNotFound(err) {
 		return ctrl.Result{}, errs.Wrapf(err, "unable to delete the SpaceBinding")
