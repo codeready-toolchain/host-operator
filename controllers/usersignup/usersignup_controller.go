@@ -357,14 +357,16 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 
 		if shouldManageSpace(userSignup) {
 			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
-			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
-			if err != nil {
-				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
-			} else if created {
+			if err == nil {
 				err = r.updateStatusHomeSpace(ctx, userSignup, space.Name)
 				if err != nil {
 					return true, err
 				}
+			}
+			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
+			if err != nil {
+				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
+			} else if created {
 				return true, nil
 			}
 			if err = r.ensureSpaceBinding(ctx, userSignup, mur, space); err != nil {
