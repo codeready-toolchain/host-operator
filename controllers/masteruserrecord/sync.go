@@ -151,10 +151,6 @@ func (s *Synchronizer) withClusterDetails(ctx context.Context, status toolchainv
 			return status, errs.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
-		if status.Cluster.APIEndpoint == "" {
-			status.Cluster.APIEndpoint = s.memberCluster.APIEndpoint
-		}
-
 		for _, memberStatus := range toolchainStatus.Status.Members {
 			if memberStatus.ClusterName == status.Cluster.Name {
 				if memberStatus.MemberStatus.Routes == nil {
@@ -164,8 +160,6 @@ func (s *Synchronizer) withClusterDetails(ctx context.Context, status toolchainv
 					ready, _ := condition.FindConditionByType(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
 					return status, fmt.Errorf("routes are not properly set in ToolchainStatus - the reason is: `%s` with message: `%s`", ready.Reason, ready.Message)
 				}
-				status.Cluster.ConsoleURL = memberStatus.MemberStatus.Routes.ConsoleURL
-				status.Cluster.CheDashboardURL = memberStatus.MemberStatus.Routes.CheDashboardURL
 				return status, nil
 			}
 		}
