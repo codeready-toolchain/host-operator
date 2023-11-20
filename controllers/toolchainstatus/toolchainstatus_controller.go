@@ -337,7 +337,7 @@ func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStat
 	}
 
 	// verify deployment version
-	versionCondition := r.VersionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, githubRepo)
+	versionCondition := r.VersionCheckManager.CheckDeployedVersionIsUpToDate(ctx, isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, githubRepo)
 	errVersionCheck := status.ValidateComponentConditionReady(*versionCondition)
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
@@ -961,7 +961,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 		Branch:            registrationServiceRepoBranchName,
 		DeployedCommitSHA: healthValues.Revision,
 	}
-	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
+	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(ctx, isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
 	err = status.ValidateComponentConditionReady(*versionCondition)
 	if err != nil {
 		// add version is not up-to-date condition
