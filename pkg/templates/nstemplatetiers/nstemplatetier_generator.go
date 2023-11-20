@@ -44,7 +44,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 	}
 
 	// create the NSTemplateTier resources
-	err = generator.createNSTemplateTiers()
+	err = generator.createNSTemplateTiers(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to create NSTemplateTiers")
 	}
@@ -383,7 +383,7 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 }
 
 // createNSTemplateTiers creates the NSTemplateTier resources from the tier map
-func (t *tierGenerator) createNSTemplateTiers() error {
+func (t *tierGenerator) createNSTemplateTiers(ctx context.Context) error {
 	applyCl := commonclient.NewApplyClient(t.client)
 
 	for tierName, tierData := range t.templatesByTier {
@@ -405,7 +405,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 			labels = make(map[string]string)
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
-		updated, err := applyCl.ApplyObject(tier, commonclient.ForceUpdate(true))
+		updated, err := applyCl.ApplyObject(ctx, tier, commonclient.ForceUpdate(true))
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTier", tierName)
 		}

@@ -160,6 +160,33 @@ func (r *Reconciler) addFinalizer(ctx context.Context, memberCluster cluster.Clu
 	return nil
 }
 
+// fetches the subspace corresponding to the space request given.
+//
+// returns:
+//   - nil, err if an error occurred retrieving spaces or more than one matching subspace was found
+//   - nil, nil if no subspaces exist
+//   - space, nil if a matching space was found
+func (r *Reconciler) getSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
+	subSpaceList := &toolchainv1alpha1.SpaceList{}
+	if err := r.Client.List(ctx, subSpaceList,
+		runtimeclient.InNamespace(r.Namespace),
+		runtimeclient.MatchingLabels{
+			toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
+			toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
+		}); err != nil {
+		return nil, errs.Wrap(err, "failed to list subspaces")
+	}
+
+	length := len(subSpaceList.Items)
+	if length >= 2 {
+		return nil, errs.Errorf("Expected 1 matching subspace for spaceRequest %v in namespace %v, found %d", spaceRequest.GetName(), spaceRequest.GetNamespace(), length)
+	} else if length == 0 {
+		return nil, nil
+	}
+
+	return &subSpaceList.Items[0], nil
+}
+
 func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, bool, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("ensuring subSpace")
@@ -180,27 +207,25 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 	}
 
 	// create if not found on the expected target cluster
-	subSpace := &toolchainv1alpha1.Space{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(parentSpace, spaceRequest),
-	}, subSpace); err != nil {
-		if errors.IsNotFound(err) {
-			// no spaces found, let's create it
-			logger.Info("creating subSpace")
-			if err := r.setStatusProvisioning(ctx, memberCluster, spaceRequest); err != nil {
-				return nil, false, errs.Wrap(err, "error updating status")
-			}
-			subSpace, err = r.createNewSubSpace(ctx, spaceRequest, parentSpace)
-			if err != nil {
-				// failed to create subSpace
-				return nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
-			}
-			return subSpace, true, nil // a subSpace was created
-		}
-		// failed to create subSpace
-		return nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
+	subSpace, err := r.getSubSpace(ctx, spaceRequest)
+	if err != nil {
+		return nil, false, err
 	}
+
+	if subSpace == nil {
+		// no spaces found, let's create it
+		logger.Info("creating subSpace")
+		if err := r.setStatusProvisioning(ctx, memberCluster, spaceRequest); err != nil {
+			return nil, false, errs.Wrap(err, "error updating status")
+		}
+		subSpace, err := r.createNewSubSpace(ctx, spaceRequest, parentSpace)
+		if err != nil {
+			// failed to create subSpace
+			return nil, false, r.setStatusFailedToCreateSubSpace(ctx, memberCluster, spaceRequest, err)
+		}
+		return subSpace, true, nil // a subSpace was created
+	}
+
 	logger.Info("subSpace already exists")
 	updated, err := r.updateExistingSubSpace(ctx, spaceRequest, subSpace)
 	return subSpace, updated, err
@@ -322,12 +347,8 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, memberClusterWithS
 		// finalizer was already removed, nothing to delete anymore...
 		return nil
 	}
-	// find parent space from namespace labels
-	parentSpace, err := r.getParentSpace(ctx, memberClusterWithSpaceRequest, spaceRequest)
-	if err != nil {
-		return err
-	}
-	if isBeingDeleted, err := r.deleteSubSpace(ctx, parentSpace, spaceRequest); err != nil {
+
+	if isBeingDeleted, err := r.deleteSubSpace(ctx, spaceRequest); err != nil {
 		return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceRequest, spaceRequest, err)
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(ctx, memberClusterWithSpaceRequest, spaceRequest); err != nil {
@@ -349,22 +370,18 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, memberClusterWithS
 // returns true/nil if the deletion of the subSpace was triggered
 // returns false/nil if the subSpace was already deleted
 // return false/err if something went wrong
-func (r *Reconciler) deleteSubSpace(ctx context.Context, parentSpace *toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
-
-	subSpace := &toolchainv1alpha1.Space{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(parentSpace, spaceRequest),
-	}, subSpace); err != nil {
-		if errors.IsNotFound(err) {
-			// no spaces found, already deleted
-			logger := log.FromContext(ctx)
-			logger.Info("subSpace was already deleted", "subSpace.name", subSpace.Name)
-			return false, nil
-		}
-		// failed to get subSpace
+func (r *Reconciler) deleteSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
+	subSpace, err := r.getSubSpace(ctx, spaceRequest)
+	if err != nil {
 		return false, err
 	}
+
+	// should be a unique subspace
+	if subSpace == nil {
+		// the subspace has already been deleted
+		return false, nil
+	}
+
 	// deleting subSpace
 	return r.deleteExistingSubSpace(ctx, subSpace)
 }
@@ -427,7 +444,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 		switch {
 		case len(secretList.Items) == 0:
 			// create the secret for this namespace
-			clientConfig, err := r.generateKubeConfig(subSpaceTargetCluster, namespace.Name)
+			clientConfig, err := r.generateKubeConfig(ctx, subSpaceTargetCluster, namespace.Name)
 			if err != nil {
 				return err
 			}
@@ -483,9 +500,9 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 	return nil
 }
 
-func (r *Reconciler) generateKubeConfig(subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
+func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
 	// create a token request for the admin service account
-	token, err := restclient.CreateTokenRequest(subSpaceTargetCluster.RESTClient, types.NamespacedName{
+	token, err := restclient.CreateTokenRequest(ctx, subSpaceTargetCluster.RESTClient, types.NamespacedName{
 		Namespace: namespace,
 		Name:      toolchainv1alpha1.AdminServiceAccountName,
 	}, TokenRequestExpirationSeconds)
