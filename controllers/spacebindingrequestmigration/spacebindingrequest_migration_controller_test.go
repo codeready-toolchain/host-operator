@@ -18,7 +18,6 @@ import (
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -283,18 +282,6 @@ func TestMigrateSpaceBindingToSBR(t *testing.T) {
 		})
 
 	})
-}
-
-func murWithOwnerReference(t *testing.T, name string) *toolchainv1alpha1.MasterUserRecord {
-	janeMur := masteruserrecord.NewMasterUserRecord(t, name)
-	janeMur.ObjectMeta.OwnerReferences = []v1.OwnerReference{
-		{
-			APIVersion: "toolchain.dev.openshift.com/v1alpha1",
-			Kind:       "UserSignup",
-			Name:       name,
-		},
-	}
-	return janeMur
 }
 
 func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacebindingrequestmigration.Reconciler {
