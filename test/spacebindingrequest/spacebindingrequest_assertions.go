@@ -77,6 +77,14 @@ func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Asse
 	return a
 }
 
+func (a *Assertion) HasLabelWithValue(key, value string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.NotNil(a.t, a.spaceBindingRequest.Labels)
+	assert.Equal(a.t, value, a.spaceBindingRequest.Labels[key])
+	return a
+}
+
 func (a *Assertion) DoesNotExist() *Assertion {
 	err := a.loadResource()
 	require.Error(a.t, err)
