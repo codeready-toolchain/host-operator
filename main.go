@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequest"
+	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequestmigration"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
@@ -320,6 +321,19 @@ func main() { // nolint:gocyclo
 			Scheme:         mgr.GetScheme(),
 		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
+			os.Exit(1)
+		}
+	}
+	// TEMPORARY controller that converts spacebindings created via sandbox-cli into spacebinding requests
+	// once the migration effort is completed , the controller can be disabled and deleted.
+	if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
+		if err = (&spacebindingrequestmigration.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			MemberClusters: clusterScopedMemberClusters,
+			Scheme:         mgr.GetScheme(),
+		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequestMigration")
 			os.Exit(1)
 		}
 	}
