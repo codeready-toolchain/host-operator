@@ -13,4 +13,4 @@ objects:
 parameters:
 - name: NAMESPACE
 - name: DEACTIVATION_TIMEOUT_DAYS
-  value: "30"
+  value: "100"
