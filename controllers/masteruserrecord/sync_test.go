@@ -928,10 +928,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "https://console.member-cluster/",
-				CheDashboardURL: "https://che-toolchain-che.member-cluster/",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -962,10 +959,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "https://console.member-cluster/",
-				CheDashboardURL: "",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -996,10 +990,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "",
-				CheDashboardURL: "",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -1033,10 +1024,7 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 		HasConditions(expMurCon...).
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-			Name:            test.MemberClusterName,
-			APIEndpoint:     "https://api.member-cluster:6433",
-			ConsoleURL:      "https://console.member-cluster/",
-			CheDashboardURL: "http://che-toolchain-che.member-cluster/",
+			Name: test.MemberClusterName,
 		}).
 		AllUserAccountsHaveCondition(userAccountCondition)
 }
