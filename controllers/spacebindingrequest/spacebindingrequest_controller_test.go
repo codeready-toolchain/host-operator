@@ -499,6 +499,35 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasFinalizer()
 		})
 
+		t.Run("SpaceBinding not managed by this SpaceBindingRequest CR can be deleted", func(t *testing.T) {
+			// given
+			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
+			// this SBR will fail for the conflict with the already existing SpaceBinding
+			// but we should be able to delete it
+			sbrForDuplicatedSpaceBinding := spacebindingrequesttest.NewSpaceBindingRequest("jane", "jane-tenant",
+				spacebindingrequesttest.WithMUR(janeMur.Name),
+				spacebindingrequesttest.WithSpaceRole("admin"),
+				spacebindingrequesttest.WithFinalizer(), // we set the finalizer so we can check if it's being removed
+				spacebindingrequesttest.WithDeletionTimestamp(),
+			)
+
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNamespace, sbrForDuplicatedSpaceBinding), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
+
+			// then
+			require.NoError(t, err)
+			// finalizer should be removed
+			spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				DoesNotExist()
+			// the spacebinding should not be deleted, since it doesn't belong to the SBR
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
+				Exists()
+		})
+
 	})
 }
 
