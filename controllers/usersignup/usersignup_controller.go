@@ -393,6 +393,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		alreadyVerificationRequired := condition.IsFalseWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, toolchainv1alpha1.UserSignupVerificationRequiredReason)
 		err := r.updateStatus(ctx, userSignup, r.setStatusVerificationRequired)
 		if err == nil && !alreadyVerificationRequired {
+			logger.Info("Incremented UserSignupVerificationRequiredTotal metric", "usersignup", userSignup.Name)
 			// increment the verification required counter only the first time the UserSignup status is set to verification required
 			metrics.UserSignupVerificationRequiredTotal.Inc()
 		}
