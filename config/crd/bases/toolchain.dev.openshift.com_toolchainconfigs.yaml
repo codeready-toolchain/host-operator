@@ -264,6 +264,13 @@ spec:
                             description: Captcha defines any configuration related
                               to captcha verification
                             properties:
+                              automaticVerificationThreshold:
+                                description: AutomaticVerificationThreshold defines
+                                  the lowest captcha score for automatic approval
+                                  to be enabled. If the captcha score is below this
+                                  threshold then manual approval is required in order
+                                  for the user to be provisioned.
+                                type: string
                               enabled:
                                 description: Enabled specifies whether the captcha
                                   verification feature is enabled or not
