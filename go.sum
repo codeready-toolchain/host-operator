@@ -138,8 +138,6 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20231122125952-9e6527f5e746 h1:By8gc3SbJl1GHf7LfPTxfLYC0IuTeF4wiZHvtBxPx4s=
 github.com/codeready-toolchain/api v0.0.0-20231122125952-9e6527f5e746/go.mod h1:FO7kgXH1x1LqkF327D5a36u0WIrwjVCbeijPkzgwaZc=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20231122135421-3933b292cbb6 h1:+xecIaHMA1T9fioEVWsR9hyh736xHLBZEY6h3LWdj9M=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20231122135421-3933b292cbb6/go.mod h1:SonFn2Nu9p70l4gYaf4+XUzCn9dQdpFfpqQ+E4MVILU=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -455,8 +453,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/reflectwalk v1.0.0 h1:9D+8oIskB4VJBN5SFlmc27fSlIBZaov1Wpk/IfikLNY=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
-github.com/mmulholla/toolchain-common v0.0.0-20231117181038-9cf4637bc49e h1:dAHGNCsGT7eExrDfST9KhwJhhzg03ues/Y2cXpixVL0=
-github.com/mmulholla/toolchain-common v0.0.0-20231117181038-9cf4637bc49e/go.mod h1:W+JXS7K1wG8dbkrq9qnLgcvutap83mFe5+Xa0k5Yr1U=
+github.com/mmulholla/toolchain-common v0.0.0-20231127184049-1a45dcc89997 h1:qm+snv7cUBYDAw7ylo/5br8FtNFHPlCxCiguB6kqNAQ=
+github.com/mmulholla/toolchain-common v0.0.0-20231127184049-1a45dcc89997/go.mod h1:SonFn2Nu9p70l4gYaf4+XUzCn9dQdpFfpqQ+E4MVILU=
 github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 github.com/moby/term v0.0.0-20210610120745-9d4ed1856297/go.mod h1:vgPCkQMyxTZ7IDy8SXRufE172gr8+K/JE/7hHFxHW3A=
 github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6/go.mod h1:E2VnQOmVuvZB6UYnnDB0qG5Nq/1tD9acaOpo6xmt0Kw=
