@@ -181,7 +181,7 @@ func TestNewUserTier(t *testing.T) {
 				case "nodeactivation":
 					assert.Equal(t, 0, tier.Spec.DeactivationTimeoutDays)
 				case "deactivate30":
-					assert.Equal(t, 100, tier.Spec.DeactivationTimeoutDays)
+					assert.Equal(t, 30, tier.Spec.DeactivationTimeoutDays)
 				case "deactivate80":
 					assert.Equal(t, 80, tier.Spec.DeactivationTimeoutDays)
 				case "deactivate90":
