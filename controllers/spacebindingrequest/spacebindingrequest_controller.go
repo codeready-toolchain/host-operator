@@ -272,10 +272,7 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 func sbrOwnsSpaceBinding(spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) bool {
 	sbrLabel := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
 	sbrNamespaceLabel := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
-	if sbrLabel != spaceBindingRequest.GetName() || sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
-		return false
-	}
-	return true
+	return sbrLabel == spaceBindingRequest.GetName() && sbrNamespaceLabel == spaceBindingRequest.GetNamespace()
 }
 
 // updateExistingSpaceBinding updates the spacebinding with the config from the spaceBindingRequest.
