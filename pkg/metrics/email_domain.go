@@ -22,11 +22,11 @@ var internalDomainPattern = regexp.MustCompile(`^.*@redhat.com$|^.*@((.+)\.)?ibm
 func GetEmailDomain(obj RuntimeObject) Domain {
 	emailAddress := ""
 
-	switch obj.(type) {
+	switch obj := obj.(type) {
 	case *toolchainv1alpha1.MasterUserRecord:
-		emailAddress = obj.(*toolchainv1alpha1.MasterUserRecord).Spec.PropagatedClaims.Email
+		emailAddress = obj.Spec.PropagatedClaims.Email
 	case *toolchainv1alpha1.UserSignup:
-		emailAddress = obj.(*toolchainv1alpha1.UserSignup).Spec.IdentityClaims.Email
+		emailAddress = obj.Spec.IdentityClaims.Email
 	}
 	if emailAddress == "" {
 		log.Error(nil, "no email address found in object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "name", obj.GetName())
