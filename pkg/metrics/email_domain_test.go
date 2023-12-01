@@ -25,8 +25,12 @@ func TestGetEmailDomain(t *testing.T) {
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
-					Annotations: map[string]string{
-						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@redhat.com",
+				},
+				Spec: toolchainv1alpha1.UserSignupSpec{
+					IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+						PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+							Email: "joe@redhat.com",
+						},
 					},
 				},
 			},
@@ -37,8 +41,12 @@ func TestGetEmailDomain(t *testing.T) {
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
-					Annotations: map[string]string{
-						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@ibm.com",
+				},
+				Spec: toolchainv1alpha1.UserSignupSpec{
+					IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+						PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+							Email: "joe@ibm.com",
+						},
 					},
 				},
 			},
@@ -49,8 +57,12 @@ func TestGetEmailDomain(t *testing.T) {
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
-					Annotations: map[string]string{
-						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fr.ibm.com",
+				},
+				Spec: toolchainv1alpha1.UserSignupSpec{
+					IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+						PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+							Email: "joe@fr.ibm.com",
+						},
 					},
 				},
 			},
@@ -61,8 +73,12 @@ func TestGetEmailDomain(t *testing.T) {
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
-					Annotations: map[string]string{
-						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fribm.com",
+				},
+				Spec: toolchainv1alpha1.UserSignupSpec{
+					IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+						PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+							Email: "joe@fribm.com",
+						},
 					},
 				},
 			},
@@ -73,8 +89,12 @@ func TestGetEmailDomain(t *testing.T) {
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
-					Annotations: map[string]string{
-						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@example.com",
+				},
+				Spec: toolchainv1alpha1.UserSignupSpec{
+					IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+						PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+							Email: "joe@example.com",
+						},
 					},
 				},
 			},
@@ -84,10 +104,7 @@ func TestGetEmailDomain(t *testing.T) {
 			name: "Missing",
 			object: &toolchainv1alpha1.UserSignup{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "joe",
-					Annotations: map[string]string{
-						// no email
-					},
+					Name: "joe",
 				},
 			},
 			expectedDomain: metrics.External,

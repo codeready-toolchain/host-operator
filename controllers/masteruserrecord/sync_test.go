@@ -69,30 +69,6 @@ func TestIsSynchronized(t *testing.T) {
 			assert.False(t, s.isSynchronized())
 		})
 
-		t.Run("missing email annotation", func(t *testing.T) {
-			// given
-			record, memberUserAcc := setupSynchronizerItems()
-			delete(memberUserAcc.Annotations, toolchainv1alpha1.UserEmailAnnotationKey)
-			s := Synchronizer{
-				memberUserAcc: &memberUserAcc,
-				record:        &record,
-			}
-			// when/then
-			assert.False(t, s.isSynchronized())
-		})
-
-		t.Run("email annotation does not match", func(t *testing.T) {
-			// given
-			record, memberUserAcc := setupSynchronizerItems()
-			memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = "foo"
-			s := Synchronizer{
-				memberUserAcc: &memberUserAcc,
-				record:        &record,
-			}
-			// when/then
-			assert.False(t, s.isSynchronized())
-		})
-
 		t.Run("different disable", func(t *testing.T) {
 			// given
 			record, memberUserAcc := setupSynchronizerItems()
@@ -108,7 +84,7 @@ func TestIsSynchronized(t *testing.T) {
 		t.Run("different userID", func(t *testing.T) {
 			// given
 			record, memberUserAcc := setupSynchronizerItems()
-			record.Spec.UserID = "bar"
+			record.Spec.PropagatedClaims.UserID = "bar"
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
@@ -175,31 +151,6 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasTier(*otherTier).
-		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
-}
-
-func TestSynchronizeAnnotation(t *testing.T) {
-	// given
-	apiScheme(t)
-	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
-
-	userAccount := uatest.NewUserAccountFromMur(mur)
-	userAccount.Annotations = nil
-
-	hostClient := test.NewFakeClient(t, mur)
-	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
-
-	// when
-	createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
-
-	// then
-	require.NoError(t, err)
-	assert.True(t, createdOrUpdated)
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		Exists().
-		MatchMasterUserRecord(mur)
-
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 

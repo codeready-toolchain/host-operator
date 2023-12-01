@@ -20,9 +20,16 @@ var internalDomainPattern = regexp.MustCompile(`^.*@redhat.com$|^.*@((.+)\.)?ibm
 // Note: if given email address is empty (ie, it does not exist - which should not happen),
 // then an error is logged and the returned domain is `external`
 func GetEmailDomain(obj RuntimeObject) Domain {
-	emailAddress, exists := obj.GetAnnotations()[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
-	if !exists {
-		log.Error(nil, "no email address found in annotations", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "name", obj.GetName())
+	emailAddress := ""
+
+	switch obj.(type) {
+	case *toolchainv1alpha1.MasterUserRecord:
+		emailAddress = obj.(*toolchainv1alpha1.MasterUserRecord).Spec.PropagatedClaims.Email
+	case *toolchainv1alpha1.UserSignup:
+		emailAddress = obj.(*toolchainv1alpha1.UserSignup).Spec.IdentityClaims.Email
+	}
+	if emailAddress == "" {
+		log.Error(nil, "no email address found in object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "name", obj.GetName())
 	} else if internalDomainPattern.MatchString(emailAddress) {
 		return Internal
 	}
