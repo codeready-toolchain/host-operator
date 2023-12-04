@@ -124,10 +124,14 @@ func (r *Reconciler) ensureSpaceBindingDeletion(ctx context.Context, memberClust
 	if err != nil {
 		return err
 	}
-	if isBeingDeleted, err := r.deleteSpaceBinding(ctx, spaceBinding); err != nil {
-		return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
-	} else if isBeingDeleted {
-		return r.setStatusTerminating(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
+
+	// delete the SpaceBinding only if it's owned by the current SBR
+	if spaceBinding != nil && sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest) {
+		if isBeingDeleted, err := r.deleteSpaceBinding(ctx, spaceBinding); err != nil {
+			return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
+		} else if isBeingDeleted {
+			return r.setStatusTerminating(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
+		}
 	}
 
 	// Remove finalizer from SpaceBindingRequest
@@ -164,15 +168,6 @@ func (r *Reconciler) getSpaceBinding(ctx context.Context, spaceBindingRequest *t
 	// more than one spacebinding
 	if len(spaceBindings.Items) > 1 {
 		return nil, space, fmt.Errorf("expected 1 spacebinding for Space %s and MUR %s. But found %d", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord, len(spaceBindings.Items))
-	}
-
-	// check if existing spacebinding was created from spaceBindingRequest
-	if len(spaceBindings.Items) == 1 {
-		sbrLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
-		sbrNamespaceLabel := spaceBindings.Items[0].Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
-		if sbrLabel != spaceBindingRequest.GetName() || sbrNamespaceLabel != spaceBindingRequest.GetNamespace() {
-			return nil, space, fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
-		}
 	}
 
 	return &spaceBindings.Items[0], space, nil // all good
@@ -231,6 +226,13 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 	if err != nil {
 		return err
 	}
+
+	// check if existing spacebinding was created from spaceBindingRequest
+	// and return an error in case it was not.
+	if spaceBinding != nil && !sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest) {
+		return fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
+	}
+
 	// space is being deleted
 	if util.IsBeingDeleted(space) {
 		return errs.New("space is being deleted")
@@ -258,6 +260,15 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 
 	logger.Info("SpaceBinding already exists")
 	return r.updateExistingSpaceBinding(ctx, spaceBindingRequest, spaceBinding)
+}
+
+// sbrOwnsSpaceBinding check if the SpaceBinding was created by the given SpaceBindingRequest resource
+// returns true if it was created by the SBR
+// returns false if it wasn't created by the SBR
+func sbrOwnsSpaceBinding(spaceBinding *toolchainv1alpha1.SpaceBinding, spaceBindingRequest *toolchainv1alpha1.SpaceBindingRequest) bool {
+	sbrLabel := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestLabelKey]
+	sbrNamespaceLabel := spaceBinding.Labels[toolchainv1alpha1.SpaceBindingRequestNamespaceLabelKey]
+	return sbrLabel == spaceBindingRequest.GetName() && sbrNamespaceLabel == spaceBindingRequest.GetNamespace()
 }
 
 // updateExistingSpaceBinding updates the spacebinding with the config from the spaceBindingRequest.
