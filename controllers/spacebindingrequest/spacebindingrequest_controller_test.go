@@ -499,7 +499,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				HasFinalizer()
 		})
 
-		t.Run("SpaceBinding not managed by this SpaceBindingRequest CR can be deleted", func(t *testing.T) {
+		t.Run("SpaceBindingRequest CR is deleted but admin-generated SpaceBinding stays there", func(t *testing.T) {
 			// given
 			spaceBinding := spacebindingcommon.NewSpaceBinding(janeMur, janeSpace, "john") // there is already an admin generated SpaceBinding
 			// this SBR will fail for the conflict with the already existing SpaceBinding
