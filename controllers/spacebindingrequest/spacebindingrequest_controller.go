@@ -126,13 +126,11 @@ func (r *Reconciler) ensureSpaceBindingDeletion(ctx context.Context, memberClust
 	}
 
 	// delete the SpaceBinding only if it's owned by the current SBR
-	if spaceBinding != nil {
-		if ownedBySBR := sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest); ownedBySBR {
-			if isBeingDeleted, err := r.deleteSpaceBinding(ctx, spaceBinding); err != nil {
-				return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
-			} else if isBeingDeleted {
-				return r.setStatusTerminating(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
-			}
+	if spaceBinding != nil && sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest) {
+		if isBeingDeleted, err := r.deleteSpaceBinding(ctx, spaceBinding); err != nil {
+			return r.setStatusTerminatingFailed(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err)
+		} else if isBeingDeleted {
+			return r.setStatusTerminating(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
 		}
 	}
 
