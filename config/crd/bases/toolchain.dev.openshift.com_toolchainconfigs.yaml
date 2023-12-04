@@ -264,6 +264,12 @@ spec:
                             description: Captcha defines any configuration related
                               to captcha verification
                             properties:
+                              allowLowScoreReactivation:
+                                description: AllowLowScoreReactivation specifies whether
+                                  the reactivation for users with low captcha score
+                                  (below the RequiredScore) is enabled without the
+                                  need for manual approval.
+                                type: boolean
                               enabled:
                                 description: Enabled specifies whether the captcha
                                   verification feature is enabled or not
@@ -271,6 +277,13 @@ spec:
                               projectID:
                                 description: ProjectID defines the GCP project ID
                                   that has the recaptcha service enabled.
+                                type: string
+                              requiredScore:
+                                description: RequiredScore defines the lowest captcha
+                                  score, below this score the user cannot proceed
+                                  with the signup process at all. Users with captcha
+                                  score lower than the required one can still be approved
+                                  manually.
                                 type: string
                               scoreThreshold:
                                 description: ScoreThreshold defines the captcha assessment
