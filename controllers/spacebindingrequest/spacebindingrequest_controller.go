@@ -229,10 +229,8 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 
 	// check if existing spacebinding was created from spaceBindingRequest
 	// and return an error in case it was not.
-	if spaceBinding != nil {
-		if ownedBySBR := sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest); !ownedBySBR {
-			return fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
-		}
+	if spaceBinding != nil && !sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest) {
+		return fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
 	}
 
 	// space is being deleted
