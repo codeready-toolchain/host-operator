@@ -18,3 +18,4 @@ parameters:
   value: "24"
 - name: MEMORY_BUILD_REQUEST
   value: "128Gi"
+  
