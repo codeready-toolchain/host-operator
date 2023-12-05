@@ -270,6 +270,6 @@ parameters:
 - name: MEMORY_REQUEST
   value: "32Gi"
 - name: MEMORY_BUILD_LIMIT
-  value: "128Gi"
+  value: "256Gi"
 - name: MEMORY_BUILD_REQUEST
-  value: "64Gi"
+  value: "128Gi"
