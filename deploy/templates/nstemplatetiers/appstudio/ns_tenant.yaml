@@ -52,9 +52,8 @@ objects:
     scopes:
     - Terminating
     hard:
-      limits.cpu: "120"
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: "12"
+      requests.cpu: ${CPU_BUILD_REQUEST}
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -156,7 +155,6 @@ objects:
     limits:
     - type: "Container"
       default:
-        cpu: 2000m
         memory: 2Gi
       defaultRequest:
         cpu: 10m
@@ -270,6 +268,8 @@ parameters:
 - name: MEMORY_REQUEST
   value: "32Gi"
 - name: MEMORY_BUILD_LIMIT
-  value: "256Gi"
-- name: MEMORY_BUILD_REQUEST
   value: "128Gi"
+- name: CPU_BUILD_REQUEST
+  value: "12"
+- name: MEMORY_BUILD_REQUEST
+  value: "64Gi"
