@@ -15,6 +15,6 @@ parameters:
 - name: MEMORY_BUILD_LIMIT
   value: "256Gi"
 - name: CPU_BUILD_REQUEST
-  value: "12"
+  value: "24"
 - name: MEMORY_BUILD_REQUEST
   value: "128Gi"
