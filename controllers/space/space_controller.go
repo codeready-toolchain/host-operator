@@ -69,6 +69,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 // Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+	logger.Info("reconciling Space")
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
@@ -446,6 +447,7 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, space *toolchainv1alpha1.Space) error {
 	logger := log.FromContext(ctx)
 
+	logger.Info("terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(ctx, space); err != nil {
 		// space was already provisioned to a cluster
 		// let's not proceed with deletion
@@ -521,6 +523,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(ctx context.Context, space *
 		if !errors.IsNotFound(err) {
 			return false, err // something wrong happened
 		}
+		logger.Info("the NSTemplateSet resource is already deleted")
 		return false, nil // NSTemplateSet was already deleted
 	}
 	if util.IsBeingDeleted(nstmplSet) {
