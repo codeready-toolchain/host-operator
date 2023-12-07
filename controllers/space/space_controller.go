@@ -69,7 +69,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 // Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("MMM: reconciling Space")
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
@@ -145,8 +144,6 @@ const postponeDelay = 2 * time.Second
 // Returns `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1alpha1.Space) (time.Duration, error) { //nolint:gocyclo
 	logger := log.FromContext(ctx)
-
-	logger.Info("MMM: Enter ensureNSTemplateSet")
 
 	// deprovision from space.Status.TargetCluster if needed
 	if space.Status.TargetCluster != "" && space.Spec.TargetCluster != space.Status.TargetCluster {
@@ -266,8 +263,6 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info("MMM: Enter manageNSTemplateSet")
-
 	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
 	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
 	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
@@ -296,13 +291,11 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 		}
 		return spaceFound, nil
 	}
-	logger.Info("MMM: get spacebinding list, disableInheritance:",space.Spec.DisableInheritance)
 	spaceBindingLister := spacebinding.NewLister(listSpaceBindingsFunc, getSpaceFunc)
 	spaceBindings, err := spaceBindingLister.ListForSpace(space, []toolchainv1alpha1.SpaceBinding{})
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
 	}
-	logger.Info("MMM: num spacebindings found:", len(spaceBindings))
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(ctx, types.NamespacedName{
@@ -453,7 +446,6 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, space *toolchainv1alpha1.Space) error {
 	logger := log.FromContext(ctx)
 
-	logger.Info("MMM: terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(ctx, space); err != nil {
 		// space was already provisioned to a cluster
 		// let's not proceed with deletion
@@ -529,7 +521,6 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(ctx context.Context, space *
 		if !errors.IsNotFound(err) {
 			return false, err // something wrong happened
 		}
-		logger.Info("MMM: the NSTemplateSet resource is already deleted")
 		return false, nil // NSTemplateSet was already deleted
 	}
 	if util.IsBeingDeleted(nstmplSet) {
