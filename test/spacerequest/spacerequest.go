@@ -39,6 +39,12 @@ func WithTargetClusterRoles(targetClusterRoles []string) Option {
 	}
 }
 
+func WithDisableInheritance(disableInheritance bool) Option {
+	return func(spaceRequest *toolchainv1alpha1.SpaceRequest) {
+		spaceRequest.Spec.DisableInheritance = disableInheritance
+	}
+}
+
 func WithDeletionTimestamp() Option {
 	return func(spaceRequest *toolchainv1alpha1.SpaceRequest) {
 		now := metav1.NewTime(time.Now())

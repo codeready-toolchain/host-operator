@@ -1584,7 +1584,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-			space := NewSpace(userSignup, "member1", "foo", "base")
+			space := NewSpace(userSignup, "member1", "foo", "base", false)
 
 			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 			initObjs := []runtime.Object{userSignup, baseNSTemplateTier, deactivate30Tier}
@@ -1868,7 +1868,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		},
 	}
 
-	space := NewSpace(userSignup, "member1", "foo", "base")
+	space := NewSpace(userSignup, "member1", "foo", "base", false)
 
 	spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
 
