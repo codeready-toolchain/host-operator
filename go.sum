@@ -550,8 +550,8 @@ github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
-github.com/sbryzak/toolchain-common v0.0.0-20231201020534-3a9a03216f83 h1:ujkVrqLjkmUSVEargXtlVdKdmxzp0gwZMjlB9k0p6Pw=
-github.com/sbryzak/toolchain-common v0.0.0-20231201020534-3a9a03216f83/go.mod h1:SonFn2Nu9p70l4gYaf4+XUzCn9dQdpFfpqQ+E4MVILU=
+github.com/sbryzak/toolchain-common v0.0.0-20231212211632-8b31f7c3d4b8 h1:wZ81O17LUSbM7tV85VD1emL1vgL2QtUO7OSTJALgDzg=
+github.com/sbryzak/toolchain-common v0.0.0-20231212211632-8b31f7c3d4b8/go.mod h1:cEkJH2jz88KIZt5W8wSnK3Gz6OfszzXv74OIndbTlRE=
 github.com/scylladb/go-set v1.0.2/go.mod h1:DkpGd78rljTxKAnTDPFqXSGxvETQnJyuSOQwsHycqfs=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/analytics-go/v3 v3.2.1 h1:G+f90zxtc1p9G+WigVyTR0xNfOghOGs/PYAlljLOyeg=

@@ -106,7 +106,9 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:   "foo",
+			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+				UserID: "foo",
+			},
 			Disabled: false,
 		},
 	}
@@ -117,7 +119,9 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			},
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:   "foo",
+			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+				UserID: "foo",
+			},
 			Disabled: false,
 			TierName: "base1ns",
 		},
