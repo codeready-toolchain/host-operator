@@ -2475,7 +2475,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			Username: meta.Name,
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					//Email: "john.doe@redhat.com",
+					Email: "john.doe@redhat.com",
 				},
 			},
 		},
