@@ -25,11 +25,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 
 	userSignupOld := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
@@ -38,17 +36,18 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "jane.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "jane.doe@redhat.com",
+				},
 			},
 		},
 	}
 
 	userSignupUnchanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
@@ -57,17 +56,18 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "alice.mayweather.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "jane.doe@redhat.com",
+				},
 			},
 		},
 	}
 
 	userSignupWithGenerationChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
@@ -76,17 +76,18 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "alice.mayweather.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "jane.doe@redhat.com",
+				},
 			},
 		},
 	}
 
 	userSignupWithEmailHashLabelChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
 			},
@@ -95,17 +96,18 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "alice.mayweather.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "jane.doe@redhat.com",
+				},
 			},
 		},
 	}
 
-	userSignupWithEmailAnnotationChanged := &toolchainv1alpha1.UserSignup{
+	userSignupWithEmailAddressChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
@@ -114,17 +116,18 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "alice.mayweather.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "alice.mayweather.doe@redhat.com",
+				},
 			},
 		},
 	}
 
 	userSignupWithMigrationInProgressAnnotationRemoved := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignupName,
-			Namespace: test.HostOperatorNs,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-			},
+			Name:        userSignupName,
+			Namespace:   test.HostOperatorNs,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
@@ -133,6 +136,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PreferredUsername: "alice.mayweather.doe@redhat.com",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "jane.doe@redhat.com",
+				},
 			},
 		},
 	}
@@ -180,7 +186,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	t.Run("test UserSignupChangedPredicate returns true when email annotation changed", func(t *testing.T) {
 		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
-			ObjectNew: userSignupWithEmailAnnotationChanged,
+			ObjectNew: userSignupWithEmailAddressChanged,
 		}
 		require.True(t, pred.Update(e))
 	})

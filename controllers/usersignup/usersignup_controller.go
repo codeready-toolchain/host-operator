@@ -240,7 +240,7 @@ func (r *Reconciler) isUserBanned(
 ) (bool, error) {
 	banned := false
 	// Lookup the user email annotation
-	if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+	if userSignup.Spec.IdentityClaims.Email != "" {
 
 		// Lookup the email hash label
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
@@ -256,13 +256,13 @@ func (r *Reconciler) isUserBanned(
 
 			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
 			for _, bannedUser := range bannedUserList.Items {
-				if bannedUser.Spec.Email == emailLbl {
+				if bannedUser.Spec.Email == userSignup.Spec.IdentityClaims.Email {
 					banned = true
 					break
 				}
 			}
 
-			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
+			hashIsValid := validateEmailHash(userSignup.Spec.IdentityClaims.Email, emailHashLbl)
 			if !hashIsValid {
 				err := fmt.Errorf("hash is invalid")
 				return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidEmailHash, err, "the email hash '%s' is invalid ", emailHashLbl)

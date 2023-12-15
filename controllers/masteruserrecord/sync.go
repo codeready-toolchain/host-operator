@@ -244,7 +244,7 @@ func alignReadiness(ctx context.Context, scheme *runtime.Scheme, hostClient runt
 				WithTemplate(notificationtemplates.UserProvisionedTemplateName).
 				WithUserContext(userSignup).
 				WithKeysAndValues(keysAndVals).
-				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+				Create(userSignup.Spec.IdentityClaims.Email)
 
 			if err != nil {
 				return false, err
