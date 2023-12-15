@@ -230,9 +230,6 @@ func (r *Reconciler) ensureUserAccount(ctx context.Context, mur *toolchainv1alph
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, mur)
 
-			// Remove this after all users have been migrated to new IdP client
-			userAccount.Spec.OriginalSub = mur.Spec.OriginalSub
-
 			if err := memberCluster.Client.Create(ctx, userAccount); err != nil {
 				return false, r.wrapErrorWithStatusUpdate(ctx, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", targetCluster)
@@ -433,28 +430,14 @@ func newUserAccount(nsdName types.NamespacedName, mur *toolchainv1alpha1.MasterU
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserEmailAnnotationKey: mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey],
-			},
 			Labels: map[string]string{
 				toolchainv1alpha1.TierLabelKey: mur.Spec.TierName,
 			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:           mur.Spec.UserID,
 			Disabled:         mur.Spec.Disabled,
 			PropagatedClaims: mur.Spec.PropagatedClaims,
 		},
-	}
-
-	val, found := mur.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
-	if found && val != "" {
-		ua.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = val
-	}
-
-	val, found = mur.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
-	if found && val != "" {
-		ua.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = val
 	}
 
 	return ua

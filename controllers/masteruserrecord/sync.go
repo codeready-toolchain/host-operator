@@ -41,8 +41,6 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 			return false, err
 		}
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
-		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
-		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 		s.memberUserAcc.Spec.PropagatedClaims = s.record.Spec.PropagatedClaims
 
 		// In addition to synchronizing the spec, ensure both the tier label and email annotation are set
@@ -54,7 +52,6 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 		if s.memberUserAcc.Annotations == nil {
 			s.memberUserAcc.Annotations = map[string]string{}
 		}
-		s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 
 		err := s.memberCluster.Client.Update(ctx, s.memberUserAcc)
 		if err != nil {
@@ -69,11 +66,10 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 
 func (s *Synchronizer) isSynchronized() bool {
 	return s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
-		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
 		s.memberUserAcc.Spec.PropagatedClaims == s.record.Spec.PropagatedClaims &&
-		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
-		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
+		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName
 }
+
 func (s *Synchronizer) removeAccountFromStatus(ctx context.Context) error {
 	for i := range s.record.Status.UserAccounts {
 		if s.record.Status.UserAccounts[i].Cluster.Name == s.memberCluster.Name {

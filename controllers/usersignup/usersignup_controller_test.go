@@ -125,22 +125,9 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
-			val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
-			if ok {
-				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
-					HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, val)
-			}
-
-			val, ok = userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
-			if ok {
-				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
-					HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, val)
-			}
-
 			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-				HasOriginalSub(userSignup.Spec.OriginalSub).
 				HasUserAccounts(1).Get()
 			switch testname {
 			case "automatically approved via social event":
@@ -404,7 +391,6 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.Username, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*deactivate30Tier).
 		Get()
@@ -736,7 +722,6 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*customUserTier).
 		Get()
@@ -1390,7 +1375,6 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*deactivate30Tier).
 		Get()
@@ -1897,7 +1881,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Name:      mur.Name,
 	}, murInstance)
 	require.NoError(t, err)
-	require.Equal(t, userSignup.Spec.OriginalSub, murInstance.Spec.OriginalSub)
 
 	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
 		// given the space is ready
@@ -2490,6 +2473,11 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: meta.Name,
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email: "john.doe@redhat.com",
+				},
+			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
@@ -4591,7 +4579,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 			Username: meta.Name,
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub:         "44332211",
+					Sub:         "UserID123",
 					UserID:      "135246",
 					AccountID:   "357468",
 					OriginalSub: "11223344",
