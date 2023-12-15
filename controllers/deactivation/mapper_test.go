@@ -64,7 +64,9 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 				CreationTimestamp: metav1.Now(),
 			},
 			Spec: toolchainv1alpha1.MasterUserRecordSpec{
-				UserID: "echo",
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					UserID: "echo",
+				},
 			},
 			Status: toolchainv1alpha1.MasterUserRecordStatus{},
 		}
