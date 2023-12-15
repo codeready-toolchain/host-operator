@@ -131,11 +131,16 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "foo@redhat.com",
-				Userid:     "foo",
-				GivenName:  "Foo",
-				FamilyName: "Bar",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+						Sub:   "foo",
+						Email: "foo@redhat.com",
+					},
+					PreferredUsername: "foo@redhat.com",
+					GivenName:         "Foo",
+					FamilyName:        "Bar",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		controller, cl := newController(t, ds, userSignup)
@@ -238,10 +243,13 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "jane@redhat.com",
-				GivenName:  "jane",
-				FamilyName: "doe",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "jane@redhat.com",
+					GivenName:         "jane",
+					FamilyName:        "doe",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		// pass in nil for deliveryService since send won't be used (sending skipped)
@@ -276,10 +284,13 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "foo@redhat.com",
-				GivenName:  "Foo",
-				FamilyName: "Bar",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "foo@redhat.com",
+					GivenName:         "Foo",
+					FamilyName:        "Bar",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		mds := &MockDeliveryService{}

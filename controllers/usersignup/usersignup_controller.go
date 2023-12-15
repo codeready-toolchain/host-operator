@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	logger = logger.WithValues("username", userSignup.Spec.Username)
+	logger = logger.WithValues("username", userSignup.Spec.IdentityClaims.PreferredUsername)
 
 	if util.IsBeingDeleted(userSignup) {
 		logger.Info("The UserSignup is being deleted")
@@ -568,7 +568,7 @@ func (r *Reconciler) generateCompliantUsername(
 	instance *toolchainv1alpha1.UserSignup,
 ) (string, error) {
 	// transformed should now be of maxLength specified in TransformUsername
-	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
+	transformed := usersignup.TransformUsername(instance.Spec.IdentityClaims.PreferredUsername, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
 	maxlengthWithSuffix := usersignup.MaxLength - 4
 	newUsername := transformed
@@ -608,7 +608,7 @@ func (r *Reconciler) generateCompliantUsername(
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername))
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
@@ -631,7 +631,7 @@ func (r *Reconciler) provisionMasterUserRecord(
 	compliantUsername, err := r.generateCompliantUsername(ctx, config, userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
+			"Error generating compliant username for %s", userSignup.Spec.IdentityClaims.PreferredUsername)
 	}
 
 	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)

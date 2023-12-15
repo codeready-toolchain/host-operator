@@ -477,9 +477,13 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 	us := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta(username, email),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username:      email,
 			TargetCluster: "east",
-			Userid:        username,
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: username,
+				},
+				PreferredUsername: email,
+			},
 		},
 	}
 	states.SetApprovedManually(us, true)

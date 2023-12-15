@@ -36,7 +36,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "jane.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "jane.doe@redhat.com",
+			},
 		},
 	}
 
@@ -53,7 +55,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
 		},
 	}
 
@@ -70,7 +74,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 2,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
 		},
 	}
 
@@ -87,7 +93,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 2,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
 		},
 	}
 
@@ -104,7 +112,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 2,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
 		},
 	}
 
@@ -121,7 +131,9 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 2,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
 		},
 	}
 

@@ -389,7 +389,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.Username, r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
 		HasTier(*deactivate30Tier).
@@ -397,8 +397,9 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
 	// space and spacebinding should be created after the next reconcile
-	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).DoesNotExist()
-	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).DoesNotExist()
+	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).DoesNotExist()
+	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername,
+		userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).DoesNotExist()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -431,7 +432,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should now be created
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			Exists().
 			HasSpecTargetCluster("member1").
@@ -441,7 +442,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
 			// set the space to ready
-			err = r.setSpaceToReady(userSignup.Spec.Username)
+			err = r.setSpaceToReady(userSignup.Spec.IdentityClaims.PreferredUsername)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -451,12 +452,13 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			require.Equal(t, reconcile.Result{}, res)
 
 			// spacebinding should be created
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername,
+				userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Spec.Username).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Spec.Username).
-				HasSpec(mur.Name, userSignup.Spec.Username, "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Spec.IdentityClaims.PreferredUsername).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Spec.IdentityClaims.PreferredUsername).
+				HasSpec(mur.Name, userSignup.Spec.IdentityClaims.PreferredUsername, "admin")
 
 			// Lookup the userSignup one more time and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1836,7 +1838,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 		"toolchain.dev.openshift.com/approved":            "true",
 	}
-	userSignup.Spec.OriginalSub = "original-sub:foo"
+	userSignup.Spec.IdentityClaims.OriginalSub = "original-sub:foo"
 
 	// Create a MUR with the same UserID but don't set the OriginalSub property
 	mur := &toolchainv1alpha1.MasterUserRecord{
@@ -2284,7 +2286,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		notification := notifications.Items[0]
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
-		require.Equal(t, userSignup.Spec.Userid, notification.Spec.Context["UserID"])
+		require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notification.Spec.Context["Sub"])
 		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
@@ -2368,9 +2370,13 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: "UserID123",
+				},
+				PreferredUsername: meta.Name,
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2471,12 +2477,12 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Email: "john.doe@redhat.com",
+					Email:  "john.doe@redhat.com",
+					UserID: "UserID123",
 				},
+				PreferredUsername: meta.Name,
 			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
@@ -2669,9 +2675,13 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: "edward.jones@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateApproved},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: "UserID123",
+				},
+				PreferredUsername: "edward.jones@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateApproved},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2869,9 +2879,13 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID089",
-			Username: "edward.jones@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{"deactivating"},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: "UserID089",
+				},
+				PreferredUsername: "edward.jones@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{"deactivating"},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2924,7 +2938,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
+	require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notifications.Items[0].Spec.Context["Sub"])
 
 	// Confirm the status is correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2985,7 +2999,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
+	require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notifications.Items[0].Spec.Context["Sub"])
 
 	// Confirm the status is still correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3312,9 +3326,13 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Userid:   "UserID123",
-				Username: "alice.mayweather.doe@redhat.com",
-				States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+						Sub: "UserID123",
+					},
+					PreferredUsername: "alice.mayweather.doe@redhat.com",
+				},
+				States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 			},
 			Status: toolchainv1alpha1.UserSignupStatus{
 				Conditions: []toolchainv1alpha1.Condition{
@@ -3430,9 +3448,13 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: "alice.mayweather.doe@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: "UserID123",
+				},
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -3914,7 +3936,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
-			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
+			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", prefix, name)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, deactivate30Tier)
 			InitializeCounters(t, NewToolchainStatus(
@@ -3959,7 +3981,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
-			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
+			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", name, suffix)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, deactivate30Tier)
 			InitializeCounters(t, NewToolchainStatus(
@@ -4575,8 +4597,6 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
 					Sub:         "UserID123",
@@ -4585,6 +4605,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 					OriginalSub: "11223344",
 					Email:       "joe@redhat.com",
 				},
+				PreferredUsername: meta.Name,
 			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
