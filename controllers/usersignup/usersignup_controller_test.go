@@ -82,9 +82,9 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueDeactivated),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
 			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "9834722"),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "4837262"),
-			commonsignup.WithOriginalSub("original-sub-value:1234")),
+			commonsignup.WithOriginalSub("original-sub-value:1234"),
+			commonsignup.WithUserID("9834722"),
+			commonsignup.WithAccountID("4837262")),
 		"automatically approved via unknown social event": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
