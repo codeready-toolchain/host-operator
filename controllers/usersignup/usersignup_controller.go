@@ -239,7 +239,7 @@ func (r *Reconciler) isUserBanned(
 	userSignup *toolchainv1alpha1.UserSignup,
 ) (bool, error) {
 	banned := false
-	// Lookup the user email annotation
+	// Lookup the user email
 	if userSignup.Spec.IdentityClaims.Email != "" {
 
 		// Lookup the email hash label
@@ -274,9 +274,9 @@ func (r *Reconciler) isUserBanned(
 				"the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 		}
 	} else {
-		err := fmt.Errorf("missing annotation at usersignup")
-		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmailAnnotation, err,
-			"the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
+		err := fmt.Errorf("missing email at usersignup")
+		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmail, err,
+			"the email address is not present")
 	}
 	return banned, nil
 }
@@ -765,6 +765,9 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	}
 	// annotation was missing so assume it's the first activation
 	logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+	if userSignup.Annotations == nil {
+		userSignup.Annotations = make(map[string]string)
+	}
 	userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
 	return 1
 }
@@ -816,7 +819,7 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
@@ -852,7 +855,7 @@ func (r *Reconciler) sendDeactivatedNotification(ctx context.Context, config too
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {

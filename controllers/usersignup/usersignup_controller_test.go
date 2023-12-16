@@ -67,8 +67,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "198573"),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "387832"),
+			commonsignup.WithUserID("198573"),
+			commonsignup.WithAccountID("387832"),
 			commonsignup.WithOriginalSub("original-sub-value:1234")),
 		"automatically approved with valid activation annotation": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
@@ -496,10 +496,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 }
 
-func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
+func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(commonsignup.WithoutAnnotations())
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Spec.IdentityClaims.Email = ""
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
@@ -529,8 +530,8 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  "MissingUserEmailAnnotation",
-			Message: "missing annotation at usersignup",
+			Reason:  "MissingUserEmail",
+			Message: "missing email at usersignup",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -547,8 +548,9 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
 		commonsignup.WithLabel("toolchain.dev.openshift.com/approved", "false"),
-		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "foo@redhat.com"),
 	)
+
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
@@ -638,9 +640,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
-	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-	}
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
@@ -1831,9 +1831,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup()
-	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-	}
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 	userSignup.Labels = map[string]string{
 		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 		"toolchain.dev.openshift.com/approved":            "true",
@@ -1847,9 +1845,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
 				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
-			},
-			Annotations: map[string]string{
-				toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
 			},
 		},
 	}
@@ -2080,7 +2075,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.Equal(t, mur.Spec.PropagatedClaims, userSignup.Spec.IdentityClaims.PropagatedClaims)
 
 	// Modify one of the propagated claims
-	userSignup.Spec.IdentityClaims.PropagatedClaims.Email = "abc@def.com"
+	userSignup.Spec.IdentityClaims.PropagatedClaims.UserID = "314159265358979"
 
 	// Reconcile the UserSignup again
 	r, req, _ = prepareReconcile(t, userSignup.Name, ready, userSignup, deactivate30Tier)
@@ -2093,7 +2088,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.NoError(t, err)
 
 	// Confirm the propagated claim has been updated in the MUR
-	require.Equal(t, "abc@def.com", mur.Spec.PropagatedClaims.Email)
+	require.Equal(t, "314159265358979", mur.Spec.PropagatedClaims.UserID)
 }
 
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
@@ -2372,7 +2367,8 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub: "UserID123",
+					Sub:   "UserID123",
+					Email: "john.doe@redhat.com",
 				},
 				PreferredUsername: meta.Name,
 			},
@@ -2677,7 +2673,8 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub: "UserID123",
+					Sub:   "UserID123",
+					Email: "edward.jones@redhat.com",
 				},
 				PreferredUsername: "edward.jones@redhat.com",
 			},
@@ -2881,7 +2878,8 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub: "UserID089",
+					Sub:   "UserID089",
+					Email: "edward.jones@redhat.com",
 				},
 				PreferredUsername: "edward.jones@redhat.com",
 			},
@@ -3328,7 +3326,8 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-						Sub: "UserID123",
+						Sub:   "UserID123",
+						Email: "alice.mayweather.doe@redhat.com",
 					},
 					PreferredUsername: "alice.mayweather.doe@redhat.com",
 				},

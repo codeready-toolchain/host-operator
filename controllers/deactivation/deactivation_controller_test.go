@@ -464,9 +464,6 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      name,
 		Namespace: operatorNamespace,
-		Annotations: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
-		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
 		},
@@ -480,7 +477,8 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 			TargetCluster: "east",
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub: username,
+					Sub:   username,
+					Email: email,
 				},
 				PreferredUsername: email,
 			},
