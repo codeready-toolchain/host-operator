@@ -4602,7 +4602,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 					UserID:      "135246",
 					AccountID:   "357468",
 					OriginalSub: "11223344",
-					Email:       "joe@redhat.com",
+					Email:       "john.doe@redhat.com",
 				},
 				PreferredUsername: meta.Name,
 			},
@@ -4612,6 +4612,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		},
 	}
 	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Spec.PropagatedClaims.Email = "john.doe@redhat.com"
 	mur.Labels = map[string]string{
 		toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
 		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
