@@ -33,14 +33,20 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username: "foo@redhat.com",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "foo@redhat.com",
+				},
 			},
 		}
 
 		userSignup2 := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username: "alice.mayweather.doe@redhat.com",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "alice.mayweather.doe@redhat.com",
+				},
 			},
 		}
 
