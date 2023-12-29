@@ -653,7 +653,8 @@ func (r *Reconciler) provisionMasterUserRecord(
 
 	// track the MUR creation as an account activation event in Segment
 	if r.SegmentClient != nil {
-		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.IdentityClaims.UserID,
+			userSignup.Spec.IdentityClaims.AccountID)
 	} else {
 		logger.Info("segment client not configured to track account activations")
 	}

@@ -79,15 +79,6 @@ spec:
           spec:
             description: UserSignupSpec defines the desired state of UserSignup
             properties:
-              company:
-                description: The user's company name, obtained from the identity provider.
-                type: string
-              familyName:
-                description: The user's last name, obtained from the identity provider.
-                type: string
-              givenName:
-                description: The user's first name, obtained from the identity provider.
-                type: string
               identityClaims:
                 description: IdentityClaims contains as-is claim values extracted
                   from the user's access token
@@ -145,16 +136,6 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
-              userid:
-                description: The user's user ID, obtained from the identity provider
-                  from the 'sub' (subject) claim
-                type: string
-              username:
-                description: The user's username, obtained from the identity provider.
-                type: string
-            required:
-            - userid
-            - username
             type: object
           status:
             description: UserSignupStatus defines the observed state of UserSignup
