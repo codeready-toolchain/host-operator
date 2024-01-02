@@ -215,11 +215,11 @@ spec:
                               keys URL
                             type: string
                           ssoBaseURL:
-                            description: SsoBaseURL specifies the SSO base URL such
+                            description: SSOBaseURL specifies the SSO base URL such
                               as https://sso.redhat.com
                             type: string
                           ssoRealm:
-                            description: SsoRealm specifies the SSO realm name
+                            description: SSORealm specifies the SSO realm name
                             type: string
                         type: object
                       environment:
