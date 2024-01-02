@@ -120,11 +120,6 @@ spec:
                 - preferredUsername
                 - sub
                 type: object
-              originalSub:
-                description: OriginalSub is an optional property temporarily introduced
-                  for the purpose of migrating the users to a new IdP provider client,
-                  and contains the user's "original-sub" claim
-                type: string
               states:
                 description: States contains a number of values that reflect the desired
                   state of the UserSignup.
