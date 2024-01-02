@@ -200,10 +200,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
-		murtest.WithOwnerLabel("john-123"),
-		murtest.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "123456"),
-		murtest.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "987654"))
-	mur.Spec.OriginalSub = "original-sub:12345"
+		murtest.WithOwnerLabel("john-123"))
 
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
@@ -233,12 +230,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		Exists().
 		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "123456").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "987654").
 		HasSpec(toolchainv1alpha1.UserAccountSpec{
-			UserID:           mur.Spec.UserID,
 			Disabled:         false,
-			OriginalSub:      mur.Spec.OriginalSub,
 			PropagatedClaims: mur.Spec.PropagatedClaims,
 		})
 
@@ -262,10 +255,7 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("ricky-123"))
 	mur := murtest.NewMasterUserRecord(t, "ricky",
 		murtest.WithOwnerLabel("ricky-123"),
-		murtest.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888"),
-		murtest.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666"),
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-	mur.Spec.OriginalSub = "original-sub:ZZZZZ"
 
 	spaceBinding := spacebindingtest.NewSpaceBinding("ricky", "ricky-space", "admin", "ricky-123")
 	space := spacetest.NewSpace(mur.Namespace, "ricky-space",
@@ -302,12 +292,8 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 		Exists().
 		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666").
 		HasSpec(toolchainv1alpha1.UserAccountSpec{
-			UserID:           mur.Spec.UserID,
 			Disabled:         false,
-			OriginalSub:      mur.Spec.OriginalSub,
 			PropagatedClaims: mur.Spec.PropagatedClaims,
 		})
 
@@ -338,12 +324,8 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 		Exists().
 		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "999888").
-		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "777666").
 		HasSpec(toolchainv1alpha1.UserAccountSpec{
-			UserID:           mur.Spec.UserID,
 			Disabled:         false,
-			OriginalSub:      mur.Spec.OriginalSub,
 			PropagatedClaims: mur.Spec.PropagatedClaims,
 		})
 }

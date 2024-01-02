@@ -22,9 +22,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 	// then
 	expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
 		commonmur.WithOwnerLabel(userSignup.Name),
-		commonmur.TierName("deactivate90"),
-		commonmur.UserID("UserID123"),
-		commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+		commonmur.TierName("deactivate90"))
 
 	expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 
@@ -43,7 +41,6 @@ func TestNewMasterUserRecordWhenSpaceCreationIsSkipped(t *testing.T) {
 		commonmur.WithOwnerLabel(userSignup.Name),
 		commonmur.TierName("deactivate90"),
 		commonmur.UserID("UserID123"),
-		commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"),
 		commonmur.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
 
 	expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
@@ -68,9 +65,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.False(t, changed)
 			expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
 				commonmur.WithOwnerLabel(userSignup.Name),
-				commonmur.TierName("deactivate90"),
-				commonmur.UserID("UserID123"),
-				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+				commonmur.TierName("deactivate90"))
 			expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 			assert.Equal(t, expectedMUR, mur)
 		})
@@ -90,9 +85,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.True(t, changed)
 			expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
 				commonmur.WithOwnerLabel(userSignup.Name),
-				commonmur.TierName("deactivate90"),
-				commonmur.UserID("UserID123"),
-				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+				commonmur.TierName("deactivate90"))
 			expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 			assert.Equal(t, expectedMUR, mur)
 		})

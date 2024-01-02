@@ -63,7 +63,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
+	reqLogger = reqLogger.WithValues("username", instance.Spec.IdentityClaims.PreferredUsername)
 	ctx = log.IntoContext(ctx, reqLogger)
 
 	if util.IsBeingDeleted(instance) {
