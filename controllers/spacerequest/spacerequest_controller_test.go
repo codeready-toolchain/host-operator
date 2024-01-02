@@ -390,6 +390,56 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasTier("appstudio").
 				HasSpecTargetClusterRoles(srClusterRoles)
 		})
+
+		t.Run("return first secret when there's more then one", func(t *testing.T) {
+			// given
+			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte("kubeconfig1"),
+			})
+			kubeconfigSecret1.StringData = map[string]string{
+				"kubeconfig": fakeKubeConfigSecret("member-1"),
+			}
+			kubeconfigSecret1.Labels = map[string]string{}
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
+			kubeconfigSecret2 := test.CreateSecret("jane-xyz2", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte("kubeconfig2"),
+			})
+			kubeconfigSecret2.Labels = map[string]string{}
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			member1Client := test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1, kubeconfigSecret2)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).
+				HasStatusTargetClusterURL(member1.APIEndpoint).
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "jane-xyz1"}}). // secret is the first one created
+				HasFinalizer()
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -657,45 +707,6 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to get parentSpace: spaces.toolchain.dev.openshift.com \"jane\" not found")
-		})
-
-		t.Run("invalid number of secrets found", func(t *testing.T) {
-			// given
-			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
-				"kubeconfig": []byte("kubeconfig1"),
-			})
-			kubeconfigSecret1.Labels = map[string]string{}
-			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
-			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
-			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
-			kubeconfigSecret2 := test.CreateSecret("jane-xyz2", sr.Namespace, map[string][]byte{
-				"kubeconfig": []byte("kubeconfig2"),
-			})
-			kubeconfigSecret2.Labels = map[string]string{}
-			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
-			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
-			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
-			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
-				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
-				spacetest.WithStatusTargetCluster("member-1"),
-				spacetest.WithSpecParentSpace("jane"),
-				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
-					Name: "jane-env",
-					Type: "default",
-				}}),
-				spacetest.WithTierName(sr.Spec.TierName))
-			member1Client := test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1, kubeconfigSecret2)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "invalid number of secrets found. actual 2, expected 1")
 		})
 
 		t.Run("unable to get parent space", func(t *testing.T) {

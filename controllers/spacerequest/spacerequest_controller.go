@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -486,7 +487,18 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 
 		case len(secretList.Items) > 1:
 			// some unexpected issue causing to many secrets
-			return fmt.Errorf("invalid number of secrets found. actual %d, expected %d", len(secretList.Items), 1)
+			// this ca be caused by the client cache which is not up-to-date immediately after the first secret is created.
+			logger.Error(fmt.Errorf("invalid number of secrets found. actual %d, expected %d", len(secretList.Items), 1), "defaulting on the first secret in alphabetical order")
+			// Sort alphabetically the list of secrets
+			// so that in case of multiple secrets for the same namespace we always return the same one.
+			sort.Slice(secretList.Items, func(i, j int) bool {
+				return secretList.Items[i].Name < secretList.Items[j].Name
+			})
+			// let's default on the first secret, as they should all be valid, and they will all be deleted once the SpaceRequest resource is deleted.
+			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
+				Name:      namespace.Name,
+				SecretRef: secretList.Items[0].Name,
+			})
 		}
 
 	}
