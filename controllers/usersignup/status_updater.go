@@ -440,3 +440,11 @@ func (u *StatusUpdater) updateStatusConditions(ctx context.Context, userSignup *
 	}
 	return u.Client.Status().Update(ctx, userSignup)
 }
+
+func (u *StatusUpdater) updateStatusHomeSpace(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, spaceName string) error {
+	if userSignup.Status.HomeSpace != spaceName {
+		userSignup.Status.HomeSpace = spaceName
+		return u.Client.Status().Update(ctx, userSignup)
+	}
+	return nil // Nothing changed
+}
