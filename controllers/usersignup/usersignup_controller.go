@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	logger = logger.WithValues("username", userSignup.Spec.Username)
+	logger = logger.WithValues("username", userSignup.Spec.IdentityClaims.PreferredUsername)
 
 	if util.IsBeingDeleted(userSignup) {
 		logger.Info("The UserSignup is being deleted")
@@ -239,8 +239,8 @@ func (r *Reconciler) isUserBanned(
 	userSignup *toolchainv1alpha1.UserSignup,
 ) (bool, error) {
 	banned := false
-	// Lookup the user email annotation
-	if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+	// Lookup the user email
+	if userSignup.Spec.IdentityClaims.Email != "" {
 
 		// Lookup the email hash label
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
@@ -256,13 +256,13 @@ func (r *Reconciler) isUserBanned(
 
 			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
 			for _, bannedUser := range bannedUserList.Items {
-				if bannedUser.Spec.Email == emailLbl {
+				if bannedUser.Spec.Email == userSignup.Spec.IdentityClaims.Email {
 					banned = true
 					break
 				}
 			}
 
-			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
+			hashIsValid := validateEmailHash(userSignup.Spec.IdentityClaims.Email, emailHashLbl)
 			if !hashIsValid {
 				err := fmt.Errorf("hash is invalid")
 				return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidEmailHash, err, "the email hash '%s' is invalid ", emailHashLbl)
@@ -274,9 +274,9 @@ func (r *Reconciler) isUserBanned(
 				"the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 		}
 	} else {
-		err := fmt.Errorf("missing annotation at usersignup")
-		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmailAnnotation, err,
-			"the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
+		err := fmt.Errorf("missing email at usersignup")
+		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmail, err,
+			"the email address is not present")
 	}
 	return banned, nil
 }
@@ -572,7 +572,7 @@ func (r *Reconciler) generateCompliantUsername(
 	instance *toolchainv1alpha1.UserSignup,
 ) (string, error) {
 	// transformed should now be of maxLength specified in TransformUsername
-	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
+	transformed := usersignup.TransformUsername(instance.Spec.IdentityClaims.PreferredUsername, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
 	maxlengthWithSuffix := usersignup.MaxLength - 4
 	newUsername := transformed
@@ -612,7 +612,7 @@ func (r *Reconciler) generateCompliantUsername(
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername))
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
@@ -635,7 +635,7 @@ func (r *Reconciler) provisionMasterUserRecord(
 	compliantUsername, err := r.generateCompliantUsername(ctx, config, userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
+			"Error generating compliant username for %s", userSignup.Spec.IdentityClaims.PreferredUsername)
 	}
 
 	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)
@@ -769,6 +769,9 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	}
 	// annotation was missing so assume it's the first activation
 	logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+	if userSignup.Annotations == nil {
+		userSignup.Annotations = make(map[string]string)
+	}
 	userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
 	return 1
 }
@@ -820,7 +823,7 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
@@ -856,7 +859,7 @@ func (r *Reconciler) sendDeactivatedNotification(ctx context.Context, config too
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {

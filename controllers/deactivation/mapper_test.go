@@ -18,7 +18,9 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username: "foo@redhat.com",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PreferredUsername: "foo@redhat.com",
+				},
 			},
 			Status: toolchainv1alpha1.UserSignupStatus{
 				CompliantUsername: "foo",
@@ -41,7 +43,9 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "bravo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username: "bravo@redhat.com",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PreferredUsername: "bravo@redhat.com",
+				},
 			},
 			Status: toolchainv1alpha1.UserSignupStatus{
 				CompliantUsername: "",

@@ -224,14 +224,14 @@ func (u *StatusUpdater) setStatusFailedToReadBannedUsers(ctx context.Context, us
 		})
 }
 
-func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusInvalidMissingUserEmail(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		ctx,
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailAnnotationReason,
+			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailReason,
 			Message: message,
 		})
 }
