@@ -53,6 +53,14 @@ func (a *UserSignupAssertion) HasCompliantUsername(name string) *UserSignupAsser
 	return a
 }
 
+// Checks that the HomeSpace matches the given string
+func (a *UserSignupAssertion) HasHomeSpace(name string) *UserSignupAssertion {
+	err := a.loadUserSignup()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, name, a.usersignup.Status.HomeSpace)
+	return a
+}
+
 func (a *UserSignupAssertion) HasLabel(key, value string) *UserSignupAssertion {
 	err := a.loadUserSignup()
 	require.NoError(a.t, err)
