@@ -487,7 +487,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 
 		case len(secretList.Items) > 1:
 			// some unexpected issue causing to many secrets
-			// this ca be caused by the client cache which is not up-to-date immediately after the first secret is created.
+			// this can be caused by the client cache which is not up-to-date immediately after the first secret is created.
 			logger.Error(fmt.Errorf("invalid number of secrets found. actual %d, expected %d", len(secretList.Items), 1), "defaulting on the first secret in alphabetical order")
 			// Sort alphabetically the list of secrets
 			// so that in case of multiple secrets for the same namespace we always return the same one.
