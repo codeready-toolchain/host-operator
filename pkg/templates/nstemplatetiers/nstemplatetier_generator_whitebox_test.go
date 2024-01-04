@@ -41,15 +41,16 @@ var expectedProdTiers = map[string]bool{
 }
 
 var expectedTestTiers = map[string]bool{
-	"advanced":  true, // tier_name: true/false (if based on the other tier)
-	"base":      false,
-	"nocluster": false,
-	"appstudio": false,
+	"advanced":       true, // tier_name: true/false (if based on the other tier)
+	"base":           false,
+	"nocluster":      false,
+	"appstudio":      false,
+	"appstudiolarge": true,
 }
 
 func nsTypes(tier string) []string {
 	switch tier {
-	case "appstudio":
+	case "appstudio", "appstudiolarge":
 		return []string{"tenant"}
 	case "appstudio-env":
 		return []string{"env"}
@@ -62,7 +63,7 @@ func nsTypes(tier string) []string {
 
 func roles(tier string) []string {
 	switch tier {
-	case "appstudio", "appstudio-env":
+	case "appstudio", "appstudiolarge", "appstudio-env":
 		return []string{"admin", "maintainer", "contributor"}
 	default:
 		return []string{"admin"}
