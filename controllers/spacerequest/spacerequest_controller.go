@@ -429,7 +429,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 
 	var namespaceAccess []toolchainv1alpha1.NamespaceAccess
 	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
-		na, err := r.ensureSecretForProvisionedNamespace(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, subSpace, namespace)
+		na, err := r.ensureSecretForProvisionedNamespace(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, namespace)
 		if err != nil {
 			return err
 		}
@@ -450,7 +450,6 @@ func (r *Reconciler) ensureSecretForProvisionedNamespace(
 	memberClusterWithSpaceRequest cluster.Cluster,
 	subSpaceTargetCluster cluster.Cluster,
 	spaceRequest *toolchainv1alpha1.SpaceRequest,
-	subSpace *toolchainv1alpha1.Space,
 	namespace toolchainv1alpha1.SpaceNamespace,
 ) (*toolchainv1alpha1.NamespaceAccess, error) {
 	// check if secret reference exists in SpaceRequest's status
