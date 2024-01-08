@@ -24,7 +24,7 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
-    - jsonPath: .spec.userAccounts[].targetCluster
+    - jsonPath: .status.userAccounts[].cluster.name
       name: Cluster
       type: string
     - jsonPath: .spec.tierName
