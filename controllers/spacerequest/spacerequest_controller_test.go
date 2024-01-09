@@ -352,10 +352,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 			})
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 			ctrl := newReconciler(t, hostClient, member1)
-			// check that there is no secret prior to reconcile
-			secret := &corev1.Secret{}
-			err = member1Client.Get(context.TODO(), types.NamespacedName{Name: "jane-xyz1", Namespace: spaceRequest.GetNamespace()}, secret)
-			require.Error(t, err)
+			// check that there are no secret prior to reconcile
+			secrets := &corev1.SecretList{}
+			err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
+				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
+			})
+			require.NoError(t, err)
+			require.Len(t, secrets.Items, 0)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -363,16 +367,21 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			// spacerequest exists with expected cluster roles and finalizer
-			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, spaceRequest.GetName(), member1.Client).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).
 				HasStatusTargetClusterURL(member1.APIEndpoint).
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "jane-xyz1"}}).
 				HasFinalizer()
 			// check that the secret was created
-			secret = &corev1.Secret{}
-			err = member1Client.Get(context.TODO(), types.NamespacedName{Name: "jane-xyz1", Namespace: spaceRequest.GetNamespace()}, secret)
+			// and there's only 1 secret for the provisioned namespace
+			secrets = &corev1.SecretList{}
+			err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
+				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
+			})
 			require.NoError(t, err)
+			require.Len(t, secrets.Items, 1)
 		})
 
 		t.Run("secret in SpaceRequest status already exists", func(t *testing.T) {
@@ -421,9 +430,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "jane-xyz1"}}). // secret is the first one created
 				HasFinalizer()
 			// check that the secret is still there
-			secret := &corev1.Secret{}
-			err = member1Client.Get(context.TODO(), types.NamespacedName{Name: "jane-xyz1", Namespace: spaceRequest.GetNamespace()}, secret)
+			// and there's only 1 secret for the provisioned namespace
+			secrets := &corev1.SecretList{}
+			err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
+				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
+			})
 			require.NoError(t, err)
+			require.Len(t, secrets.Items, 1)
 		})
 
 		t.Run("spacerequest creates secrets for two namespaces", func(t *testing.T) {
