@@ -40,8 +40,9 @@ var expectedProdTiers = map[string]bool{
 	"appstudio-env":      false,
 }
 
+// tier_name: true/false (if based on the other tier)
 var expectedTestTiers = map[string]bool{
-	"advanced":       true, // tier_name: true/false (if based on the other tier)
+	"advanced":       true,
 	"base":           false,
 	"nocluster":      false,
 	"appstudio":      false,
@@ -174,7 +175,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 4)
+			require.Len(t, tmpls, 5)             // advanced,appstudio,appstudiolarge,base,nocluster
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
 			for _, tier := range tiers(expectedTestTiers) {
@@ -600,6 +601,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	} else {
 		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	}
+	t.Logf("checking template '%s' (based on another tier: %t)", templatePath, basedOnOtherTier(expectedTiers, tier))
 	content, err := assets.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
