@@ -42,11 +42,10 @@ var expectedProdTiers = map[string]bool{
 
 // tier_name: true/false (if based on the other tier)
 var expectedTestTiers = map[string]bool{
-	"advanced":       true,
-	"base":           false,
-	"nocluster":      false,
-	"appstudio":      false,
-	"appstudiolarge": true,
+	"advanced":  true,
+	"base":      false,
+	"nocluster": false,
+	"appstudio": false,
 }
 
 func nsTypes(tier string) []string {
@@ -175,7 +174,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 5)             // advanced,appstudio,appstudiolarge,base,nocluster
+			require.Len(t, tmpls, 4)             // advanced,appstudio,base,nocluster
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
 			for _, tier := range tiers(expectedTestTiers) {
@@ -607,6 +606,21 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
+	// then override the templates' parameters (if applicable)
+	if basedOnOtherTier(expectedTiers, tier) {
+		content, err = assets.Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
+		require.NoError(t, err)
+		extension := BasedOnTier{}
+		err = yaml.Unmarshal(content, &extension)
+		require.NoError(t, err)
+		for i, p := range expected.Parameters {
+			for _, ep := range extension.Parameters {
+				if p.Name == ep.Name {
+					expected.Parameters[i].Value = ep.Value
+				}
+			}
+		}
+	}
 	assert.Equal(t, expected, actual)
 	assert.NotEmpty(t, actual.Objects)
 }
