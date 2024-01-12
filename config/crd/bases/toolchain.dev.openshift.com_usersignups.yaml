@@ -128,6 +128,7 @@ spec:
                 - email
                 - preferredUsername
                 - sub
+                - userID
                 type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
@@ -152,6 +153,8 @@ spec:
               username:
                 description: The user's username, obtained from the identity provider.
                 type: string
+            required:
+            - identityClaims
             type: object
           status:
             description: UserSignupStatus defines the observed state of UserSignup
