@@ -95,7 +95,6 @@ spec:
                 required:
                 - email
                 - sub
-                - userID
                 type: object
               tierName:
                 description: TierName is an optional property introduced to retain

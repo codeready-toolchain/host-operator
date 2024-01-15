@@ -128,7 +128,6 @@ spec:
                 - email
                 - preferredUsername
                 - sub
-                - userID
                 type: object
               originalSub:
                 description: OriginalSub is an optional property temporarily introduced
