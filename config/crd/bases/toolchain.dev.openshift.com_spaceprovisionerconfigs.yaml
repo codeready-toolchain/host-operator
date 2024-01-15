@@ -48,15 +48,18 @@ spec:
                   in this provisioner
                 properties:
                   maxMemoryUtilizationPercent:
+                    description: "MaxMemoryUtilizationPercent is the maximum memory
+                      utilization of the cluster to permit provisioning new spaces
+                      to it. \n 0 or undefined value means no limit."
                     maximum: 100
                     minimum: 0
                     type: integer
                   maxNumberOfSpaces:
+                    description: "MaxNumberOfSpaces is the maximum number of spaces
+                      that can be provisioned to the referenced cluster. \n 0 or undefined
+                      value means no limit."
                     minimum: 0
                     type: integer
-                required:
-                - maxMemoryUtilizationPercent
-                - maxNumberOfSpaces
                 type: object
               enabled:
                 default: false
@@ -80,7 +83,7 @@ spec:
             properties:
               conditions:
                 description: Conditions describes the state of the configuration (its
-                  validity). The only known condition type is "Valid".
+                  validity). The only known condition type is "Ready".
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
