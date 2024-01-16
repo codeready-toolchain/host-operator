@@ -25,9 +25,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: "SpaceProvisionerConfig is the configuration of space provisioning
-          in the member clusters. \n Note that these objects are currently NOT used
-          anywhere."
+        description: SpaceProvisionerConfig is the configuration of space provisioning
+          in the member clusters.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
