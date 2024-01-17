@@ -123,7 +123,7 @@ spec:
                   (“sub” claim)
                 type: string
             required:
-            - userID
+            - propagatedClaims
             type: object
           status:
             description: MasterUserRecordStatus defines the observed state of MasterUserRecord
