@@ -8,6 +8,7 @@ resources:
 - bases/toolchain.dev.openshift.com_nstemplatetiers.yaml
 - bases/toolchain.dev.openshift.com_socialevents.yaml
 - bases/toolchain.dev.openshift.com_spacebindings.yaml
+- bases/toolchain.dev.openshift.com_spaceprovisionerconfigs.yaml
 - bases/toolchain.dev.openshift.com_spaces.yaml
 - bases/toolchain.dev.openshift.com_tiertemplates.yaml
 - bases/toolchain.dev.openshift.com_toolchainclusters.yaml
