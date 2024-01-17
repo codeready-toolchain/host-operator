@@ -1,0 +1,125 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: spaceprovisionerconfigs.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: SpaceProvisionerConfig
+    listKind: SpaceProvisionerConfigList
+    plural: spaceprovisionerconfigs
+    singular: spaceprovisionerconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.toolchainCluster
+      name: Cluster
+      type: string
+    - jsonPath: .spec.enabled
+      name: Enabled
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SpaceProvisionerConfig is the configuration of space provisioning
+          in the member clusters.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              capacityThresholds:
+                description: CapacityThresholds specifies the max capacities allowed
+                  in this provisioner
+                properties:
+                  maxMemoryUtilizationPercent:
+                    description: "MaxMemoryUtilizationPercent is the maximum memory
+                      utilization of the cluster to permit provisioning new spaces
+                      to it. \n 0 or undefined value means no limit."
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  maxNumberOfSpaces:
+                    description: "MaxNumberOfSpaces is the maximum number of spaces
+                      that can be provisioned to the referenced cluster. \n 0 or undefined
+                      value means no limit."
+                    minimum: 0
+                    type: integer
+                type: object
+              enabled:
+                default: false
+                description: Enabled specifies whether the member cluster is enabled
+                  (and therefore can hold spaces) or not.
+                type: boolean
+              placementRoles:
+                description: PlacementRoles is the list of roles, or flavors, that
+                  the provisioner possesses that influence the space scheduling decisions.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
+              toolchainCluster:
+                description: ToolchainCluster is the name of the ToolchainCluster
+                  CR of the member cluster that this config is for.
+                type: string
+            required:
+            - toolchainCluster
+            type: object
+          status:
+            properties:
+              conditions:
+                description: Conditions describes the state of the configuration (its
+                  validity). The only known condition type is "Ready".
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}
