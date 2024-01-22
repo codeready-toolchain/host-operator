@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubectl/pkg/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -147,7 +146,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
-	s := scheme.Scheme
+	s := runtime.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
