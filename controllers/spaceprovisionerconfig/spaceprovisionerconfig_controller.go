@@ -9,7 +9,6 @@ import (
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,15 +35,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			// the ToolChainClusters are created or deleted. We don't have to care about updates, the mere existence of the
 			// ToolchainCluster is enough for us.
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainCluster{}},
-			handler.EnqueueRequestsFromMapFunc(func(o runtimeclient.Object) []reconcile.Request {
-				reqs, err := findReferencingProvisionerConfigs(ctx, r.Client, runtimeclient.ObjectKeyFromObject(o))
-				if err != nil {
-					log.FromContext(ctx).Error(err, "failed to list SpaceProvisionerConfig objects while determining what objects to reconcile",
-						"toolchainClusterCause", runtimeclient.ObjectKeyFromObject(o))
-					return nil
-				}
-				return reqs
-			}),
+			handler.EnqueueRequestsFromMapFunc(MapToolChainClusterToSpaceProvisionerConfigs(ctx, r.Client)),
 			builder.WithPredicates(predicate.Funcs{
 				CreateFunc: func(event.CreateEvent) bool {
 					return true
@@ -55,25 +46,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			},
 			)).
 		Complete(r)
-}
-
-func findReferencingProvisionerConfigs(ctx context.Context, cl runtimeclient.Client, toolchainClusterObjectKey runtimeclient.ObjectKey) ([]reconcile.Request, error) {
-	configs := &toolchainv1alpha1.SpaceProvisionerConfigList{}
-	if err := cl.List(ctx, configs, runtimeclient.InNamespace(toolchainClusterObjectKey.Namespace)); err != nil {
-		return nil, err
-	}
-	ret := make([]reconcile.Request, 0, len(configs.Items))
-	for _, cfg := range configs.Items {
-		if cfg.Spec.ToolchainCluster == toolchainClusterObjectKey.Name {
-			ret = append(ret, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: cfg.Namespace,
-					Name:      cfg.Name,
-				},
-			})
-		}
-	}
-	return ret, nil
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaceprovisionerconfigs,verbs=get;list;watch;create;update;patch;delete
