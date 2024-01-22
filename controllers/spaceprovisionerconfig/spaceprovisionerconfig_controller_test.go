@@ -146,7 +146,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
-	s := runtime.Scheme
+	s := runtime.NewScheme()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
