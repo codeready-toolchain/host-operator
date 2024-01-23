@@ -159,6 +159,26 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		assert.NoError(t, reconcileErr)
 		assert.Empty(t, spc.Status.Conditions)
 	})
+	t.Run("doesn't re-enqueue when ToolchainCluster not found", func(t *testing.T) {
+		// given
+		spc := spc.DeepCopy()
+		r, req, cl := prepareReconcile(t, spc)
+		cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); ok {
+				return &kerrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
+			}
+			return cl.Client.Get(ctx, key, obj, opts...)
+		}
+
+		// when
+		res, reconcileErr := r.Reconcile(context.TODO(), req)
+		assert.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.Nil(t, reconcileErr)
+		assert.False(t, res.Requeue)
+		assert.NotEmpty(t, spc.Status.Conditions)
+	})
 }
 
 func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
