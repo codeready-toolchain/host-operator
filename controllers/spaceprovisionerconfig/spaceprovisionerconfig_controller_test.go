@@ -100,6 +100,23 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		// then
 		assert.ErrorIs(t, reconcileErr, expectedErr)
 	})
+	t.Run("re-enqueues on failure to get ToolchainCluster", func(t *testing.T) {
+		// given
+		r, req, cl := prepareReconcile(t, spc.DeepCopy())
+		expectedErr := errors.New("purposefully failing the get request")
+		cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); ok {
+				return expectedErr
+			}
+			return cl.Client.Get(ctx, key, obj, opts...)
+		}
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+
+		// then
+		assert.ErrorIs(t, reconcileErr, expectedErr)
+	})
 	t.Run("re-enqueues on failure to update the status", func(t *testing.T) {
 		// given
 		r, req, cl := prepareReconcile(t, spc.DeepCopy())

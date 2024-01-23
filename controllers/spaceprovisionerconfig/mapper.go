@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func MapToolChainClusterToSpaceProvisionerConfigs(ctx context.Context, cl runtimeclient.Client) func(runtimeclient.Object) []reconcile.Request {
+func MapToolchainClusterToSpaceProvisionerConfigs(ctx context.Context, cl runtimeclient.Client) func(runtimeclient.Object) []reconcile.Request {
 	return func(obj runtimeclient.Object) []reconcile.Request {
 		ret, err := findReferencingProvisionerConfigs(ctx, cl, runtimeclient.ObjectKeyFromObject(obj))
 		if err != nil {
