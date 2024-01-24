@@ -30,11 +30,10 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
-		getErr := cl.Get(context.TODO(), runtimeclient.ObjectKey{Name: "spc", Namespace: test.HostOperatorNs}, spc)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		require.NoError(t, reconcileErr)
-		require.NoError(t, getErr)
+		assert.NoError(t, reconcileErr)
 		assert.True(t, condition.IsFalse(spc.Status.Conditions, toolchainv1alpha1.ConditionReady))
 	})
 
@@ -50,11 +49,10 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
-		getErr := cl.Get(context.TODO(), runtimeclient.ObjectKey{Name: "spc", Namespace: test.HostOperatorNs}, spc)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		require.NoError(t, reconcileErr)
-		require.NoError(t, getErr)
+		assert.NoError(t, reconcileErr)
 		assert.True(t, condition.IsTrue(spc.Status.Conditions, toolchainv1alpha1.ConditionReady))
 	})
 }
@@ -157,10 +155,10 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 		// when
 		res, reconcileErr := r.Reconcile(context.TODO(), req)
-		assert.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.Nil(t, reconcileErr)
+		assert.NoError(t, reconcileErr)
 		assert.False(t, res.Requeue)
 		assert.NotEmpty(t, spc.Status.Conditions)
 	})
