@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// check that there exists a ToolchainCluster CR in the same namespace
+	// check that there is a ToolchainCluster CR in the same namespace
 	toolchainCluster := &toolchainv1alpha1.ToolchainCluster{}
 	toolchainClusterKey := runtimeclient.ObjectKey{Name: spaceProvisionerConfig.Spec.ToolchainCluster, Namespace: spaceProvisionerConfig.Namespace}
 	toolchainPresent := corev1.ConditionTrue
