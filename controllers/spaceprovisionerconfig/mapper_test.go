@@ -7,73 +7,66 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/assert"
+	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestFindingReferencedSpaceProvisionerConfigs(t *testing.T) {
-	t.Run("find referenced provisioner configs", func(t *testing.T) {
-		// given
-		cl := test.NewFakeClient(t, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc0",
-				Namespace: test.HostOperatorNs,
+func requestFromObject(obj runtimeclient.Object) reconcile.Request {
+	return reconcile.Request{
+		NamespacedName: runtimeclient.ObjectKeyFromObject(obj),
+	}
+}
+
+func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
+	type testCase struct {
+		ToolchainClusterName string
+		ExpectedRequests     []reconcile.Request
+	}
+
+	spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1")
+	spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, "cluster2")
+	spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, "cluster1")
+
+	tests := map[string]testCase{
+		"find 1 referencing SpaceProvisionerConfig in many": {
+			ToolchainClusterName: "cluster2",
+			ExpectedRequests: []reconcile.Request{
+				requestFromObject(spc1),
 			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
+		},
+		"find more referencing SpaceProvisionerConfigs in many": {
+			ToolchainClusterName: "cluster1",
+			ExpectedRequests: []reconcile.Request{
+				requestFromObject(spc0),
+				requestFromObject(spc2),
 			},
-		}, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc1",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster2",
-			},
-		}, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc2",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
+		},
+		"find no referencing SpaceProvisionerConfigs in many": {
+			ToolchainClusterName: "cluster3",
+			ExpectedRequests:     []reconcile.Request{},
+		},
+	}
+
+	for name, tst := range tests {
+		t.Run(name, func(t *testing.T) {
+			// given
+			cl := test.NewFakeClient(t, spc0, spc1, spc2)
+
+			// when
+			reqs, err := findReferencingProvisionerConfigs(context.TODO(), cl, runtimeclient.ObjectKey{Name: tst.ToolchainClusterName, Namespace: test.HostOperatorNs})
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reqs, tst.ExpectedRequests)
 		})
+	}
 
-		// when
-		reqs, err := findReferencingProvisionerConfigs(context.TODO(), cl, runtimeclient.ObjectKey{Name: "cluster1", Namespace: test.HostOperatorNs})
-
-		// then
-		require.NoError(t, err)
-		require.Len(t, reqs, 2)
-		assert.Equal(t, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: test.HostOperatorNs,
-				Name:      "spc0",
-			},
-		}, reqs[0])
-		assert.Equal(t, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: test.HostOperatorNs,
-				Name:      "spc2",
-			},
-		}, reqs[1])
-	})
 	t.Run("empty references when listing space provisioner configs fails", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc0",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
-		})
+		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1"))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
@@ -93,32 +86,15 @@ func TestFindingReferencedSpaceProvisionerConfigs(t *testing.T) {
 
 func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 	t.Run("maps existing spcs", func(t *testing.T) {
+		// this pretty much duplicates the test of finding the referencing space provisioner configs above but does it from
+		// the POV of the higher level function. Therefore, we don't need to replicate all the positive cases here, just
+		// one should be enough.
+
 		// given
-		cl := test.NewFakeClient(t, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc0",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
-		}, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc1",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster2",
-			},
-		}, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc2",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
-		})
+		spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1")
+		spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, "cluster2")
+		spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, "cluster1")
+		cl := test.NewFakeClient(t, spc0, spc1, spc2)
 
 		// when
 		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(&toolchainv1alpha1.ToolchainCluster{
@@ -129,31 +105,15 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		})
 
 		// then
-		require.Len(t, reqs, 2)
-		assert.Equal(t, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: test.HostOperatorNs,
-				Name:      "spc0",
-			},
-		}, reqs[0])
-		assert.Equal(t, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: test.HostOperatorNs,
-				Name:      "spc2",
-			},
-		}, reqs[1])
+		require.Equal(t, reqs, []reconcile.Request{
+			requestFromObject(spc0),
+			requestFromObject(spc2),
+		})
 	})
+
 	t.Run("interprets errors as empty result", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc0",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
-		})
+		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1"))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {

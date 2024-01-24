@@ -3,7 +3,6 @@ package spaceprovisionerconfig
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -24,15 +24,7 @@ import (
 func TestSpaceProvisionerConfigValidation(t *testing.T) {
 	t.Run("is not valid when non-existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "non-existent",
-			},
-		}
+		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "non-existent")
 		r, req, cl := prepareReconcile(t, spc)
 
 		// when
@@ -47,15 +39,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 	t.Run("is valid when existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := &toolchainv1alpha1.SpaceProvisionerConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "spc",
-				Namespace: test.HostOperatorNs,
-			},
-			Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-				ToolchainCluster: "cluster1",
-			},
-		}
+		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "cluster1")
 		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
@@ -75,15 +59,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 }
 
 func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
-	spc := &toolchainv1alpha1.SpaceProvisionerConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "spc",
-			Namespace: test.HostOperatorNs,
-		},
-		Spec: toolchainv1alpha1.SpaceProvisionerConfigSpec{
-			ToolchainCluster: "cluster1",
-		},
-	}
+	spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "cluster1")
 
 	t.Run("re-enqueues on failure to GET", func(t *testing.T) {
 		// given
@@ -182,7 +158,6 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
-	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := runtime.NewScheme()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
