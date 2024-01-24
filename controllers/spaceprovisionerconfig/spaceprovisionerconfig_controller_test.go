@@ -8,7 +8,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/apis"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +33,11 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		assert.True(t, condition.IsFalse(spc.Status.Conditions, toolchainv1alpha1.ConditionReady))
+		assert.Len(t, spc.Status.Conditions, 1)
+		assert.Equal(t, toolchainv1alpha1.ConditionReady, spc.Status.Conditions[0].Type)
+		assert.Equal(t, corev1.ConditionFalse, spc.Status.Conditions[0].Status)
+		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason, spc.Status.Conditions[0].Reason)
+		assert.Empty(t, spc.Status.Conditions[0].Message)
 	})
 
 	t.Run("is valid when existing ToolchainCluster is referenced", func(t *testing.T) {
@@ -53,7 +56,11 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		assert.True(t, condition.IsTrue(spc.Status.Conditions, toolchainv1alpha1.ConditionReady))
+		assert.Len(t, spc.Status.Conditions, 1)
+		assert.Equal(t, toolchainv1alpha1.ConditionReady, spc.Status.Conditions[0].Type)
+		assert.Equal(t, corev1.ConditionTrue, spc.Status.Conditions[0].Status)
+		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigValidReason, spc.Status.Conditions[0].Reason)
+		assert.Empty(t, spc.Status.Conditions[0].Message)
 	})
 }
 
