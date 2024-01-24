@@ -13,6 +13,7 @@ import (
 	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,22 +77,30 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		// then
 		assert.ErrorIs(t, reconcileErr, expectedErr)
 	})
-	t.Run("re-enqueues on failure to get ToolchainCluster", func(t *testing.T) {
+	t.Run("re-enqueues and reports error in status on failure to get ToolchainCluster", func(t *testing.T) {
 		// given
 		r, req, cl := prepareReconcile(t, spc.DeepCopy())
-		expectedErr := errors.New("purposefully failing the get request")
+		getErr := errors.New("purposefully failing the get request")
 		cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); ok {
-				return expectedErr
+				return getErr
 			}
 			return cl.Client.Get(ctx, key, obj, opts...)
 		}
 
 		// when
-		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		res, reconcileErr := r.Reconcile(context.TODO(), req)
+		spcInCluster := &toolchainv1alpha1.SpaceProvisionerConfig{}
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spcInCluster))
 
 		// then
-		assert.ErrorIs(t, reconcileErr, expectedErr)
+		assert.NoError(t, reconcileErr)
+		assert.True(t, res.Requeue)
+		assert.Len(t, spcInCluster.Status.Conditions, 1)
+		assert.Equal(t, toolchainv1alpha1.ConditionReady, spcInCluster.Status.Conditions[0].Type)
+		assert.Equal(t, corev1.ConditionFalse, spcInCluster.Status.Conditions[0].Status)
+		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason, spcInCluster.Status.Conditions[0].Reason)
+		assert.Equal(t, "failed to get the referenced ToolchainCluster: "+getErr.Error(), spcInCluster.Status.Conditions[0].Message)
 	})
 	t.Run("re-enqueues on failure to update the status", func(t *testing.T) {
 		// given

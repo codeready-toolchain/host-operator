@@ -75,9 +75,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	toolchainClusterKey := runtimeclient.ObjectKey{Name: spaceProvisionerConfig.Spec.ToolchainCluster, Namespace: spaceProvisionerConfig.Namespace}
 	toolchainPresent := corev1.ConditionTrue
 	toolchainPresenceReason := toolchainv1alpha1.SpaceProvisionerConfigValidReason
+	requeue := false
+	toolchainPresenceMessage := ""
 	if err := r.Client.Get(ctx, toolchainClusterKey, toolchainCluster); err != nil {
 		if !errors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("failed to get ToolchainCluster: %w", err)
+			// we need to requeue the reconciliation in this case because we cannot be sure whether the ToolchainCluster
+			// is really present in the cluster or not. If we did not do that and instead just reported the error in
+			// the status, we could eventually leave the SPC in an incorrect state once the error condition in the cluster,
+			// that prevents us from reading the ToolchainCluster, clears. I.e. we need the requeue to keep the promise
+			// of eventual consistency.
+
+			requeue = true
+			toolchainPresenceMessage = "failed to get the referenced ToolchainCluster: " + err.Error()
 		}
 		toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason
 		toolchainPresent = corev1.ConditionFalse
@@ -85,14 +94,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	spaceProvisionerConfig.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(spaceProvisionerConfig.Status.Conditions,
 		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: toolchainPresent,
-			Reason: toolchainPresenceReason,
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  toolchainPresent,
+			Reason:  toolchainPresenceReason,
+			Message: toolchainPresenceMessage,
 		})
 
 	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: requeue}, nil
 }
