@@ -429,66 +429,11 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 
 	var namespaceAccess []toolchainv1alpha1.NamespaceAccess
 	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
-		// check if kubeconfig secret exists,
-		// if it doesn't exist it will be created
-		secretList := &corev1.SecretList{}
-		secretLabels := runtimeclient.MatchingLabels{
-			toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
-			toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: namespace.Name,
+		na, err := r.ensureSecretForProvisionedNamespace(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, namespace)
+		if err != nil {
+			return err
 		}
-		if err := memberClusterWithSpaceRequest.Client.List(ctx, secretList, secretLabels, runtimeclient.InNamespace(spaceRequest.GetNamespace())); err != nil {
-			return errs.Wrap(err, fmt.Sprintf(`attempt to list Secrets associated with spaceRequest %s in namespace %s failed`, spaceRequest.GetName(), spaceRequest.GetNamespace()))
-		}
-
-		kubeConfigSecret := &corev1.Secret{}
-		switch {
-		case len(secretList.Items) == 0:
-			// create the secret for this namespace
-			clientConfig, err := r.generateKubeConfig(ctx, subSpaceTargetCluster, namespace.Name)
-			if err != nil {
-				return err
-			}
-			clientConfigFormatted, err := clientcmd.Write(*clientConfig)
-			if err != nil {
-				return err
-			}
-			kubeConfigSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: spaceRequest.Name + "-",
-					Namespace:    spaceRequest.Namespace,
-					Labels:       secretLabels,
-				},
-				Type: corev1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"kubeconfig": string(clientConfigFormatted),
-				},
-			}
-			if err := controllerutil.SetControllerReference(spaceRequest, kubeConfigSecret, r.Scheme); err != nil {
-				return errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
-			}
-			if err := memberClusterWithSpaceRequest.Client.Create(ctx, kubeConfigSecret); err != nil {
-				return errs.Wrap(err, "error while creating secret")
-			}
-			logger.Info("Created Secret", "Name", kubeConfigSecret.Name)
-
-			// add provisioned namespace and name of the secret that provides access to the namespace
-			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
-				Name:      namespace.Name,
-				SecretRef: kubeConfigSecret.Name,
-			})
-
-		case len(secretList.Items) == 1:
-			// a secret is already present for this namespace
-			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
-				Name:      namespace.Name,
-				SecretRef: secretList.Items[0].Name,
-			})
-
-		case len(secretList.Items) > 1:
-			// some unexpected issue causing to many secrets
-			return fmt.Errorf("invalid number of secrets found. actual %d, expected %d", len(secretList.Items), 1)
-		}
-
+		namespaceAccess = append(namespaceAccess, *na)
 	}
 
 	// update space request status in case secrets for provisioned namespace were created.
@@ -498,6 +443,107 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(ctx context.Context, m
 	}
 
 	return nil
+}
+
+func (r *Reconciler) ensureSecretForProvisionedNamespace(
+	ctx context.Context,
+	memberClusterWithSpaceRequest cluster.Cluster,
+	subSpaceTargetCluster cluster.Cluster,
+	spaceRequest *toolchainv1alpha1.SpaceRequest,
+	namespace toolchainv1alpha1.SpaceNamespace,
+) (*toolchainv1alpha1.NamespaceAccess, error) {
+	// check if secret reference exists in SpaceRequest's status
+	na := r.findNamespaceAccessForNamespace(spaceRequest, namespace)
+	if na == nil {
+		// create secret generating the name
+		return r.createProvisionedNamespaceAccessSecret(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, namespace, "")
+	}
+
+	// check if secret referenced in SpaceRequest's status exists
+	if err := r.searchExistingSecretRef(ctx, memberClusterWithSpaceRequest, spaceRequest, *na); err != nil {
+		if !errors.IsNotFound(err) {
+			return nil, err
+		}
+
+		// create with already selected name if it's missing
+		return r.createProvisionedNamespaceAccessSecret(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, namespace, na.SecretRef)
+	}
+
+	return na, nil
+}
+
+func (r *Reconciler) createProvisionedNamespaceAccessSecret(
+	ctx context.Context,
+	memberClusterWithSpaceRequest cluster.Cluster,
+	subSpaceTargetCluster cluster.Cluster,
+	spaceRequest *toolchainv1alpha1.SpaceRequest,
+	namespace toolchainv1alpha1.SpaceNamespace,
+	secretName string,
+) (*toolchainv1alpha1.NamespaceAccess, error) {
+	// create the secret for this namespace
+	clientConfig, err := r.generateKubeConfig(ctx, subSpaceTargetCluster, namespace.Name)
+	if err != nil {
+		return nil, err
+	}
+	clientConfigFormatted, err := clientcmd.Write(*clientConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeConfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: spaceRequest.Name + "-", // it will be used only when Name is empty
+			Name:         secretName,
+			Namespace:    spaceRequest.Namespace,
+			Labels: runtimeclient.MatchingLabels{
+				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: namespace.Name,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		StringData: map[string]string{
+			"kubeconfig": string(clientConfigFormatted),
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(spaceRequest, kubeConfigSecret, r.Scheme); err != nil {
+		return nil, errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
+	}
+	if err := memberClusterWithSpaceRequest.Client.Create(ctx, kubeConfigSecret); err != nil {
+		return nil, errs.Wrap(err, "error while creating secret")
+	}
+	log.FromContext(ctx).Info("Created Secret", "Name", kubeConfigSecret.Name)
+
+	return &toolchainv1alpha1.NamespaceAccess{
+		Name:      namespace.Name,
+		SecretRef: kubeConfigSecret.Name,
+	}, nil
+}
+
+func (r *Reconciler) findNamespaceAccessForNamespace(
+	spaceRequest *toolchainv1alpha1.SpaceRequest,
+	namespace toolchainv1alpha1.SpaceNamespace,
+) *toolchainv1alpha1.NamespaceAccess {
+	for _, namespaceAccessStatus := range spaceRequest.Status.NamespaceAccess {
+		if namespaceAccessStatus.Name == namespace.Name && namespaceAccessStatus.SecretRef != "" {
+			return &namespaceAccessStatus
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) searchExistingSecretRef(
+	ctx context.Context,
+	memberClusterWithSpaceRequest cluster.Cluster,
+	spaceRequest *toolchainv1alpha1.SpaceRequest,
+	namespaceAccess toolchainv1alpha1.NamespaceAccess,
+) error {
+	// try and get the secret to check if it still exists
+	existingSecret := &corev1.Secret{}
+	return memberClusterWithSpaceRequest.Client.Get(ctx, types.NamespacedName{
+		Namespace: spaceRequest.Namespace,
+		Name:      namespaceAccess.SecretRef,
+	}, existingSecret)
 }
 
 func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetCluster cluster.Cluster, namespace string) (*api.Config, error) {
