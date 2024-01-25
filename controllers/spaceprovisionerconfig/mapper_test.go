@@ -26,9 +26,9 @@ func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
 		ExpectedRequests     []reconcile.Request
 	}
 
-	spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1")
-	spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, "cluster2")
-	spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, "cluster1")
+	spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+	spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster2"))
+	spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
 
 	tests := map[string]testCase{
 		"find 1 referencing SpaceProvisionerConfig in many": {
@@ -66,7 +66,7 @@ func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
 
 	t.Run("empty references when listing space provisioner configs fails", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1"))
+		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1")))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
@@ -86,14 +86,14 @@ func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
 
 func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 	t.Run("maps existing spcs", func(t *testing.T) {
-		// this pretty much duplicates the test of finding the referencing space provisioner configs above but does it from
-		// the POV of the higher level function. Therefore, we don't need to replicate all the positive cases here, just
-		// one should be enough.
+		// this pretty much duplicates the test of finding the referencing space provisioner configs but does it from the POV
+		// of the higher level function. Therefore, we don't need to replicate all the positive cases here, just one should
+		//
 
 		// given
-		spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1")
-		spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, "cluster2")
-		spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, "cluster1")
+		spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+		spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster2"))
+		spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
 		cl := test.NewFakeClient(t, spc0, spc1, spc2)
 
 		// when
@@ -113,7 +113,7 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 
 	t.Run("interprets errors as empty result", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, "cluster1"))
+		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1")))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {

@@ -24,7 +24,7 @@ import (
 func TestSpaceProvisionerConfigValidation(t *testing.T) {
 	t.Run("is not valid when non-existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "non-existent")
+		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("non-existent"))
 		r, req, cl := prepareReconcile(t, spc)
 
 		// when
@@ -42,7 +42,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 	t.Run("is valid when existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "cluster1")
+		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
 		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
@@ -65,7 +65,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 }
 
 func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
-	spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, "cluster1")
+	spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
 
 	t.Run("re-enqueues on failure to GET", func(t *testing.T) {
 		// given
