@@ -9,10 +9,10 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
+	. "github.com/codeready-toolchain/toolchain-common/pkg/test/assertions"
+	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,7 +24,7 @@ import (
 func TestSpaceProvisionerConfigValidation(t *testing.T) {
 	t.Run("is not valid when non-existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("non-existent"))
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("non-existent"))
 		r, req, cl := prepareReconcile(t, spc)
 
 		// when
@@ -33,16 +33,12 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		assert.Len(t, spc.Status.Conditions, 1)
-		assert.Equal(t, toolchainv1alpha1.ConditionReady, spc.Status.Conditions[0].Type)
-		assert.Equal(t, corev1.ConditionFalse, spc.Status.Conditions[0].Status)
-		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason, spc.Status.Conditions[0].Reason)
-		assert.Empty(t, spc.Status.Conditions[0].Message)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 	})
 
 	t.Run("is valid when existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
-		spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
 		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
@@ -56,16 +52,60 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		assert.Len(t, spc.Status.Conditions, 1)
-		assert.Equal(t, toolchainv1alpha1.ConditionReady, spc.Status.Conditions[0].Type)
-		assert.Equal(t, corev1.ConditionTrue, spc.Status.Conditions[0].Status)
-		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigValidReason, spc.Status.Conditions[0].Reason)
-		assert.Empty(t, spc.Status.Conditions[0].Message)
+		AssertThat(t, spc, Is(Ready()))
+	})
+	t.Run("is invalid when no ToolchainCluster is referenced", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs)
+		r, req, cl := prepareReconcile(t, spc)
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
+	})
+	t.Run("becomes valid when the referenced ToolchainCluster appears", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
+			ReferencingToolchainCluster("cluster1"),
+			WithReadyConditionInvalid(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason))
+		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster1",
+				Namespace: test.HostOperatorNs,
+			},
+		})
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(Ready()))
+	})
+	t.Run("becomes invalid when the referenced ToolchainCluster disappears", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
+			ReferencingToolchainCluster("cluster1"),
+			WithReadyConditionValid())
+		r, req, cl := prepareReconcile(t, spc)
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 	})
 }
 
 func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
-	spc := testSpc.NewSpaceProvisionerConfig("spc", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+	spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
 
 	t.Run("re-enqueues on failure to GET", func(t *testing.T) {
 		// given
@@ -101,10 +141,8 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		// then
 		assert.NoError(t, reconcileErr)
 		assert.True(t, res.Requeue)
+		AssertThat(t, spcInCluster, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 		assert.Len(t, spcInCluster.Status.Conditions, 1)
-		assert.Equal(t, toolchainv1alpha1.ConditionReady, spcInCluster.Status.Conditions[0].Type)
-		assert.Equal(t, corev1.ConditionFalse, spcInCluster.Status.Conditions[0].Status)
-		assert.Equal(t, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason, spcInCluster.Status.Conditions[0].Reason)
 		assert.Equal(t, "failed to get the referenced ToolchainCluster: "+getErr.Error(), spcInCluster.Status.Conditions[0].Message)
 	})
 	t.Run("re-enqueues on failure to update the status", func(t *testing.T) {
@@ -131,22 +169,26 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		}
 
 		// when
-		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		res, reconcileErr := r.Reconcile(context.TODO(), req)
 
 		// then
 		assert.NoError(t, reconcileErr)
+		assert.False(t, res.Requeue)
+		assert.Empty(t, spc.Status.Conditions)
 	})
 	t.Run("doesn't re-enqueue when object being deleted", func(t *testing.T) {
 		// given
 		spc := spc.DeepCopy()
 		spc.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-		r, req, _ := prepareReconcile(t, spc)
+		r, req, cl := prepareReconcile(t, spc)
 
 		// when
-		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		res, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
 		assert.NoError(t, reconcileErr)
+		assert.False(t, res.Requeue)
 		assert.Empty(t, spc.Status.Conditions)
 	})
 	t.Run("doesn't re-enqueue when ToolchainCluster not found", func(t *testing.T) {

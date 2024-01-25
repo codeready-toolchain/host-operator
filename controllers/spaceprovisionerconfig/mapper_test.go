@@ -7,7 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	testSpc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
+	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,9 +26,9 @@ func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
 		ExpectedRequests     []reconcile.Request
 	}
 
-	spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
-	spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster2"))
-	spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+	spc0 := NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
+	spc1 := NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, ReferencingToolchainCluster("cluster2"))
+	spc2 := NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
 
 	tests := map[string]testCase{
 		"find 1 referencing SpaceProvisionerConfig in many": {
@@ -66,7 +66,7 @@ func TestFindingReferencingSpaceProvisionerConfigs(t *testing.T) {
 
 	t.Run("empty references when listing space provisioner configs fails", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1")))
+		cl := test.NewFakeClient(t, NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1")))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
@@ -91,9 +91,9 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		//
 
 		// given
-		spc0 := testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
-		spc1 := testSpc.NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster2"))
-		spc2 := testSpc.NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1"))
+		spc0 := NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
+		spc1 := NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, ReferencingToolchainCluster("cluster2"))
+		spc2 := NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
 		cl := test.NewFakeClient(t, spc0, spc1, spc2)
 
 		// when
@@ -113,7 +113,7 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 
 	t.Run("interprets errors as empty result", func(t *testing.T) {
 		// given
-		cl := test.NewFakeClient(t, testSpc.NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, testSpc.ReferencingToolchainCluster("cluster1")))
+		cl := test.NewFakeClient(t, NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1")))
 		expectedErr := errors.New("expected list error")
 		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {

@@ -1,5 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20240125165010-df87a40fe9c9
+
 require (
 	github.com/codeready-toolchain/api v0.0.0-20240116164228-8d18c9262420
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20231218221155-9d1179b6a349
@@ -30,8 +32,6 @@ require (
 	k8s.io/klog/v2 v2.70.1
 	sigs.k8s.io/controller-runtime v0.13.0
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20240125091627-98a8e74d0fcb
 
 require github.com/google/uuid v1.3.0 // indirect
 
