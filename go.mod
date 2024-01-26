@@ -4,7 +4,7 @@ replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/too
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20240116164228-8d18c9262420
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20231218221155-9d1179b6a349
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240125161658-0594a843cd4e
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
