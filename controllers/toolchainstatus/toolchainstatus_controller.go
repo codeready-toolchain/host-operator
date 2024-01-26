@@ -308,7 +308,7 @@ func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStat
 	// save host operator deployment check status in this flag, it will be returned in case no errors are found by the following checks.
 	allOK := true
 	// check host operator deployment status
-	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(ctx, r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
 	errDeploy = status.ValidateComponentConditionReady(deploymentConditions...)
 	if errDeploy != nil {
 		logger.Error(errDeploy, "host operator deployment is not ready")
@@ -866,7 +866,7 @@ type regServiceSubstatusHandler struct {
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
 func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	deploymentConditions := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(ctx, s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
 	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
 
