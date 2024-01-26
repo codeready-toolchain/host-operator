@@ -50,7 +50,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create(context.TODO(), "jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		require.NoError(t, cl.Update(context.TODO(), notification))
@@ -72,7 +72,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create(context.TODO(), "jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -101,7 +101,7 @@ func TestNotificationSentFailure(t *testing.T) {
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("test", "test content").
-			Create("abc123@acme.com")
+			Create(context.TODO(), "abc123@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -148,7 +148,7 @@ func TestNotificationDelivery(t *testing.T) {
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
-			Create("foo@redhat.com")
+			Create(context.TODO(), "foo@redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -195,7 +195,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
-			Create("sandbox-admin@developers.redhat.com")
+			Create(context.TODO(), "sandbox-admin@developers.redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -256,7 +256,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, cl := newController(t, nil, userSignup, toolchainConfig)
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
-			Create("jane@redhat.com")
+			Create(context.TODO(), "jane@redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -297,7 +297,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, cl := newController(t, mds, userSignup)
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
-			Create("foo@redhat.com")
+			Create(context.TODO(), "foo@redhat.com")
 		require.NoError(t, err)
 
 		// when

@@ -871,7 +871,7 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Spec.IdentityClaims.Email)
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
@@ -907,7 +907,7 @@ func (r *Reconciler) sendDeactivatedNotification(ctx context.Context, config too
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Spec.IdentityClaims.Email)
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
