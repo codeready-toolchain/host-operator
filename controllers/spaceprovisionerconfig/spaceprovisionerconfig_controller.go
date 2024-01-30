@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	toolchainClusterKey := runtimeclient.ObjectKey{Name: spaceProvisionerConfig.Spec.ToolchainCluster, Namespace: spaceProvisionerConfig.Namespace}
 	toolchainPresent := corev1.ConditionTrue
 	toolchainPresenceReason := toolchainv1alpha1.SpaceProvisionerConfigValidReason
-	requeue := false
+	var reportedError error
 	toolchainPresenceMessage := ""
 	if err := r.Client.Get(ctx, toolchainClusterKey, toolchainCluster); err != nil {
 		if !errors.IsNotFound(err) {
@@ -85,8 +85,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			// that prevents us from reading the ToolchainCluster, clears. I.e. we need the requeue to keep the promise
 			// of eventual consistency.
 
-			requeue = true
-			toolchainPresenceMessage = "failed to get the referenced ToolchainCluster: " + err.Error()
+			reportedError = fmt.Errorf("failed to get the referenced ToolchainCluster: %w", err)
+			toolchainPresenceMessage = reportedError.Error()
 		}
 		toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason
 		toolchainPresent = corev1.ConditionFalse
@@ -101,8 +101,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		})
 
 	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
+		if reportedError != nil {
+			logger.Info("failed to update the status (reported as failed reconciliation) with a previous unreported error during reconciliation", "unreportedError", reportedError)
+		}
+		reportedError = fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: requeue}, nil
+	return ctrl.Result{}, reportedError
 }
