@@ -533,7 +533,7 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 		WithName(fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue)).
 		WithControllerReference(toolchainStatus, r.Scheme).
 		WithSubjectAndContent(subjectString, contentString).
-		Create(config.Notifications().AdminEmail())
+		Create(ctx, config.Notifications().AdminEmail())
 
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
