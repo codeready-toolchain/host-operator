@@ -115,6 +115,6 @@ require (
 
 go 1.20
 
-replace github.com/codeready-toolchain/api => github.com/sbryzak/api v0.0.0-20240122043958-5766c6177c5f
+replace github.com/codeready-toolchain/api => github.com/sbryzak/api v0.0.0-20240129201259-6f21cc1f6f48
 
 replace github.com/codeready-toolchain/toolchain-common => github.com/sbryzak/toolchain-common v0.0.0-20240127001349-e2601d8aaca0

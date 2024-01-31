@@ -548,8 +548,8 @@ github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
-github.com/sbryzak/api v0.0.0-20240122043958-5766c6177c5f h1:Yy4DgctB2UhAtKdCTJlNSs0eOlMlrcOFEaGlO7NGY9E=
-github.com/sbryzak/api v0.0.0-20240122043958-5766c6177c5f/go.mod h1:FO7kgXH1x1LqkF327D5a36u0WIrwjVCbeijPkzgwaZc=
+github.com/sbryzak/api v0.0.0-20240129201259-6f21cc1f6f48 h1:+rBh367F0wNcfNrp7Z7gGcoRM+nPfjAiu6RkvojvPk0=
+github.com/sbryzak/api v0.0.0-20240129201259-6f21cc1f6f48/go.mod h1:FO7kgXH1x1LqkF327D5a36u0WIrwjVCbeijPkzgwaZc=
 github.com/sbryzak/toolchain-common v0.0.0-20240127001349-e2601d8aaca0 h1:+M6r5HekZ3z5N/v1aZEjlkhwumlZAtvCBZEEEsnV3Tk=
 github.com/sbryzak/toolchain-common v0.0.0-20240127001349-e2601d8aaca0/go.mod h1:vuxDx4HKxnb8xJV21OufzRhh/6qNP46stTkn2ni06UY=
 github.com/scylladb/go-set v1.0.2/go.mod h1:DkpGd78rljTxKAnTDPFqXSGxvETQnJyuSOQwsHycqfs=
