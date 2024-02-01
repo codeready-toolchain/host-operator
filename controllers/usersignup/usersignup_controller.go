@@ -111,6 +111,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	// TODO remove this section (and the referenced function) after migration has completed
+	// FROM HERE ---------
+	migrated, err := r.migrateUserSignupClaimsIfNecessary(ctx, userSignup)
+	if err != nil {
+		// Error during migration - requeue the request
+		return reconcile.Result{}, err
+	}
+
+	if migrated {
+		// If migration occurred, then queue the UserSignup for reconciliation again
+		return reconcile.Result{Requeue: true}, nil
+	}
+	// TO HERE ^^^^^^^^^^^^
+
 	if userSignup.GetLabels() == nil {
 		userSignup.Labels = make(map[string]string)
 	}
@@ -188,6 +202,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(ctx, config, userSignup)
+}
+
+// migrateUserSignupClaimsIfNecessary is a temporary function that will set the UserSignup's IdentityClaims based on the
+// existing property values
+func (r *Reconciler) migrateUserSignupClaimsIfNecessary(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+
+	if userSignup.Spec.IdentityClaims.Sub == "" {
+		userSignup.Spec.IdentityClaims.Sub = userSignup.Spec.Userid
+		userSignup.Spec.IdentityClaims.FamilyName = userSignup.Spec.FamilyName
+		userSignup.Spec.IdentityClaims.GivenName = userSignup.Spec.GivenName
+		userSignup.Spec.IdentityClaims.OriginalSub = userSignup.Spec.OriginalSub
+		userSignup.Spec.IdentityClaims.PreferredUsername = userSignup.Spec.Username
+		userSignup.Spec.IdentityClaims.Company = userSignup.Spec.Company
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.UserID = val
+		}
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.AccountID = val
+		}
+
+		if val, ok := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; ok {
+			userSignup.Spec.IdentityClaims.Email = val
+		}
+
+		if err := r.Client.Update(ctx, userSignup); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // handleDeactivatedUserSignup defines the workflow for deactivated users
@@ -357,13 +405,16 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 
 		if shouldManageSpace(userSignup) {
 			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
-			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
 			if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
-			} else if created {
+			}
+			if err := r.updateStatusHomeSpace(ctx, userSignup, space.Name); err != nil {
+				return true, err
+			}
+			// if the space was just created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
+			if created {
 				return true, nil
 			}
-
 			if err = r.ensureSpaceBinding(ctx, userSignup, mur, space); err != nil {
 				return true, err
 			}
@@ -379,6 +430,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		logger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name))
 	}
+
 	return false, nil
 }
 
@@ -819,7 +871,7 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Spec.IdentityClaims.Email)
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
@@ -855,7 +907,7 @@ func (r *Reconciler) sendDeactivatedNotification(ctx context.Context, config too
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Spec.IdentityClaims.Email)
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {

@@ -24,7 +24,7 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
-    - jsonPath: .spec.userAccounts[].targetCluster
+    - jsonPath: .status.userAccounts[].cluster.name
       name: Cluster
       type: string
     - jsonPath: .spec.tierName
@@ -122,8 +122,6 @@ spec:
                 description: UserID is the user ID from RHD Identity Provider token
                   (“sub” claim)
                 type: string
-            required:
-            - userID
             type: object
           status:
             description: MasterUserRecordStatus defines the observed state of MasterUserRecord
