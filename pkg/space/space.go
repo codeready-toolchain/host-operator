@@ -9,7 +9,7 @@ import (
 )
 
 // NewSpace creates a space CR for a UserSignup object.
-func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string, compliantUserName, tier string, disableInheritance bool) *toolchainv1alpha1.Space {
+func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string, compliantUserName, tier string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
 		toolchainv1alpha1.SpaceCreatorLabelKey: userSignup.Name,
 	}
@@ -24,7 +24,6 @@ func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string
 			TargetCluster:      targetClusterName,
 			TargetClusterRoles: []string{cluster.RoleLabel(cluster.Tenant)}, // by default usersignups should be provisioned to tenant clusters
 			TierName:           tier,
-			DisableInheritance: disableInheritance,
 		},
 	}
 	return space

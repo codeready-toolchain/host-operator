@@ -694,7 +694,7 @@ func (r *Reconciler) ensureSpace(
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name, false)
+	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(ctx, space)
 	if err != nil {

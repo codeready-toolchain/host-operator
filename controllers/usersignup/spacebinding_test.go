@@ -19,7 +19,7 @@ func TestNewSpaceBinding(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-	space := NewSpace(userSignup, test.MemberClusterName, "smith", nsTemplateTier.Name, false)
+	space := NewSpace(userSignup, test.MemberClusterName, "smith", nsTemplateTier.Name)
 	mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 	// when
