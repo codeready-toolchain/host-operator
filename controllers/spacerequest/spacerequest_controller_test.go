@@ -42,7 +42,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 			spacerequesttest.WithTierName("appstudio"),
-			spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+			spacerequesttest.WithTargetClusterRoles(srClusterRoles),
+			spacerequesttest.WithDisableInheritance(false))
 
 		t.Run("subSpace doesn't exists it should be created", func(t *testing.T) {
 			// given
@@ -59,12 +60,44 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasSpecTierName("appstudio").
+				HasDisableInheritance(false).
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
 			// there should be 1 subSpace that was created from the spacerequest
 			spacetest.AssertThatSubSpace(t, hostClient, sr, parentSpace).
 				HasTier("appstudio").
-				HasSpecTargetClusterRoles(srClusterRoles)
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasDisableInheritance(false)
+		})
+
+		t.Run("subSpace created with disableInheritance", func(t *testing.T) {
+			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
+				spacerequesttest.WithTierName("appstudio"),
+				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
+				spacerequesttest.WithDisableInheritance(true))
+
+			// given
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasSpecTierName("appstudio").
+				HasDisableInheritance(true).
+				HasConditions(spacetest.Provisioning()).
+				HasFinalizer()
+			// there should be 1 subSpace that was created from the spacerequest
+			spacetest.AssertThatSubSpace(t, hostClient, sr, parentSpace).
+				HasTier("appstudio").
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasDisableInheritance(true)
 		})
 
 		t.Run("subSpace exists but is not ready yet", func(t *testing.T) {
