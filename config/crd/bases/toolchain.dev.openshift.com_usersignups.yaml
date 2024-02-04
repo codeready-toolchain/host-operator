@@ -16,18 +16,18 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.username
+    - jsonPath: .spec.identityClaims.preferredUsername
       name: Username
       type: string
-    - jsonPath: .spec.givenName
+    - jsonPath: .spec.identityClaims.givenName
       name: First Name
       priority: 1
       type: string
-    - jsonPath: .spec.familyName
+    - jsonPath: .spec.identityClaims.familyName
       name: Last Name
       priority: 1
       type: string
-    - jsonPath: .spec.company
+    - jsonPath: .spec.identityClaims.company
       name: Company
       priority: 1
       type: string
