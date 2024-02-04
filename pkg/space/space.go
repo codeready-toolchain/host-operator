@@ -47,6 +47,7 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 			TargetClusterRoles: spaceRequest.Spec.TargetClusterRoles,
 			TierName:           spaceRequest.Spec.TierName,
 			ParentSpace:        parentSpace.GetName(),
+			DisableInheritance: spaceRequest.Spec.DisableInheritance,
 		},
 	}
 
