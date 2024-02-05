@@ -96,7 +96,8 @@ spec:
       kind: SpaceBindingRequest
       name: spacebindingrequests.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: SpaceProvisionerConfig contains configuration for provisioning spaces to clusters
+    - description: SpaceProvisionerConfig contains configuration for provisioning
+        spaces to clusters
       displayName: SpaceProvisionerConfig
       kind: SpaceProvisionerConfig
       name: spaceprovisionerconfigs.toolchain.dev.openshift.com
