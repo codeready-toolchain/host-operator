@@ -119,6 +119,13 @@ func (a *Assertion) HasSpecTierName(tierName string) *Assertion {
 	return a
 }
 
+func (a *Assertion) HasDisableInheritance(disableInheritance bool) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, disableInheritance, a.spaceRequest.Spec.DisableInheritance)
+	return a
+}
+
 func (a *Assertion) HasTargetClusterURL(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
