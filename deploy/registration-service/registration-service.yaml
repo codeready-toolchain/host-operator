@@ -114,7 +114,7 @@ objects:
                 successThreshold: 1
                 timeoutSeconds: 1
               readinessProbe:
-                failureThreshold: 30
+                failureThreshold: 3
                 httpGet:
                   path: /api/v1/health
                   port: 8080
