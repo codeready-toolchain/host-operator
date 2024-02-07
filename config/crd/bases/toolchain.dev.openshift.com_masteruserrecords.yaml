@@ -24,7 +24,7 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
-    - jsonPath: .spec.userAccounts[].targetCluster
+    - jsonPath: .status.userAccounts[].cluster.name
       name: Cluster
       type: string
     - jsonPath: .spec.tierName
@@ -64,11 +64,6 @@ spec:
                   be able to login (but the underlying UserAccounts still exists)
                   "false" is assumed by default
                 type: boolean
-              originalSub:
-                description: OriginalSub is an optional property temporarily introduced
-                  for the purpose of migrating the users to a new IdP provider client,
-                  and contains the user's "original-sub" claim
-                type: string
               propagatedClaims:
                 description: PropagatedClaims contains a selection of claim values
                   from the SSO Identity Provider which are intended to be "propagated"
@@ -118,12 +113,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - targetCluster
                 x-kubernetes-list-type: map
-              userID:
-                description: UserID is the user ID from RHD Identity Provider token
-                  (“sub” claim)
-                type: string
-            required:
-            - userID
             type: object
           status:
             description: MasterUserRecordStatus defines the observed state of MasterUserRecord

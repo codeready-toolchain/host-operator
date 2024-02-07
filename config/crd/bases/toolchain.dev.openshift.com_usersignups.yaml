@@ -16,18 +16,18 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.username
+    - jsonPath: .spec.identityClaims.preferredUsername
       name: Username
       type: string
-    - jsonPath: .spec.givenName
+    - jsonPath: .spec.identityClaims.givenName
       name: First Name
       priority: 1
       type: string
-    - jsonPath: .spec.familyName
+    - jsonPath: .spec.identityClaims.familyName
       name: Last Name
       priority: 1
       type: string
-    - jsonPath: .spec.company
+    - jsonPath: .spec.identityClaims.company
       name: Company
       priority: 1
       type: string
@@ -79,15 +79,6 @@ spec:
           spec:
             description: UserSignupSpec defines the desired state of UserSignup
             properties:
-              company:
-                description: The user's company name, obtained from the identity provider.
-                type: string
-              familyName:
-                description: The user's last name, obtained from the identity provider.
-                type: string
-              givenName:
-                description: The user's first name, obtained from the identity provider.
-                type: string
               identityClaims:
                 description: IdentityClaims contains as-is claim values extracted
                   from the user's access token
@@ -129,11 +120,6 @@ spec:
                 - preferredUsername
                 - sub
                 type: object
-              originalSub:
-                description: OriginalSub is an optional property temporarily introduced
-                  for the purpose of migrating the users to a new IdP provider client,
-                  and contains the user's "original-sub" claim
-                type: string
               states:
                 description: States contains a number of values that reflect the desired
                   state of the UserSignup.
@@ -145,16 +131,6 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
-              userid:
-                description: The user's user ID, obtained from the identity provider
-                  from the 'sub' (subject) claim
-                type: string
-              username:
-                description: The user's username, obtained from the identity provider.
-                type: string
-            required:
-            - userid
-            - username
             type: object
           status:
             description: UserSignupStatus defines the observed state of UserSignup

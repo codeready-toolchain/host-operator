@@ -200,11 +200,11 @@ spec:
                         properties:
                           authClientConfigContentType:
                             description: AuthClientConfigContentType specifies the
-                              auth config config content type
+                              auth config content type
                             type: string
                           authClientConfigRaw:
                             description: AuthClientConfigRaw specifies the URL used
-                              to a access the registration service
+                              to access the registration service
                             type: string
                           authClientLibraryURL:
                             description: AuthClientLibraryURL specifies the auth library
@@ -213,6 +213,13 @@ spec:
                           authClientPublicKeysURL:
                             description: AuthClientPublicKeysURL specifies the public
                               keys URL
+                            type: string
+                          ssoBaseURL:
+                            description: SSOBaseURL specifies the SSO base URL such
+                              as https://sso.redhat.com
+                            type: string
+                          ssoRealm:
+                            description: SSORealm specifies the SSO realm name
                             type: string
                         type: object
                       environment:

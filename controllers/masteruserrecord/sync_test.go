@@ -101,9 +101,6 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			Labels: map[string]string{
 				toolchainv1alpha1.TierLabelKey: "base1ns",
 			},
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
-			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
 			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
@@ -113,11 +110,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 		},
 	}
 	record := toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
-			},
-		},
+		ObjectMeta: metav1.ObjectMeta{},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
 				UserID: "foo",
