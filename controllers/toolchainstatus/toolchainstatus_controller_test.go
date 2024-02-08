@@ -1829,7 +1829,6 @@ func cachedToolchainCluster(cl runtimeclient.Client, name string, status corev1.
 	return &cluster.CachedToolchainCluster{
 		Config: &cluster.Config{
 			Name:              name,
-			Type:              cluster.Host,
 			OperatorNamespace: test.MemberOperatorNs,
 			OwnerClusterName:  test.MemberClusterName,
 			APIEndpoint:       "http://api.devcluster.openshift.com",

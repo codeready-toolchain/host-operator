@@ -1367,7 +1367,6 @@ func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...
 		require.NoError(t, err)
 		clusters[c.Name] = cluster.Cluster{
 			Config: &commoncluster.Config{
-				Type:              commoncluster.Member,
 				APIEndpoint:       c.APIEndpoint,
 				OperatorNamespace: c.OperatorNamespace,
 				OwnerClusterName:  test.MemberClusterName,
