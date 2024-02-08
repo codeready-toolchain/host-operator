@@ -222,12 +222,8 @@ func main() { // nolint:gocyclo
 		mgr,
 		namespace,
 		memberClientTimeout,
-<<<<<<< HEAD
 		useClusterRL,
 	).SetupWithManager(mgr); err != nil {
-=======
-		useClusterRL).SetupWithManager(mgr); err != nil {
->>>>>>> 8bcdfd5 (KSPACE-20: Drop the distinction between host & member ToolchainClusters)
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
 	}

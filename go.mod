@@ -115,8 +115,4 @@ require (
 
 go 1.20
 
-<<<<<<< HEAD
 replace github.com/codeready-toolchain/toolchain-common => github.com/fbm3307/toolchain-common v0.0.0-20240214113024-8aa8eb8cfe1d
-=======
-replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
->>>>>>> 8bcdfd5 (KSPACE-20: Drop the distinction between host & member ToolchainClusters)
