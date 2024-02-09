@@ -56,7 +56,7 @@ spec:
     - jsonPath: .status.compliantUsername
       name: CompliantUsername
       type: string
-    - jsonPath: .metadata.annotations.toolchain\.dev\.openshift\.com/user-email
+    - jsonPath: .spec.identityClaims.email
       name: Email
       type: string
     name: v1alpha1
