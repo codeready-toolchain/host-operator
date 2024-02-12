@@ -41,7 +41,7 @@ var expectedProdTiers = map[string]bool{
 }
 
 var expectedTestTiers = map[string]bool{
-	"advanced":  true, // tier_name: true/false (if based on the other tier)
+	"advanced":  true,
 	"base":      false,
 	"nocluster": false,
 	"appstudio": false,
@@ -49,7 +49,7 @@ var expectedTestTiers = map[string]bool{
 
 func nsTypes(tier string) []string {
 	switch tier {
-	case "appstudio":
+	case "appstudio", "appstudiolarge":
 		return []string{"tenant"}
 	case "appstudio-env":
 		return []string{"env"}
@@ -62,7 +62,7 @@ func nsTypes(tier string) []string {
 
 func roles(tier string) []string {
 	switch tier {
-	case "appstudio", "appstudio-env":
+	case "appstudio", "appstudiolarge", "appstudio-env":
 		return []string{"admin", "maintainer", "contributor"}
 	default:
 		return []string{"admin"}
@@ -173,7 +173,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 4)
+			require.Len(t, tmpls, 4)             // advanced,appstudio,base,nocluster
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
 			for _, tier := range tiers(expectedTestTiers) {
@@ -599,11 +599,27 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	} else {
 		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	}
+	t.Logf("checking template '%s' (based on another tier: %t)", templatePath, basedOnOtherTier(expectedTiers, tier))
 	content, err := assets.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
+	// then override the templates' parameters (if applicable)
+	if basedOnOtherTier(expectedTiers, tier) {
+		content, err = assets.Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
+		require.NoError(t, err)
+		extension := BasedOnTier{}
+		err = yaml.Unmarshal(content, &extension)
+		require.NoError(t, err)
+		for i, p := range expected.Parameters {
+			for _, ep := range extension.Parameters {
+				if p.Name == ep.Name {
+					expected.Parameters[i].Value = ep.Value
+				}
+			}
+		}
+	}
 	assert.Equal(t, expected, actual)
 	assert.NotEmpty(t, actual.Objects)
 }

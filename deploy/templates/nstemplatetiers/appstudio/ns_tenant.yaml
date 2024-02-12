@@ -39,7 +39,6 @@ objects:
     scopes:
     - NotTerminating
     hard:
-      limits.cpu: "20"
       limits.memory: ${MEMORY_LIMIT}
       requests.cpu: 1750m
       requests.memory: ${MEMORY_REQUEST}
@@ -52,9 +51,8 @@ objects:
     scopes:
     - Terminating
     hard:
-      limits.cpu: "120"
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: "12"
+      requests.cpu: ${CPU_BUILD_REQUEST}
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -156,10 +154,9 @@ objects:
     limits:
     - type: "Container"
       default:
-        cpu: 2000m
         memory: 2Gi
       defaultRequest:
-        cpu: 10m
+        cpu: 200m
         memory: 256Mi
 
 - apiVersion: networking.k8s.io/v1
@@ -271,5 +268,7 @@ parameters:
   value: "32Gi"
 - name: MEMORY_BUILD_LIMIT
   value: "128Gi"
+- name: CPU_BUILD_REQUEST
+  value: "12"
 - name: MEMORY_BUILD_REQUEST
   value: "64Gi"

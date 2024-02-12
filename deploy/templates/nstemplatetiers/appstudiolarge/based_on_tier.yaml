@@ -12,3 +12,9 @@ parameters:
   value: "300"
 - name: SECRET_QUOTA
   value: "300"
+- name: MEMORY_BUILD_LIMIT
+  value: "512Gi"
+- name: CPU_BUILD_REQUEST
+  value: "24"
+- name: MEMORY_BUILD_REQUEST
+  value: "128Gi"
