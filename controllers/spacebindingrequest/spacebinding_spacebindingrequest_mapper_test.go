@@ -6,7 +6,7 @@ import (
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequest"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
-	spacebindingrequesttest "github.com/codeready-toolchain/host-operator/test/spacebindingrequest"
+	spacebindingrequesttestcommon "github.com/codeready-toolchain/toolchain-common/pkg/test/spacebindingrequest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +15,7 @@ import (
 
 func TestMapSpaceBindingToSpaceBindingRequestByLabel(t *testing.T) {
 	// given
-	spaceBindingRequest := spacebindingrequesttest.NewSpaceBindingRequest("mySpaceBindingRequest", "jane")
+	spaceBindingRequest := spacebindingrequesttestcommon.NewSpaceBindingRequest("mySpaceBindingRequest", "jane")
 	// following spaceBinding has a spaceBindingRequest associated
 	sb := spacebindingtest.NewSpaceBinding("jane", "jane", "admin", "signupAdmin")
 	sb.Labels[v1alpha1.SpaceBindingRequestLabelKey] = spaceBindingRequest.Name

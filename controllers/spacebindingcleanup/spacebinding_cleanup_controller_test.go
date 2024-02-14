@@ -12,13 +12,13 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
-	spacebindingrequesttest "github.com/codeready-toolchain/host-operator/test/spacebindingrequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	spacebindingrequesttestcommon "github.com/codeready-toolchain/toolchain-common/pkg/test/spacebindingrequest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -148,9 +148,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 func TestDeleteSpaceBindingRequest(t *testing.T) {
 	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t,
 		testconfig.SpaceConfig().SpaceBindingRequestEnabled(true))
-	sbr := spacebindingrequesttest.NewSpaceBindingRequest("lara", "lara-tenant",
-		spacebindingrequesttest.WithMUR("lara"),
-		spacebindingrequesttest.WithSpaceRole("admin"))
+	sbr := spacebindingrequesttestcommon.NewSpaceBindingRequest("lara", "lara-tenant",
+		spacebindingrequesttestcommon.WithMUR("lara"),
+		spacebindingrequesttestcommon.WithSpaceRole("admin"))
 	sbLaraAdmin := sb.NewSpaceBinding("lara", "lara", "admin", sbr.GetName(), sb.WithSpaceBindingRequest(sbr)) // the spacebinding was created from spacebindingrequest
 	t.Run("SpaceBindingRequest is deleted", func(t *testing.T) {
 		// given
@@ -164,7 +164,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		// then
 		require.Equal(t, res.RequeueAfter, 10*time.Second)
 		require.NoError(t, err)
-		spacebindingrequesttest.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
+		spacebindingrequesttestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
 	})
 
 	t.Run("spaceBinding is deleted when spaceBindingRequest is missing", func(t *testing.T) {
