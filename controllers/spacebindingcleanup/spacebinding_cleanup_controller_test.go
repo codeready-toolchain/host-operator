@@ -18,7 +18,7 @@ import (
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	spacebindingrequesttestcommon "github.com/codeready-toolchain/toolchain-common/pkg/test/spacebindingrequest"
+	sbrtestcommon "github.com/codeready-toolchain/toolchain-common/pkg/test/spacebindingrequest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -148,9 +148,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 func TestDeleteSpaceBindingRequest(t *testing.T) {
 	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t,
 		testconfig.SpaceConfig().SpaceBindingRequestEnabled(true))
-	sbr := spacebindingrequesttestcommon.NewSpaceBindingRequest("lara", "lara-tenant",
-		spacebindingrequesttestcommon.WithMUR("lara"),
-		spacebindingrequesttestcommon.WithSpaceRole("admin"))
+	sbr := sbrtestcommon.NewSpaceBindingRequest("lara", "lara-tenant",
+		sbrtestcommon.WithMUR("lara"),
+		sbrtestcommon.WithSpaceRole("admin"))
 	sbLaraAdmin := sb.NewSpaceBinding("lara", "lara", "admin", sbr.GetName(), sb.WithSpaceBindingRequest(sbr)) // the spacebinding was created from spacebindingrequest
 	t.Run("SpaceBindingRequest is deleted", func(t *testing.T) {
 		// given
@@ -164,7 +164,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		// then
 		require.Equal(t, res.RequeueAfter, 10*time.Second)
 		require.NoError(t, err)
-		spacebindingrequesttestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
+		sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
 	})
 
 	t.Run("spaceBinding is deleted when spaceBindingRequest is missing", func(t *testing.T) {
