@@ -31,10 +31,10 @@ func (p UserSignupChangedPredicate) Update(e runtimeevent.UpdateEvent) bool {
 		return false
 	}
 	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() ||
-		p.annotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) ||
 		p.labelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 }
 
+//lint:ignore U1000
 func (p UserSignupChangedPredicate) annotationChanged(e runtimeevent.UpdateEvent, annotationName string) bool {
 	return e.ObjectOld.GetAnnotations()[annotationName] != e.ObjectNew.GetAnnotations()[annotationName]
 }

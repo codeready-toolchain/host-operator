@@ -224,14 +224,14 @@ func (u *StatusUpdater) setStatusFailedToReadBannedUsers(ctx context.Context, us
 		})
 }
 
-func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusInvalidMissingUserEmail(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		ctx,
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailAnnotationReason,
+			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailReason,
 			Message: message,
 		})
 }
@@ -439,4 +439,12 @@ func (u *StatusUpdater) updateStatusConditions(ctx context.Context, userSignup *
 		return nil
 	}
 	return u.Client.Status().Update(ctx, userSignup)
+}
+
+func (u *StatusUpdater) updateStatusHomeSpace(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, spaceName string) error {
+	if userSignup.Status.HomeSpace != spaceName {
+		userSignup.Status.HomeSpace = spaceName
+		return u.Client.Status().Update(ctx, userSignup)
+	}
+	return nil // Nothing changed
 }

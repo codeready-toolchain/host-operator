@@ -104,26 +104,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	logger = logger.WithValues("username", userSignup.Spec.Username)
+	logger = logger.WithValues("username", userSignup.Spec.IdentityClaims.PreferredUsername)
 
 	if util.IsBeingDeleted(userSignup) {
 		logger.Info("The UserSignup is being deleted")
 		return reconcile.Result{}, nil
 	}
-
-	// TODO remove this section (and the referenced function) after migration has completed
-	// FROM HERE ---------
-	migrated, err := r.migrateUserSignupClaimsIfNecessary(ctx, userSignup)
-	if err != nil {
-		// Error during migration - requeue the request
-		return reconcile.Result{}, err
-	}
-
-	if migrated {
-		// If migration occurred, then queue the UserSignup for reconciliation again
-		return reconcile.Result{Requeue: true}, nil
-	}
-	// TO HERE ^^^^^^^^^^^^
 
 	if userSignup.GetLabels() == nil {
 		userSignup.Labels = make(map[string]string)
@@ -204,40 +190,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, r.ensureNewMurIfApproved(ctx, config, userSignup)
 }
 
-// migrateUserSignupClaimsIfNecessary is a temporary function that will set the UserSignup's IdentityClaims based on the
-// existing property values
-func (r *Reconciler) migrateUserSignupClaimsIfNecessary(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
-
-	if userSignup.Spec.IdentityClaims.Sub == "" {
-		userSignup.Spec.IdentityClaims.Sub = userSignup.Spec.Userid
-		userSignup.Spec.IdentityClaims.FamilyName = userSignup.Spec.FamilyName
-		userSignup.Spec.IdentityClaims.GivenName = userSignup.Spec.GivenName
-		userSignup.Spec.IdentityClaims.OriginalSub = userSignup.Spec.OriginalSub
-		userSignup.Spec.IdentityClaims.PreferredUsername = userSignup.Spec.Username
-		userSignup.Spec.IdentityClaims.Company = userSignup.Spec.Company
-
-		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]; ok {
-			userSignup.Spec.IdentityClaims.UserID = val
-		}
-
-		if val, ok := userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]; ok {
-			userSignup.Spec.IdentityClaims.AccountID = val
-		}
-
-		if val, ok := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; ok {
-			userSignup.Spec.IdentityClaims.Email = val
-		}
-
-		if err := r.Client.Update(ctx, userSignup); err != nil {
-			return false, err
-		}
-
-		return true, nil
-	}
-
-	return false, nil
-}
-
 // handleDeactivatedUserSignup defines the workflow for deactivated users
 //
 // If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
@@ -287,8 +239,8 @@ func (r *Reconciler) isUserBanned(
 	userSignup *toolchainv1alpha1.UserSignup,
 ) (bool, error) {
 	banned := false
-	// Lookup the user email annotation
-	if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+	// Lookup the user email
+	if userSignup.Spec.IdentityClaims.Email != "" {
 
 		// Lookup the email hash label
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
@@ -304,13 +256,13 @@ func (r *Reconciler) isUserBanned(
 
 			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
 			for _, bannedUser := range bannedUserList.Items {
-				if bannedUser.Spec.Email == emailLbl {
+				if bannedUser.Spec.Email == userSignup.Spec.IdentityClaims.Email {
 					banned = true
 					break
 				}
 			}
 
-			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
+			hashIsValid := validateEmailHash(userSignup.Spec.IdentityClaims.Email, emailHashLbl)
 			if !hashIsValid {
 				err := fmt.Errorf("hash is invalid")
 				return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidEmailHash, err, "the email hash '%s' is invalid ", emailHashLbl)
@@ -322,9 +274,9 @@ func (r *Reconciler) isUserBanned(
 				"the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 		}
 	} else {
-		err := fmt.Errorf("missing annotation at usersignup")
-		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmailAnnotation, err,
-			"the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
+		err := fmt.Errorf("missing email at usersignup")
+		return banned, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusInvalidMissingUserEmail, err,
+			"the email address is not present")
 	}
 	return banned, nil
 }
@@ -405,13 +357,16 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 
 		if shouldManageSpace(userSignup) {
 			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
-			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
 			if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
-			} else if created {
+			}
+			if err := r.updateStatusHomeSpace(ctx, userSignup, space.Name); err != nil {
+				return true, err
+			}
+			// if the space was just created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
+			if created {
 				return true, nil
 			}
-
 			if err = r.ensureSpaceBinding(ctx, userSignup, mur, space); err != nil {
 				return true, err
 			}
@@ -427,6 +382,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		logger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name))
 	}
+
 	return false, nil
 }
 
@@ -441,6 +397,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		alreadyVerificationRequired := condition.IsFalseWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, toolchainv1alpha1.UserSignupVerificationRequiredReason)
 		err := r.updateStatus(ctx, userSignup, r.setStatusVerificationRequired)
 		if err == nil && !alreadyVerificationRequired {
+			logger.Info("Incremented UserSignupVerificationRequiredTotal metric", "usersignup", userSignup.Name)
 			// increment the verification required counter only the first time the UserSignup status is set to verification required
 			metrics.UserSignupVerificationRequiredTotal.Inc()
 		}
@@ -615,7 +572,7 @@ func (r *Reconciler) generateCompliantUsername(
 	instance *toolchainv1alpha1.UserSignup,
 ) (string, error) {
 	// transformed should now be of maxLength specified in TransformUsername
-	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
+	transformed := usersignup.TransformUsername(instance.Spec.IdentityClaims.PreferredUsername, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
 	maxlengthWithSuffix := usersignup.MaxLength - 4
 	newUsername := transformed
@@ -655,7 +612,7 @@ func (r *Reconciler) generateCompliantUsername(
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername))
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
@@ -678,7 +635,7 @@ func (r *Reconciler) provisionMasterUserRecord(
 	compliantUsername, err := r.generateCompliantUsername(ctx, config, userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
+			"Error generating compliant username for %s", userSignup.Spec.IdentityClaims.PreferredUsername)
 	}
 
 	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)
@@ -700,7 +657,8 @@ func (r *Reconciler) provisionMasterUserRecord(
 
 	// track the MUR creation as an account activation event in Segment
 	if r.SegmentClient != nil {
-		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.IdentityClaims.UserID,
+			userSignup.Spec.IdentityClaims.AccountID)
 	} else {
 		logger.Info("segment client not configured to track account activations")
 	}
@@ -812,6 +770,9 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	}
 	// annotation was missing so assume it's the first activation
 	logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+	if userSignup.Annotations == nil {
+		userSignup.Annotations = make(map[string]string)
+	}
 	userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
 	return 1
 }
@@ -863,7 +824,7 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {
@@ -899,7 +860,7 @@ func (r *Reconciler) sendDeactivatedNotification(ctx context.Context, config too
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
 			WithKeysAndValues(keysAndVals).
-			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+			Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 		logger := log.FromContext(ctx)
 		if err != nil {

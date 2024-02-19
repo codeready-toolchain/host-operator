@@ -18,6 +18,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingrequest"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
+	"github.com/codeready-toolchain/host-operator/controllers/spaceprovisionerconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
@@ -365,6 +366,12 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "SocialEvent")
 		os.Exit(1)
 	}
+	if err = (&spaceprovisionerconfig.Reconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	go func() {
@@ -379,7 +386,7 @@ func main() { // nolint:gocyclo
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
+		if err := toolchainstatus.CreateOrUpdateResources(ctx, mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
 			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)
 		}
@@ -397,7 +404,7 @@ func main() { // nolint:gocyclo
 		// create or update all UserTiers on the cluster at startup
 		setupLog.Info("Creating/updating the UserTier resources")
 		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
-		if err := usertiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}

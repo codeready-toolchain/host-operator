@@ -41,8 +41,6 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 			return false, err
 		}
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
-		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
-		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 		s.memberUserAcc.Spec.PropagatedClaims = s.record.Spec.PropagatedClaims
 
 		// In addition to synchronizing the spec, ensure both the tier label and email annotation are set
@@ -54,7 +52,6 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 		if s.memberUserAcc.Annotations == nil {
 			s.memberUserAcc.Annotations = map[string]string{}
 		}
-		s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 
 		err := s.memberCluster.Client.Update(ctx, s.memberUserAcc)
 		if err != nil {
@@ -69,11 +66,10 @@ func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
 
 func (s *Synchronizer) isSynchronized() bool {
 	return s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
-		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
 		s.memberUserAcc.Spec.PropagatedClaims == s.record.Spec.PropagatedClaims &&
-		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
-		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
+		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName
 }
+
 func (s *Synchronizer) removeAccountFromStatus(ctx context.Context) error {
 	for i := range s.record.Status.UserAccounts {
 		if s.record.Status.UserAccounts[i].Cluster.Name == s.memberCluster.Name {
@@ -151,10 +147,6 @@ func (s *Synchronizer) withClusterDetails(ctx context.Context, status toolchainv
 			return status, errs.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
-		if status.Cluster.APIEndpoint == "" {
-			status.Cluster.APIEndpoint = s.memberCluster.APIEndpoint
-		}
-
 		for _, memberStatus := range toolchainStatus.Status.Members {
 			if memberStatus.ClusterName == status.Cluster.Name {
 				if memberStatus.MemberStatus.Routes == nil {
@@ -164,8 +156,6 @@ func (s *Synchronizer) withClusterDetails(ctx context.Context, status toolchainv
 					ready, _ := condition.FindConditionByType(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
 					return status, fmt.Errorf("routes are not properly set in ToolchainStatus - the reason is: `%s` with message: `%s`", ready.Reason, ready.Message)
 				}
-				status.Cluster.ConsoleURL = memberStatus.MemberStatus.Routes.ConsoleURL
-				status.Cluster.CheDashboardURL = memberStatus.MemberStatus.Routes.CheDashboardURL
 				return status, nil
 			}
 		}
@@ -254,7 +244,7 @@ func alignReadiness(ctx context.Context, scheme *runtime.Scheme, hostClient runt
 				WithTemplate(notificationtemplates.UserProvisionedTemplateName).
 				WithUserContext(userSignup).
 				WithKeysAndValues(keysAndVals).
-				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+				Create(ctx, userSignup.Spec.IdentityClaims.Email)
 
 			if err != nil {
 				return false, err

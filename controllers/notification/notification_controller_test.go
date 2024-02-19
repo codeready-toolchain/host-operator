@@ -50,7 +50,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create(context.TODO(), "jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		require.NoError(t, cl.Update(context.TODO(), notification))
@@ -72,7 +72,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create(context.TODO(), "jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -101,7 +101,7 @@ func TestNotificationSentFailure(t *testing.T) {
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("test", "test content").
-			Create("abc123@acme.com")
+			Create(context.TODO(), "abc123@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -131,11 +131,16 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "foo@redhat.com",
-				Userid:     "foo",
-				GivenName:  "Foo",
-				FamilyName: "Bar",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+						Sub:   "foo",
+						Email: "foo@redhat.com",
+					},
+					PreferredUsername: "foo@redhat.com",
+					GivenName:         "Foo",
+					FamilyName:        "Bar",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		controller, cl := newController(t, ds, userSignup)
@@ -143,7 +148,7 @@ func TestNotificationDelivery(t *testing.T) {
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
-			Create("foo@redhat.com")
+			Create(context.TODO(), "foo@redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -190,7 +195,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
-			Create("sandbox-admin@developers.redhat.com")
+			Create(context.TODO(), "sandbox-admin@developers.redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -238,17 +243,20 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "jane@redhat.com",
-				GivenName:  "jane",
-				FamilyName: "doe",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "jane@redhat.com",
+					GivenName:         "jane",
+					FamilyName:        "doe",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		// pass in nil for deliveryService since send won't be used (sending skipped)
 		controller, cl := newController(t, nil, userSignup, toolchainConfig)
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
-			Create("jane@redhat.com")
+			Create(context.TODO(), "jane@redhat.com")
 		require.NoError(t, err)
 
 		// when
@@ -276,17 +284,20 @@ func TestNotificationDelivery(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:   "foo@redhat.com",
-				GivenName:  "Foo",
-				FamilyName: "Bar",
-				Company:    "Red Hat",
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims:  toolchainv1alpha1.PropagatedClaims{},
+					PreferredUsername: "foo@redhat.com",
+					GivenName:         "Foo",
+					FamilyName:        "Bar",
+					Company:           "Red Hat",
+				},
 			},
 		}
 		mds := &MockDeliveryService{}
 		controller, cl := newController(t, mds, userSignup)
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
-			Create("foo@redhat.com")
+			Create(context.TODO(), "foo@redhat.com")
 		require.NoError(t, err)
 
 		// when

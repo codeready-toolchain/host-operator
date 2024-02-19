@@ -69,30 +69,6 @@ func TestIsSynchronized(t *testing.T) {
 			assert.False(t, s.isSynchronized())
 		})
 
-		t.Run("missing email annotation", func(t *testing.T) {
-			// given
-			record, memberUserAcc := setupSynchronizerItems()
-			delete(memberUserAcc.Annotations, toolchainv1alpha1.UserEmailAnnotationKey)
-			s := Synchronizer{
-				memberUserAcc: &memberUserAcc,
-				record:        &record,
-			}
-			// when/then
-			assert.False(t, s.isSynchronized())
-		})
-
-		t.Run("email annotation does not match", func(t *testing.T) {
-			// given
-			record, memberUserAcc := setupSynchronizerItems()
-			memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = "foo"
-			s := Synchronizer{
-				memberUserAcc: &memberUserAcc,
-				record:        &record,
-			}
-			// when/then
-			assert.False(t, s.isSynchronized())
-		})
-
 		t.Run("different disable", func(t *testing.T) {
 			// given
 			record, memberUserAcc := setupSynchronizerItems()
@@ -108,7 +84,7 @@ func TestIsSynchronized(t *testing.T) {
 		t.Run("different userID", func(t *testing.T) {
 			// given
 			record, memberUserAcc := setupSynchronizerItems()
-			record.Spec.UserID = "bar"
+			record.Spec.PropagatedClaims.UserID = "bar"
 			s := Synchronizer{
 				memberUserAcc: &memberUserAcc,
 				record:        &record,
@@ -125,23 +101,20 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			Labels: map[string]string{
 				toolchainv1alpha1.TierLabelKey: "base1ns",
 			},
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
-			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:   "foo",
+			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+				UserID: "foo",
+			},
 			Disabled: false,
 		},
 	}
 	record := toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
-			},
-		},
+		ObjectMeta: metav1.ObjectMeta{},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:   "foo",
+			PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+				UserID: "foo",
+			},
 			Disabled: false,
 			TierName: "base1ns",
 		},
@@ -175,31 +148,6 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasTier(*otherTier).
-		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
-}
-
-func TestSynchronizeAnnotation(t *testing.T) {
-	// given
-	apiScheme(t)
-	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
-
-	userAccount := uatest.NewUserAccountFromMur(mur)
-	userAccount.Annotations = nil
-
-	hostClient := test.NewFakeClient(t, mur)
-	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
-
-	// when
-	createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
-
-	// then
-	require.NoError(t, err)
-	assert.True(t, createdOrUpdated)
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		Exists().
-		MatchMasterUserRecord(mur)
-
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
@@ -928,10 +876,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "https://console.member-cluster/",
-				CheDashboardURL: "https://che-toolchain-che.member-cluster/",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -962,10 +907,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "https://console.member-cluster/",
-				CheDashboardURL: "",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -996,10 +938,7 @@ func TestRoutes(t *testing.T) {
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name:            test.MemberClusterName,
-				APIEndpoint:     "https://api.member-cluster:6433",
-				ConsoleURL:      "",
-				CheDashboardURL: "",
+				Name: test.MemberClusterName,
 			}).
 			AllUserAccountsHaveCondition(condition)
 	})
@@ -1033,10 +972,7 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 		HasConditions(expMurCon...).
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-			Name:            test.MemberClusterName,
-			APIEndpoint:     "https://api.member-cluster:6433",
-			ConsoleURL:      "https://console.member-cluster/",
-			CheDashboardURL: "http://che-toolchain-che.member-cluster/",
+			Name: test.MemberClusterName,
 		}).
 		AllUserAccountsHaveCondition(userAccountCondition)
 }

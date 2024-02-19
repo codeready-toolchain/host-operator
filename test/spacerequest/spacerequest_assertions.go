@@ -88,12 +88,12 @@ func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.Names
 			}
 		}
 		assert.NotEmpty(a.t, foundItem, "unable to find namespace access", "namespace", expectedNamespaceAccess.Name)
-
 		if expectedNamespaceAccess.SecretRef == "" {
-			// check that there is no secret generated
+			// check that the secret was not created
 			assert.Empty(a.t, foundItem.SecretRef)
 			continue
 		}
+
 		// check that the secret was created
 		assert.NotEmpty(a.t, foundItem.SecretRef)
 		secret := &corev1.Secret{}
@@ -121,6 +121,13 @@ func (a *Assertion) HasSpecTierName(tierName string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, tierName, a.spaceRequest.Spec.TierName)
+	return a
+}
+
+func (a *Assertion) HasDisableInheritance(disableInheritance bool) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, disableInheritance, a.spaceRequest.Spec.DisableInheritance)
 	return a
 }
 

@@ -58,61 +58,6 @@ var event = testsocialevent.NewSocialEvent(test.HostOperatorNs, commonsocialeven
 	testsocialevent.WithUserTier(deactivate80Tier.Name),
 	testsocialevent.WithSpaceTier(base2NSTemplateTier.Name))
 
-func TestUserSignupMigration(t *testing.T) {
-	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
-
-	userSignup := commonsignup.NewUserSignup(
-		commonsignup.ApprovedManually())
-
-	// Clear the identity claims
-	userSignup.Spec.IdentityClaims = toolchainv1alpha1.IdentityClaimsEmbedded{}
-
-	// Set some other properties
-	userSignup.Spec.GivenName = "John"
-	userSignup.Spec.FamilyName = "Smith"
-	userSignup.Spec.Company = "Acme"
-	userSignup.Spec.OriginalSub = uuid.Must(uuid.NewV4()).String()
-
-	userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "123456"
-	userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "999988"
-
-	// First reconcile so that we can check that an error is returned if the client update fails
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
-	fakeClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-		return fmt.Errorf("some error")
-	}
-
-	// Reconcile and confirm we get an error
-	_, err := r.Reconcile(context.TODO(), req)
-	require.Error(t, err)
-
-	// Reconcile so that the migration can occur
-	r, req, _ = prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
-	res, err := r.Reconcile(context.TODO(), req)
-
-	// then
-	require.NoError(t, err)
-
-	// Confirm requeue
-	require.True(t, res.Requeue)
-
-	// Reload the UserSignup
-	reloaded := &toolchainv1alpha1.UserSignup{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, reloaded)
-	require.NoError(t, err)
-
-	// Confirm the migration
-	require.Equal(t, userSignup.Spec.Username, reloaded.Spec.IdentityClaims.PreferredUsername)
-	require.Equal(t, userSignup.Spec.Company, reloaded.Spec.IdentityClaims.Company)
-	require.Equal(t, userSignup.Spec.FamilyName, reloaded.Spec.IdentityClaims.FamilyName)
-	require.Equal(t, userSignup.Spec.GivenName, reloaded.Spec.IdentityClaims.GivenName)
-	require.Equal(t, userSignup.Spec.Userid, reloaded.Spec.IdentityClaims.Sub)
-	require.Equal(t, userSignup.Spec.OriginalSub, reloaded.Spec.IdentityClaims.OriginalSub)
-	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey], reloaded.Spec.IdentityClaims.UserID)
-	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], reloaded.Spec.IdentityClaims.AccountID)
-
-}
-
 func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -122,8 +67,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "198573"),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "387832"),
+			commonsignup.WithUserID("198573"),
+			commonsignup.WithAccountID("387832"),
 			commonsignup.WithOriginalSub("original-sub-value:1234")),
 		"automatically approved with valid activation annotation": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
@@ -137,9 +82,9 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueDeactivated),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
 			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "9834722"),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "4837262"),
-			commonsignup.WithOriginalSub("original-sub-value:1234")),
+			commonsignup.WithOriginalSub("original-sub-value:1234"),
+			commonsignup.WithUserID("9834722"),
+			commonsignup.WithAccountID("4837262")),
 		"automatically approved via unknown social event": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
@@ -180,22 +125,9 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
-			val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
-			if ok {
-				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
-					HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, val)
-			}
-
-			val, ok = userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
-			if ok {
-				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
-					HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, val)
-			}
-
 			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-				HasOriginalSub(userSignup.Spec.OriginalSub).
 				HasUserAccounts(1).Get()
 			switch testname {
 			case "automatically approved via social event":
@@ -295,6 +227,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base")
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with social event":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					Exists().
@@ -302,9 +235,11 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base2")
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with skip space creation annotation set to true":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					DoesNotExist()
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("")
 			default:
 				assert.Fail(t, "unknown testcase")
 			}
@@ -323,9 +258,11 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 				case "with skip space creation annotation set to true":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("")
 				default:
 					assert.Fail(t, "unknown testcase")
 				}
@@ -457,17 +394,17 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.Username, r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*deactivate30Tier).
 		Get()
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
 	// space and spacebinding should be created after the next reconcile
-	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).DoesNotExist()
-	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).DoesNotExist()
+	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).DoesNotExist()
+	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername,
+		userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).DoesNotExist()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -500,7 +437,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should now be created
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			Exists().
 			HasSpecTargetCluster("member1").
@@ -510,7 +447,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
 			// set the space to ready
-			err = r.setSpaceToReady(userSignup.Spec.Username)
+			err = r.setSpaceToReady(userSignup.Spec.IdentityClaims.PreferredUsername)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -520,18 +457,20 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			require.Equal(t, reconcile.Result{}, res)
 
 			// spacebinding should be created
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.IdentityClaims.PreferredUsername,
+				userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Spec.Username).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Spec.Username).
-				HasSpec(mur.Name, userSignup.Spec.Username, "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Spec.IdentityClaims.PreferredUsername).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Spec.IdentityClaims.PreferredUsername).
+				HasSpec(mur.Name, userSignup.Spec.IdentityClaims.PreferredUsername, "admin")
 
 			// Lookup the userSignup one more time and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace(userSignup.Name)
 
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
@@ -563,10 +502,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 }
 
-func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
+func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(commonsignup.WithoutAnnotations())
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Spec.IdentityClaims.Email = ""
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
@@ -596,8 +536,8 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  "MissingUserEmailAnnotation",
-			Message: "missing annotation at usersignup",
+			Reason:  "MissingUserEmail",
+			Message: "missing email at usersignup",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -614,8 +554,9 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
 		commonsignup.WithLabel("toolchain.dev.openshift.com/approved", "false"),
-		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "foo@redhat.com"),
 	)
+
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
@@ -705,9 +646,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
-	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-	}
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
 	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
@@ -791,7 +730,6 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*customUserTier).
 		Get()
@@ -1445,7 +1383,6 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
-		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
 		HasTier(*deactivate30Tier).
 		Get()
@@ -1900,14 +1837,12 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup()
-	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-	}
+	userSignup.Spec.IdentityClaims.Email = "foo@redhat.com"
 	userSignup.Labels = map[string]string{
 		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 		"toolchain.dev.openshift.com/approved":            "true",
 	}
-	userSignup.Spec.OriginalSub = "original-sub:foo"
+	userSignup.Spec.IdentityClaims.OriginalSub = "original-sub:foo"
 
 	// Create a MUR with the same UserID but don't set the OriginalSub property
 	mur := &toolchainv1alpha1.MasterUserRecord{
@@ -1916,9 +1851,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
 				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
-			},
-			Annotations: map[string]string{
-				toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
 			},
 		},
 	}
@@ -1952,7 +1884,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Name:      mur.Name,
 	}, murInstance)
 	require.NoError(t, err)
-	require.Equal(t, userSignup.Spec.OriginalSub, murInstance.Spec.OriginalSub)
 
 	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
 		// given the space is ready
@@ -2150,7 +2081,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.Equal(t, mur.Spec.PropagatedClaims, userSignup.Spec.IdentityClaims.PropagatedClaims)
 
 	// Modify one of the propagated claims
-	userSignup.Spec.IdentityClaims.PropagatedClaims.Email = "abc@def.com"
+	userSignup.Spec.IdentityClaims.PropagatedClaims.UserID = "314159265358979"
 
 	// Reconcile the UserSignup again
 	r, req, _ = prepareReconcile(t, userSignup.Name, ready, userSignup, deactivate30Tier)
@@ -2163,7 +2094,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.NoError(t, err)
 
 	// Confirm the propagated claim has been updated in the MUR
-	require.Equal(t, "abc@def.com", mur.Spec.PropagatedClaims.Email)
+	require.Equal(t, "314159265358979", mur.Spec.PropagatedClaims.UserID)
 }
 
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
@@ -2356,7 +2287,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		notification := notifications.Items[0]
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
-		require.Equal(t, userSignup.Spec.Userid, notification.Spec.Context["UserID"])
+		require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notification.Spec.Context["Sub"])
 		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
@@ -2440,9 +2371,14 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub:   "UserID123",
+					Email: "john.doe@redhat.com",
+				},
+				PreferredUsername: meta.Name,
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2489,13 +2425,8 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			}
 		}
 
-		// Reconcile as the first reconcile performs a temporary migration.
-		// FIXME remove after migration complete
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
 		// when
-		_, err = r.Reconcile(context.TODO(), req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.Error(t, err)
@@ -2548,8 +2479,14 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Email:  "john.doe@redhat.com",
+					UserID: "UserID123",
+					Sub:    "UserID123",
+				},
+				PreferredUsername: meta.Name,
+			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
@@ -2592,13 +2529,8 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 		))
 
-		// Reconcile as the first reconcile performs a temporary migration.
-		// FIXME remove after migration complete
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
 		// when
-		_, err = r.Reconcile(context.TODO(), req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -2746,9 +2678,14 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: "edward.jones@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateApproved},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub:   "UserID123",
+					Email: "edward.jones@redhat.com",
+				},
+				PreferredUsername: "edward.jones@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateApproved},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2787,11 +2724,6 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		err := r.setSpaceToReady(mur.Name) // given space is ready
-		require.NoError(t, err)
-
-		// Reconcile as the first reconcile performs a temporary migration.
-		// FIXME remove after migration complete
-		_, err = r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		_, err = r.Reconcile(context.TODO(), req)
@@ -2951,9 +2883,14 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID089",
-			Username: "edward.jones@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{"deactivating"},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub:   "UserID089",
+					Email: "edward.jones@redhat.com",
+				},
+				PreferredUsername: "edward.jones@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{"deactivating"},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -2990,13 +2927,8 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 		}),
 	))
 
-	// Reconcile as the first reconcile performs a temporary migration.
-	// FIXME remove after migration complete
-	_, err := r.Reconcile(context.TODO(), req)
-	require.NoError(t, err)
-
 	// when
-	_, err = r.Reconcile(context.TODO(), req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -3011,7 +2943,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
+	require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notifications.Items[0].Spec.Context["Sub"])
 
 	// Confirm the status is correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3072,7 +3004,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
+	require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notifications.Items[0].Spec.Context["Sub"])
 
 	// Confirm the status is still correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3399,9 +3331,14 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
-				Userid:   "UserID123",
-				Username: "alice.mayweather.doe@redhat.com",
-				States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+						Sub:   "UserID123",
+						Email: "alice.mayweather.doe@redhat.com",
+					},
+					PreferredUsername: "alice.mayweather.doe@redhat.com",
+				},
+				States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 			},
 			Status: toolchainv1alpha1.UserSignupStatus{
 				Conditions: []toolchainv1alpha1.Condition{
@@ -3455,13 +3392,8 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 
 		t.Run("first reconcile", func(t *testing.T) {
 
-			// Reconcile again, as the first reconcile performs a temporary migration.
-			// FIXME remove after migration complete
-			_, err := r.Reconcile(context.TODO(), req)
-			require.NoError(t, err)
-
 			// when
-			_, err = r.Reconcile(context.TODO(), req)
+			_, err := r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
 
 			// then
@@ -3522,9 +3454,13 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: "alice.mayweather.doe@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+					Sub: "UserID123",
+				},
+				PreferredUsername: "alice.mayweather.doe@redhat.com",
+			},
+			States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			Conditions: []toolchainv1alpha1.Condition{
@@ -3568,13 +3504,8 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 		}
 	}
 
-	// Reconcile as the first reconcile performs a temporary migration.
-	// FIXME remove after migration complete
-	_, err := r.Reconcile(context.TODO(), req)
-	require.NoError(t, err)
-
 	// when
-	_, err = r.Reconcile(context.TODO(), req)
+	_, err := r.Reconcile(context.TODO(), req)
 	require.Error(t, err)
 
 	// then
@@ -4011,7 +3942,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
-			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
+			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", prefix, name)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, deactivate30Tier)
 			InitializeCounters(t, NewToolchainStatus(
@@ -4056,7 +3987,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
-			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
+			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", name, suffix)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, deactivate30Tier)
 			InitializeCounters(t, NewToolchainStatus(
@@ -4672,16 +4603,15 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Userid:   "UserID123",
-			Username: meta.Name,
 			IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
 				PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-					Sub:         "44332211",
+					Sub:         "UserID123",
 					UserID:      "135246",
 					AccountID:   "357468",
 					OriginalSub: "11223344",
-					Email:       "joe@redhat.com",
+					Email:       "john.doe@redhat.com",
 				},
+				PreferredUsername: meta.Name,
 			},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
@@ -4689,6 +4619,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		},
 	}
 	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Spec.PropagatedClaims.Email = "john.doe@redhat.com"
 	mur.Labels = map[string]string{
 		toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
 		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",

@@ -308,7 +308,7 @@ func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStat
 	// save host operator deployment check status in this flag, it will be returned in case no errors are found by the following checks.
 	allOK := true
 	// check host operator deployment status
-	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(ctx, r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
 	errDeploy = status.ValidateComponentConditionReady(deploymentConditions...)
 	if errDeploy != nil {
 		logger.Error(errDeploy, "host operator deployment is not ready")
@@ -337,7 +337,7 @@ func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStat
 	}
 
 	// verify deployment version
-	versionCondition := r.VersionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, githubRepo)
+	versionCondition := r.VersionCheckManager.CheckDeployedVersionIsUpToDate(ctx, isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, githubRepo)
 	errVersionCheck := status.ValidateComponentConditionReady(*versionCondition)
 	if errVersionCheck != nil {
 		// let's set deployment is not up-to-date reason
@@ -533,7 +533,7 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 		WithName(fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue)).
 		WithControllerReference(toolchainStatus, r.Scheme).
 		WithSubjectAndContent(subjectString, contentString).
-		Create(config.Notifications().AdminEmail())
+		Create(ctx, config.Notifications().AdminEmail())
 
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
@@ -866,7 +866,7 @@ type regServiceSubstatusHandler struct {
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
 func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	deploymentConditions := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(ctx, s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
 	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
 
@@ -961,7 +961,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 		Branch:            registrationServiceRepoBranchName,
 		DeployedCommitSHA: healthValues.Revision,
 	}
-	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
+	versionCondition := s.versionCheckManager.CheckDeployedVersionIsUpToDate(ctx, isProd, toolchainConfig.GitHubSecret().AccessTokenKey(), toolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, githubRepo)
 	err = status.ValidateComponentConditionReady(*versionCondition)
 	if err != nil {
 		// add version is not up-to-date condition
