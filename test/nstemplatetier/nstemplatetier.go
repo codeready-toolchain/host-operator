@@ -118,7 +118,7 @@ var AppStudioTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 		},
 	},
 	SpaceRequestConfig: &toolchainv1alpha1.SpaceRequestConfig{
-		ServiceAccountName: "namespace-manager",
+		ServiceAccountName: toolchainv1alpha1.AdminServiceAccountName,
 	},
 }
 

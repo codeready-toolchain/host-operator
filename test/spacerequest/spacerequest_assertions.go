@@ -89,6 +89,11 @@ func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.Names
 		}
 		assert.NotEmpty(a.t, foundItem, "unable to find namespace access", "namespace", expectedNamespaceAccess.Name)
 
+		if expectedNamespaceAccess.SecretRef == "" {
+			// check that there is no secret generated
+			assert.Empty(a.t, foundItem.SecretRef)
+			continue
+		}
 		// check that the secret was created
 		assert.NotEmpty(a.t, foundItem.SecretRef)
 		secret := &corev1.Secret{}

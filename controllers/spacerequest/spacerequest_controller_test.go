@@ -390,9 +390,50 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasTier("appstudio").
 				HasSpecTargetClusterRoles(srClusterRoles)
 		})
+
+		t.Run("create with tier that has no secret creation", func(t *testing.T) {
+			spaceRequestNamespace := spacerequesttest.NewNamespace("jane")
+			spaceRequest := spacerequesttest.NewSpaceRequest("nosecret", spaceRequestNamespace.GetName(),
+				spacerequesttest.WithTierName("base1ns"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, spaceRequest, spaceRequestNamespace), "member-1", corev1.ConditionTrue)
+			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, spaceRequest),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace(parentSpace.GetName()),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles), // target cluster is member-1
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+				}),
+				spacetest.WithTierName(spaceRequest.Spec.TierName)) // it should be created with "base1ns" tier
+			hostClient := test.NewFakeClient(t, base1nsTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(spaceRequest))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, spaceRequestNamespace.Name, spaceRequest.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasSpecTierName("base1ns").
+				HasConditions(spacetest.Ready()).                                             // condition is reflected from space status
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1"}}). // namespace access is there but no secret is provisioned.
+				HasFinalizer()
+			// there should be 1 subSpace that was created from the spacerequest
+			spacetest.AssertThatSubSpace(t, hostClient, spaceRequest, parentSpace).
+				HasTier("base1ns").
+				HasSpecTargetClusterRoles(srClusterRoles)
+		})
 	})
 
-	appstudioTier.Spec.SpaceRequestConfig.ServiceAccountName = "manager"
 	t.Run("failure service account not present", func(t *testing.T) {
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 			spacerequesttest.WithTierName("appstudio"),
@@ -401,7 +442,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
-				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Name:      "another-sa-name", // create SA with different name than expected one
 				Namespace: "jane-env",
 			})
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
@@ -423,11 +464,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
 			// then
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "Post \"https://api.member-1:6433/api/v1/namespaces/jane-env/serviceaccounts/manager/token\": gock: cannot match any request")
+			require.Contains(t, err.Error(), "Post \"https://api.member-1:6433/api/v1/namespaces/jane-env/serviceaccounts/namespace-manager/token\": gock: cannot match any request")
 		})
 	})
 
-	appstudioTier.Spec.SpaceRequestConfig.ServiceAccountName = "namespace-manager"
 	t.Run("failure", func(t *testing.T) {
 		// given
 		sr := spacerequesttest.NewSpaceRequest("jane",

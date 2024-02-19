@@ -241,7 +241,7 @@ func (r *Reconciler) updateExistingSubSpace(ctx context.Context, spaceRequest *t
 // validateNSTemplateTier checks if the provided tierName in the spaceRequest exists and is valid
 func (r *Reconciler) validateNSTemplateTier(ctx context.Context, tierName string) (*toolchainv1alpha1.NSTemplateTier, error) {
 	if tierName == "" {
-		return &toolchainv1alpha1.NSTemplateTier{}, fmt.Errorf("tierName cannot be blank")
+		return nil, fmt.Errorf("tierName cannot be blank")
 	}
 	// check if requested tier exists
 	tier := &toolchainv1alpha1.NSTemplateTier{}
@@ -505,10 +505,10 @@ func (r *Reconciler) generateKubeConfig(subSpaceTargetCluster cluster.Cluster, n
 	contexts["default-context"] = &api.Context{
 		Cluster:   "default-cluster",
 		Namespace: namespace,
-		AuthInfo:  toolchainv1alpha1.AdminServiceAccountName,
+		AuthInfo:  serviceAccountName,
 	}
 	authinfos := make(map[string]*api.AuthInfo, 1)
-	authinfos[toolchainv1alpha1.AdminServiceAccountName] = &api.AuthInfo{
+	authinfos[serviceAccountName] = &api.AuthInfo{
 		Token: token,
 	}
 
