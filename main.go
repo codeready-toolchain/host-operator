@@ -65,8 +65,6 @@ var (
 const memberClientTimeout = 3 * time.Second
 const useClusterRL = true
 
-const useClusterRL = true
-
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
