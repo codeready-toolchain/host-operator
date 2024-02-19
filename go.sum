@@ -138,8 +138,6 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20240207000013-661b63025269 h1:YS5Q6YsTYq9Fo8qA6NQOTWAcVg86VEwulT1UfNWknIQ=
 github.com/codeready-toolchain/api v0.0.0-20240207000013-661b63025269/go.mod h1:FO7kgXH1x1LqkF327D5a36u0WIrwjVCbeijPkzgwaZc=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240216093005-a7f4a3ea7fb9 h1:iZnlP3lCtNpgR+6BRPxjfkU6XbG0tcGqezGymAhBCzg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240216093005-a7f4a3ea7fb9/go.mod h1:+COaw79DVTLSb2unqVwcBtYOg6sh7MbMHgXU1/ht2I8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -193,6 +191,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
+github.com/fbm3307/toolchain-common v0.0.0-20240219115726-d1606659ae07 h1:lk/PRt4UgsvsUpi53Vt9z+fvgDLOytvqD5Tq3gXyyiw=
+github.com/fbm3307/toolchain-common v0.0.0-20240219115726-d1606659ae07/go.mod h1:+COaw79DVTLSb2unqVwcBtYOg6sh7MbMHgXU1/ht2I8=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=

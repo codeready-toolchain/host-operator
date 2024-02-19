@@ -982,7 +982,6 @@ func newMemberCluster(cl runtimeclient.Client) cluster.Cluster {
 		Config: &commoncluster.Config{
 			Name:              test.MemberClusterName,
 			APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
-			Type:              commoncluster.Member,
 			OperatorNamespace: test.HostOperatorNs,
 			OwnerClusterName:  test.HostClusterName,
 		},

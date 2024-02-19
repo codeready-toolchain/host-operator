@@ -63,6 +63,7 @@ var (
 )
 
 const memberClientTimeout = 3 * time.Second
+const useClusterRL = true
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -219,6 +220,7 @@ func main() { // nolint:gocyclo
 		mgr,
 		namespace,
 		memberClientTimeout,
+		useClusterRL,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
@@ -428,7 +430,7 @@ func main() { // nolint:gocyclo
 }
 
 func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
-	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
+	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
 	}

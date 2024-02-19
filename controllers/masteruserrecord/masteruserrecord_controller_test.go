@@ -1464,7 +1464,6 @@ func newController(hostCl runtimeclient.Client, s *runtime.Scheme, memberCl ...C
 		r.MemberClusters[name] = cluster.Cluster{
 			Config: &commoncluster.Config{
 				Name:              name,
-				Type:              commoncluster.Member,
 				OperatorNamespace: commontest.MemberOperatorNs,
 				OwnerClusterName:  commontest.MemberClusterName,
 			},

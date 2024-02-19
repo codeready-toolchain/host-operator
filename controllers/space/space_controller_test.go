@@ -2078,7 +2078,6 @@ func newReconciler(hostCl runtimeclient.Client, memberClusters ...*commoncluster
 	for _, c := range memberClusters {
 		clusters[c.Name] = cluster.Cluster{
 			Config: &commoncluster.Config{
-				Type:              commoncluster.Member,
 				OperatorNamespace: c.OperatorNamespace,
 				OwnerClusterName:  test.MemberClusterName,
 			},
