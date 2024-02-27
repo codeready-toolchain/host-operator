@@ -55,19 +55,19 @@ func TestGetRoleTemplate(t *testing.T) {
 	t.Run("error reading template", func(t *testing.T) {
 		// when
 		// we pass an invalid template path
-		sa, err := GetRoleFromTemplate(&deploy.ToolchainClusterTemplateFS, "host-role-invalid.yaml", &rbac.Role{})
+		role, err := GetRoleFromTemplate(&deploy.ToolchainClusterTemplateFS, "host-role-invalid.yaml", &rbac.Role{})
 		// then
 		require.Error(t, err)
-		require.Nil(t, sa)
+		require.Nil(t, role)
 	})
 
 	t.Run("no role found", func(t *testing.T) {
 		// when
 		// we pass a template that contains a different Kind
-		sa, err := GetRoleFromTemplate(&deploy.ToolchainClusterTemplateFS, "host-sa.yaml", &rbac.Role{})
+		role, err := GetRoleFromTemplate(&deploy.ToolchainClusterTemplateFS, "host-sa.yaml", &rbac.Role{})
 		// then
 		require.Nil(t, err)
-		require.Nil(t, sa)
+		require.Nil(t, role)
 	})
 }
 
