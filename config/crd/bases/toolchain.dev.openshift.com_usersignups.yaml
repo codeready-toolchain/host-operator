@@ -131,11 +131,8 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
-<<<<<<< HEAD
             required:
             - identityClaims
-=======
->>>>>>> origin/master
             type: object
           status:
             description: UserSignupStatus defines the observed state of UserSignup
