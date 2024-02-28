@@ -47,12 +47,12 @@ func GetRoleBindingFromTemplate(toolchainclusterFS *embed.FS, templateName strin
 }
 
 func decodeTemplate(toolchainclusterFS *embed.FS, templateName string, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
-	saContent, err := toolchainclusterFS.ReadFile("templates/toolchaincluster/" + templateName)
+	templateContent, err := toolchainclusterFS.ReadFile("templates/toolchaincluster/" + templateName)
 	if err != nil {
 		return nil, nil, err
 	}
 	decode := scheme.Codecs.UniversalDeserializer().Decode
-	obj, gkv, err := decode(saContent, nil, into)
+	obj, gkv, err := decode(templateContent, nil, into)
 	if err != nil {
 		return nil, nil, err
 	}
