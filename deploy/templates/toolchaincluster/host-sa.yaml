@@ -3,4 +3,3 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: toolchaincluster-host
-  namespace: toolchain-host-operator

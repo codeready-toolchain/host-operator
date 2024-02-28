@@ -2,7 +2,6 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: toolchaincluster-host
-  namespace: toolchain-host-operator
 subjects:
 - kind: ServiceAccount
   name: toolchaincluster-host

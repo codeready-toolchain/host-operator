@@ -18,7 +18,6 @@ func TestGetServiceAccountTemplate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, sa)
 		assert.Equal(t, "toolchaincluster-host", sa.Name)
-		assert.Equal(t, "toolchain-host-operator", sa.Namespace)
 	})
 
 	t.Run("error reading template", func(t *testing.T) {
@@ -48,7 +47,6 @@ func TestGetRoleTemplate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, "toolchaincluster-host", role.Name)
-		assert.Equal(t, "toolchain-host-operator", role.Namespace)
 		require.NotEmpty(t, role.Rules)
 	})
 
@@ -79,7 +77,6 @@ func TestGetRoleBindingTemplate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, rolebinding)
 		assert.Equal(t, "toolchaincluster-host", rolebinding.Name)
-		assert.Equal(t, "toolchain-host-operator", rolebinding.Namespace)
 		assert.Equal(t, "ServiceAccount", rolebinding.Subjects[0].Kind)
 		assert.Equal(t, "toolchaincluster-host", rolebinding.Subjects[0].Name)
 		assert.Equal(t, "Role", rolebinding.RoleRef.Kind)
