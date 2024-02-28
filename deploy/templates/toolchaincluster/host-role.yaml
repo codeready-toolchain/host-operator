@@ -6,19 +6,6 @@ rules:
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
-  - "bannedusers"
-  - "masteruserrecords"
-  - "notifications"
-  - "nstemplatetiers"
-  - "spaces"
-  - "spacebindings"
-  - "tiertemplates"
-  - "toolchainconfigs"
-  - "toolchainclusters"
-  - "toolchainstatuses"
-  - "usersignups"
-  - "usertiers"
-  - "proxyplugins"
-  - "spaceprovisionerconfigs"
+  - "*"
   verbs:
   - "*"
