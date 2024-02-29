@@ -103,7 +103,7 @@ var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 var AppStudioEnvTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
-			TemplateRef: "appstudio-env-env-88b275d-88b275d",
+			TemplateRef: "appstudio-env-88b275d-88b275d",
 		},
 	},
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
