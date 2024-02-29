@@ -55,6 +55,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 // Reconcile ensures that SpaceProvisionerConfig is valid and points to an existing ToolchainCluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+	logger.Info("reconciling SpaceProvisonerConfig")
 
 	spaceProvisionerConfig := &toolchainv1alpha1.SpaceProvisionerConfig{}
 	if err := r.Client.Get(ctx, request.NamespacedName, spaceProvisionerConfig); err != nil {
@@ -100,6 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Message: toolchainPresenceMessage,
 		})
 
+	logger.Info("updating SpaceProvisionerConfig", "status", toolchainPresent, "reason", toolchainPresenceReason)
 	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
 		if reportedError != nil {
 			logger.Info("failed to update the status (reported as failed reconciliation) with a previous unreported error during reconciliation", "unreportedError", reportedError)
