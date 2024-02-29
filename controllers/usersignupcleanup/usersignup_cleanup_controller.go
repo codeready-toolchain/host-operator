@@ -2,7 +2,10 @@ package usersignupcleanup
 
 import (
 	"context"
+	"fmt"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	"strconv"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -136,7 +139,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// then delete the UserSignup
 		deactivatedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupDeactivatedRetentionDays()*24) * time.Hour)
 
-		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) {
+		meetsActivationCriteria := false
+		if !activationsAnnotationPresent {
+			// Meets the criteria if there is no activations annotation
+			meetsActivationCriteria = true
+		} else {
+			activationCount, err := strconv.Atoi(activations)
+			if err != nil {
+				// If there was an error converting the activation count to an integer, then assume it meets the criteria for deletion
+				meetsActivationCriteria = true
+			} else {
+				// Otherwise it meets the criteria if we can determine there has only ever been one activation in total
+				meetsActivationCriteria = activationCount <= 1
+			}
+		}
+
+		banned, err := r.isUserBanned(ctx, instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) && meetsActivationCriteria && !banned {
 			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(ctx, instance)
 		}
@@ -153,6 +176,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) isUserBanned(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+	banned := false
+	// Lookup the user email
+	if userSignup.Spec.IdentityClaims.Email != "" {
+
+		// Lookup the email hash label
+		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
+
+			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+			opts := runtimeclient.MatchingLabels(labels)
+			bannedUserList := &toolchainv1alpha1.BannedUserList{}
+
+			// Query BannedUser for resources that match the same email hash
+			if err := r.Client.List(ctx, bannedUserList, opts); err != nil {
+				return false, err
+			}
+
+			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
+			for _, bannedUser := range bannedUserList.Items {
+				if bannedUser.Spec.Email == userSignup.Spec.IdentityClaims.Email {
+					banned = true
+					break
+				}
+			}
+
+			hashIsValid := validateEmailHash(userSignup.Spec.IdentityClaims.Email, emailHashLbl)
+			if !hashIsValid {
+				err := fmt.Errorf("hash is invalid")
+				return banned, err
+			}
+		} else {
+			// If there isn't an email-hash label, then the state is invalid
+			err := fmt.Errorf("missing label at usersignup")
+			return banned, err
+		}
+	} else {
+		err := fmt.Errorf("missing email at usersignup")
+		return banned, err
+	}
+	return banned, nil
+}
+
+func validateEmailHash(userEmail, userEmailHash string) bool {
+	return hash.EncodeString(userEmail) == userEmailHash
 }
 
 // DeleteUserSignup deletes the specified UserSignup
