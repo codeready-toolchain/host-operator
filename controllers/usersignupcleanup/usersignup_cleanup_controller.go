@@ -25,6 +25,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	// MaxActivationsForCleanup is the maximum number of activations that a user may have in order to be considered
+	// for cleanup.  If the number of user activations exceeds this constant value, then cleanup will not occur.
+	MaxActivationsForCleanup = 1
+)
+
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 // SetupWithManager sets up the controller with the Manager.
@@ -150,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				meetsActivationCriteria = true
 			} else {
 				// Otherwise it meets the criteria if we can determine there has only ever been one activation in total
-				meetsActivationCriteria = activationCount <= 1
+				meetsActivationCriteria = activationCount <= MaxActivationsForCleanup
 			}
 		}
 
@@ -205,16 +211,16 @@ func (r *Reconciler) isUserBanned(ctx context.Context, userSignup *toolchainv1al
 
 			hashIsValid := validateEmailHash(userSignup.Spec.IdentityClaims.Email, emailHashLbl)
 			if !hashIsValid {
-				err := fmt.Errorf("hash is invalid")
+				err := fmt.Errorf("email hash is invalid for UserSignup [%s]", userSignup.Name)
 				return banned, err
 			}
 		} else {
 			// If there isn't an email-hash label, then the state is invalid
-			err := fmt.Errorf("missing label at usersignup")
+			err := fmt.Errorf("missing email-hash label for UserSignup [%s]", userSignup.Name)
 			return banned, err
 		}
 	} else {
-		err := fmt.Errorf("missing email at usersignup")
+		err := fmt.Errorf("could not determine email address for UserSignup [%s]", userSignup.Name)
 		return banned, err
 	}
 	return banned, nil
