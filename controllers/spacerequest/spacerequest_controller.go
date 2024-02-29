@@ -437,7 +437,7 @@ func (r *Reconciler) ensureNamespaceAccess(ctx context.Context, memberClusterWit
 			Name: namespace.Name,
 		}
 		if serviceAccountName != "" {
-			// generate secret for accessing the provisoined namespace
+			// generate secret for accessing the provisioned namespace
 			na, err = r.ensureSecretForProvisionedNamespace(ctx, memberClusterWithSpaceRequest, subSpaceTargetCluster, spaceRequest, namespace, serviceAccountName)
 			if err != nil {
 				return err
