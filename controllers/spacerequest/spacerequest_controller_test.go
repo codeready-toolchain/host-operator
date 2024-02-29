@@ -637,7 +637,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasParentSpace("jane") // the parent space is set as expected
 		})
 
-		t.Run("create with tier that has no secret creation", func(t *testing.T) {
+		t.Run("create with tier that has no serviceaccount name and expect no secret creation", func(t *testing.T) {
 			spaceRequestNamespace := spacerequesttest.NewNamespace("jane")
 			spaceRequest := spacerequesttest.NewSpaceRequest("nosecret", spaceRequestNamespace.GetName(),
 				spacerequesttest.WithTierName("base1ns"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
