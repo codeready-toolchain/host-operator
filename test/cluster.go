@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/strings/slices"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +30,6 @@ func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) clu
 					break
 				}
 			}
-
 		}
 		return filteredClustersInOrder
 	}
@@ -37,15 +37,45 @@ func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) clu
 
 type Modifier func(toolchainCluster *cluster.CachedToolchainCluster)
 
+// Deprecated: Use WithPlacementRoles instead
 func WithClusterRoleLabel(labelKey string) Modifier {
 	return func(cluster *cluster.CachedToolchainCluster) {
+		// This is the legacy way of adding the placement roles. Let's not remove it for now...
 		cluster.Config.Labels[labelKey] = "" // we don't care about the label value, only the key is used
 	}
 }
 
-func NewMemberClusterWithTenantRole(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
-	clusterRoleLabelModifier := WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))
-	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, clusterRoleLabelModifier)
+func WithProvisioningDisabled() Modifier {
+	return func(cluster *cluster.CachedToolchainCluster) {
+		cluster.Provisioning.Enabled = false
+	}
+}
+
+func WithMaxMemoryPercent(maxMemoryPercent uint) Modifier {
+	return func(cluster *cluster.CachedToolchainCluster) {
+		cluster.Provisioning.CapacityThresholds.MaxMemoryUtilizationPercent = maxMemoryPercent
+	}
+}
+
+func WithMaxNumberOfSpaces(maxSpaces uint) Modifier {
+	return func(cluster *cluster.CachedToolchainCluster) {
+		cluster.Provisioning.CapacityThresholds.MaxNumberOfSpaces = maxSpaces
+	}
+}
+
+func WithPlacementRoles(placementRoles ...string) Modifier {
+	return func(cluster *cluster.CachedToolchainCluster) {
+		for _, pr := range placementRoles {
+			if !slices.Contains(cluster.Provisioning.PlacementRoles, pr) {
+				cluster.Provisioning.PlacementRoles = append(cluster.Provisioning.PlacementRoles, pr)
+			}
+		}
+	}
+}
+
+func NewMemberClusterWithTenantRole(t *testing.T, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
+	modifiers = append(modifiers, WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant)))
+	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, modifiers...)
 }
 
 func NewMemberClusterWithClient(cl runtimeclient.Client, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
@@ -54,8 +84,8 @@ func NewMemberClusterWithClient(cl runtimeclient.Client, name string, status cor
 }
 
 // NewMemberClusterWithoutClusterRoles returns a cached toolchaincluster config that doesn't have the default cluster-roles which a member cluster should have
-func NewMemberClusterWithoutClusterRoles(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
-	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status)
+func NewMemberClusterWithoutClusterRoles(t *testing.T, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
+	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, modifiers...)
 }
 
 func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Modifier) GetMemberClusterFunc {
@@ -85,6 +115,9 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 					OperatorNamespace: test.MemberOperatorNs,
 					OwnerClusterName:  test.HostClusterName,
 					Labels:            map[string]string{},
+					Provisioning: cluster.ProvisioningConfig{
+						Enabled: true,
+					},
 				},
 				Client: cl,
 				ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{

@@ -50,13 +50,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var baseNSTemplateTier = tiertest.NewNSTemplateTier("base", "dev", "stage")
-var base2NSTemplateTier = tiertest.NewNSTemplateTier("base2", "dev", "stage")
-var deactivate30Tier = testusertier.NewUserTier("deactivate30", 30)
-var deactivate80Tier = testusertier.NewUserTier("deactivate80", 80)
-var event = testsocialevent.NewSocialEvent(test.HostOperatorNs, commonsocialevent.NewName(),
-	testsocialevent.WithUserTier(deactivate80Tier.Name),
-	testsocialevent.WithSpaceTier(base2NSTemplateTier.Name))
+var (
+	baseNSTemplateTier  = tiertest.NewNSTemplateTier("base", "dev", "stage")
+	base2NSTemplateTier = tiertest.NewNSTemplateTier("base2", "dev", "stage")
+	deactivate30Tier    = testusertier.NewUserTier("deactivate30", 30)
+	deactivate80Tier    = testusertier.NewUserTier("deactivate80", 80)
+	event               = testsocialevent.NewSocialEvent(test.HostOperatorNs, commonsocialevent.NewName(),
+		testsocialevent.WithUserTier(deactivate80Tier.Name),
+		testsocialevent.WithSpaceTier(base2NSTemplateTier.Name))
+)
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
@@ -310,7 +312,6 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
 		})
-
 }
 
 func TestUserSignupVerificationRequiredMetric(t *testing.T) {
@@ -689,7 +690,6 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 }
 
 func TestNonDefaultNSTemplateTier(t *testing.T) {
-
 	// given
 	customNSTemplateTier := tiertest.NewNSTemplateTier("custom", "dev", "stage")
 	customUserTier := testusertier.NewUserTier("custom", 120)
@@ -773,12 +773,10 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(customUserTier.Name)
-
 	})
 }
 
 func TestUserSignupFailedMissingTier(t *testing.T) {
-
 	type variation struct {
 		description    string
 		config         *toolchainv1alpha1.ToolchainConfig
@@ -894,10 +892,9 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	notReady := NewGetMemberClusters(
-		NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionFalse),
+		NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionFalse, WithMaxNumberOfSpaces(1)),
 		NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionFalse))
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1)))
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1229,7 +1226,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile", func(t *testing.T) {
-			//given
+			// given
 			err = r.setSpaceToReady(mur.Name)
 			require.NoError(t, err)
 			// when
@@ -1553,7 +1550,6 @@ type MurOrSpaceCreateFails struct {
 }
 
 func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
-
 	for _, testcase := range []MurOrSpaceCreateFails{
 		{
 			testName:      "create mur error",
@@ -1569,7 +1565,6 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.testName, func(t *testing.T) {
-
 			// given
 			userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
@@ -1780,7 +1775,6 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	assert.Empty(t, userSignup.Status.Conditions)
-
 }
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
@@ -1830,7 +1824,6 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
@@ -1918,7 +1911,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 				"1,external": 1,
 				"1,internal": 1,
 			})
-
 	})
 }
 
@@ -2767,7 +2759,6 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 	})
 
 	t.Run("when UserSignup deactivated and MUR and Space and SpaceBinding exists, then they should be deleted", func(t *testing.T) {
-
 		// Given
 		states.SetDeactivated(userSignup, true)
 
@@ -3391,7 +3382,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		}
 
 		t.Run("first reconcile", func(t *testing.T) {
-
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
@@ -3552,7 +3542,6 @@ func TestDeathBy100Signups(t *testing.T) {
 		"Username length greater than maxlengthWithSuffix characters": {username: "longer-user-names@redhat.com", compliantUsername: "longer-user-names", replacedCompliantUsername: "longer-user-name"},
 	} {
 		t.Run(testcase, func(t *testing.T) {
-
 			logf.SetLogger(zap.New(zap.UseDevMode(true)))
 			userSignup := commonsignup.NewUserSignup(
 				commonsignup.WithName(testusername.username),
@@ -3874,7 +3863,6 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-
 }
 
 func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
@@ -4136,7 +4124,6 @@ func TestMigrateMur(t *testing.T) {
 			Exists().
 			HasTier(*deactivate30Tier).                                                         // tier name should be set
 			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name) // other labels unchanged
-
 	})
 }
 
@@ -4333,7 +4320,6 @@ func TestUpdateMetricsByState(t *testing.T) {
 }
 
 func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
-
 	t.Run("last target cluster annotation is not initially set but added when mur is created", func(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup()
@@ -4523,7 +4509,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 	}
 
 	t.Run("until Space is provisioned", func(t *testing.T) {
-		//given
+		// given
 		userSignup, mur, space, spacebinding := setup()
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
@@ -4534,7 +4520,6 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete...)
-
 	})
 
 	t.Run("when space is provisioned", func(t *testing.T) {

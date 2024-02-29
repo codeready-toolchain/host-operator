@@ -45,12 +45,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true),
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(
+			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue, WithMaxNumberOfSpaces(1000), WithMaxMemoryPercent(70)),
+			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue, WithMaxNumberOfSpaces(1000), WithMaxMemoryPercent(75)))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -176,12 +176,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved but no cluster has capacity", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().ResourceCapacityThreshold(50),
-		)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(
+			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue, WithMaxMemoryPercent(50)),
+			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue, WithMaxMemoryPercent(50)))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -195,13 +195,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved and second cluster has capacity", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 2000)).
-				ResourceCapacityThreshold(62))
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(
+			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue, WithMaxNumberOfSpaces(2000), WithMaxMemoryPercent(62)),
+			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue, WithMaxMemoryPercent(62)))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -215,11 +214,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000)))
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue, WithMaxNumberOfSpaces(1)), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when

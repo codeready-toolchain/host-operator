@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +23,8 @@ import (
 
 // Reconciler is the reconciler for the SpaceProvisionerConfig CRs.
 type Reconciler struct {
-	Client runtimeclient.Client
+	Client       runtimeclient.Client
+	ClusterCache cluster.ToolchainClusterService
 }
 
 var _ reconcile.Reconciler = (*Reconciler)(nil)
@@ -106,6 +108,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		reportedError = fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
 	}
+
+	// in any case, we need to update the ToolchainClusterCache because there's been a change in the SPC.
+	r.ClusterCache.DeleteToolchainCluster(toolchainClusterKey.Name)
 
 	return ctrl.Result{}, reportedError
 }

@@ -45,8 +45,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(
-		testconfig.PerMemberCluster("member1", 321)),
+	config := commonconfig.NewToolchainConfigObjWithReset(t,
 		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
 	// given
@@ -65,7 +64,6 @@ func TestReconcile(t *testing.T) {
 	states.SetDeactivating(userSignupFoobar, true)
 
 	t.Run("controller should not deactivate user", func(t *testing.T) {
-
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'deactivate30' tier
 		t.Run("usersignup should not be deactivated - deactivate30 (30 days)", func(t *testing.T) {
 			// given
@@ -137,8 +135,7 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(
-				testconfig.PerMemberCluster("member1", 321)),
+			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Deactivation().DeactivatingNotificationDays(3),
 			)
 			restore := commontest.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
@@ -155,11 +152,9 @@ func TestReconcile(t *testing.T) {
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
-
 	})
 	// in these tests, the controller should (eventually) deactivate the user
 	t.Run("controller should deactivate user", func(t *testing.T) {
-
 		userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
 		t.Run("usersignup should be marked as deactivating - deactivate30 (30 days)", func(t *testing.T) {
 			// given
@@ -288,7 +283,6 @@ func TestReconcile(t *testing.T) {
 			assertThatUserSignupDeactivated(t, cl, username, true)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 		})
-
 	})
 
 	t.Run("test usersignup deactivating state reset to false", func(t *testing.T) {
@@ -355,7 +349,6 @@ func TestReconcile(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		// cannot find UserTier
 		t.Run("unable to get UserTier", func(t *testing.T) {
 			// given
@@ -433,7 +426,6 @@ func TestReconcile(t *testing.T) {
 			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 	})
-
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *commontest.FakeClient) {

@@ -82,7 +82,8 @@ func (c *ToolchainConfig) Environment() string {
 }
 
 func (c *ToolchainConfig) GitHubSecret() GitHubSecret {
-	return GitHubSecret{s: c.cfg.Host.ToolchainStatus.GitHubSecret,
+	return GitHubSecret{
+		s:       c.cfg.Host.ToolchainStatus.GitHubSecret,
 		secrets: c.secrets,
 	}
 }
@@ -150,10 +151,12 @@ func (s SpaceConfig) SpaceBindingRequestIsEnabled() bool {
 	return commonconfig.GetBool(s.spaceConfig.SpaceBindingRequestEnabled, false)
 }
 
+// Deprecated: This is superseded by SpaceProvisionderConfig.Spec.CapacityThresholds
 type CapacityThresholdsConfig struct {
 	capacityThresholds toolchainv1alpha1.CapacityThresholds
 }
 
+// Deprecated: This is superseded by SpaceProvisionderConfig.Spec.CapacityThresholds.MaxNumberOfSpaces
 func (c CapacityThresholdsConfig) MaxNumberOfSpacesSpecificPerMemberCluster() map[string]int {
 	return c.capacityThresholds.MaxNumberOfSpacesPerMemberCluster
 }
@@ -162,6 +165,7 @@ func (c CapacityThresholdsConfig) ResourceCapacityThresholdDefault() int {
 	return commonconfig.GetInt(c.capacityThresholds.ResourceCapacityThreshold.DefaultThreshold, 80)
 }
 
+// Deprecated: This is superseded by SpaceProvisionderConfig.Spec.CapacityThresholds.MaxMemoryUtilization
 func (c CapacityThresholdsConfig) ResourceCapacityThresholdSpecificPerMemberCluster() map[string]int {
 	return c.capacityThresholds.ResourceCapacityThreshold.SpecificPerMemberCluster
 }

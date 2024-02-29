@@ -35,6 +35,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	clusterCache "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
@@ -214,11 +215,12 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 
+	cacheLog := mgr.GetLogger().WithName("toolchaincluster_cache")
+	clusterCacheService := clusterCache.NewToolchainClusterService(mgr.GetClient(), cacheLog, namespace, memberClientTimeout)
+
 	// Setup all Controllers
-	if err = toolchaincluster.NewReconciler(
-		mgr,
-		namespace,
-		memberClientTimeout,
+	if err = toolchaincluster.NewReconcilerWithClusterCache(
+		mgr.GetClient(), mgr.GetScheme(), clusterCacheService,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
@@ -367,7 +369,8 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err = (&spaceprovisionerconfig.Reconciler{
-		Client: mgr.GetClient(),
+		Client:       mgr.GetClient(),
+		ClusterCache: clusterCacheService,
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
 		os.Exit(1)
