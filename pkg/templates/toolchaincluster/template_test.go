@@ -15,7 +15,7 @@ func TestLoadObjectsFromTemplates(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.NotNil(t, objects)
-		require.True(t, len(objects) > 1, "invalid number of expected objects")
+		require.Greater(t, len(objects), 1, "invalid number of expected objects")
 	})
 
 	t.Run("error - when variables are not provided", func(t *testing.T) {
