@@ -73,17 +73,13 @@ func replaceTemplateVariables(templateName string, templateContent []byte, varia
 
 // getAllTemplateNames reads the embedded filesystem and returns a list with all the filenames
 func getAllTemplateNames(toolchainclusterFS *embed.FS) (files []string, err error) {
-	if err := fs.WalkDir(toolchainclusterFS, ".", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(toolchainclusterFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
 
 		files = append(files, path)
-
 		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return files, nil
+	})
+	return files, err
 }
