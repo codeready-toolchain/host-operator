@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"text/template"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -39,7 +40,7 @@ func LoadObjectsFromTemplates(toolchainclusterFS *embed.FS, variables *TemplateV
 		for {
 			var rawExt runtime.RawExtension
 			if err := decoder.Decode(&rawExt); err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 				return objects, err
