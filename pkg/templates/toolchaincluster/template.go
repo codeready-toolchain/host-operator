@@ -1,60 +1,88 @@
 package toolchaincluster
 
 import (
+	"bytes"
 	"embed"
+	"io"
+	"io/fs"
+	"text/template"
 
-	v1 "k8s.io/api/core/v1"
-	rbac "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// GetServiceAccountFromTemplate returns the toolchaincluster service account object from the template content
-func GetServiceAccountFromTemplate(toolchainclusterFS *embed.FS, templateName string, into runtime.Object) (*v1.ServiceAccount, error) {
-	obj, gkv, err := decodeTemplate(toolchainclusterFS, templateName, into)
-	if err != nil {
-		return nil, err
-	}
-	if gkv.Kind == "ServiceAccount" {
-		return obj.(*v1.ServiceAccount), nil
-	}
-	return nil, nil
+// TemplateVariables contains all the available variables that are supported by the templates
+type TemplateVariables struct {
+	Namespace string
 }
 
-// GetRoleFromTemplate returns the toolchaincluster Role object from the template content
-func GetRoleFromTemplate(toolchainclusterFS *embed.FS, templateName string, into runtime.Object) (*rbac.Role, error) {
-	obj, gkv, err := decodeTemplate(toolchainclusterFS, templateName, into)
+// LoadObjectsFromTemplates loads all the kubernetes objects from an embedded filesystem and returns a list of Unstructured objects that can be applied in the cluster.
+// The function will return all the objects it finds starting from the root of the embedded filesystem.
+func LoadObjectsFromTemplates(toolchainclusterFS *embed.FS, variables *TemplateVariables) ([]*unstructured.Unstructured, error) {
+	var objects []*unstructured.Unstructured
+	entries, err := getAllTemplateNames(toolchainclusterFS)
 	if err != nil {
-		return nil, err
+		return objects, err
 	}
-	if gkv.Kind == "Role" {
-		return obj.(*rbac.Role), nil
+	for _, templatePath := range entries {
+		templateContent, err := toolchainclusterFS.ReadFile(templatePath)
+		if err != nil {
+			return objects, err
+		}
+		buf, err := replaceTemplateVariables(templatePath, templateContent, variables)
+		if err != nil {
+			return objects, err
+		}
+		decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(buf.Bytes()), 100)
+		for {
+			var rawExt runtime.RawExtension
+			if err := decoder.Decode(&rawExt); err != nil {
+				if err == io.EOF {
+					break
+				}
+				return objects, err
+			}
+			rawExt.Raw = bytes.TrimSpace(rawExt.Raw)
+			if len(rawExt.Raw) == 0 || bytes.Equal(rawExt.Raw, []byte("null")) {
+				continue
+			}
+			unstructuredObj := &unstructured.Unstructured{}
+			_, _, err = scheme.Codecs.UniversalDeserializer().Decode(rawExt.Raw, nil, unstructuredObj)
+			if err != nil {
+				return objects, err
+			}
+			objects = append(objects, unstructuredObj)
+		}
 	}
-	return nil, nil
+	return objects, nil
 }
 
-// GetRoleBindingFromTemplate returns the toolchaincluster RoleBinding object from the template content
-func GetRoleBindingFromTemplate(toolchainclusterFS *embed.FS, templateName string, into runtime.Object) (*rbac.RoleBinding, error) {
-	obj, gkv, err := decodeTemplate(toolchainclusterFS, templateName, into)
+// replaceTemplateVariables replaces all the variables in the given template and returns a buffer with the evaluated content
+func replaceTemplateVariables(templateName string, templateContent []byte, variables *TemplateVariables) (bytes.Buffer, error) {
+	var buf bytes.Buffer
+	tmpl, err := template.New(templateName).Parse(string(templateContent))
 	if err != nil {
-		return nil, err
+		return buf, err
 	}
-	if gkv.Kind == "RoleBinding" {
-		return obj.(*rbac.RoleBinding), nil
-	}
-	return nil, nil
+	err = tmpl.Execute(&buf, variables)
+	return buf, err
 }
 
-func decodeTemplate(toolchainclusterFS *embed.FS, templateName string, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
-	templateContent, err := toolchainclusterFS.ReadFile("templates/toolchaincluster/" + templateName)
-	if err != nil {
-		return nil, nil, err
+// getAllTemplateNames reads the embedded filesystem and returns a list with all the filenames
+func getAllTemplateNames(toolchainclusterFS *embed.FS) (files []string, err error) {
+	if err := fs.WalkDir(toolchainclusterFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
+		files = append(files, path)
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
-	decode := scheme.Codecs.UniversalDeserializer().Decode
-	obj, gkv, err := decode(templateContent, nil, into)
-	if err != nil {
-		return nil, nil, err
-	}
-	return obj, gkv, nil
+
+	return files, nil
 }
