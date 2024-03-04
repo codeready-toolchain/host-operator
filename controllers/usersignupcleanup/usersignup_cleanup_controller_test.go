@@ -273,6 +273,30 @@ func TestUserCleanup(t *testing.T) {
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
+	t.Run("test that a UserSignup older than 2 years, with indeterminate activations and not banned, is deleted", func(t *testing.T) {
+		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
+			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
+
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+			commonsignup.WithActivations("unknown"))
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.Error(t, err)
+		require.True(t, apierrors.IsNotFound(err))
+		require.IsType(t, &apierrors.StatusError{}, err)
+		statusErr := &apierrors.StatusError{}
+		require.True(t, errors.As(err, &statusErr))
+		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+	})
+
 	t.Run("test that a UserSignup 1 year old, with 1 activation and not banned, is not deleted", func(t *testing.T) {
 		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
 			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
@@ -336,6 +360,61 @@ func TestUserCleanup(t *testing.T) {
 
 		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
+
+		// Confirm the UserSignup has not been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.NoError(t, err)
+		require.NotNil(t, userSignup)
+	})
+
+	t.Run("test that a banned UserSignup with an invalid email hash returns an error and is not deleted", func(t *testing.T) {
+		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
+			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
+
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+			commonsignup.WithActivations("1"))
+		userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey] = "INVALID"
+
+		bannedUser := &toolchainv1alpha1.BannedUser{
+			ObjectMeta: corev1.ObjectMeta{
+				Labels: map[string]string{
+					toolchainv1alpha1.BannedUserEmailHashLabelKey: userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey],
+				},
+			},
+			Spec: toolchainv1alpha1.BannedUserSpec{
+				Email: userSignup.Spec.IdentityClaims.Email,
+			},
+		}
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config, bannedUser)
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, fmt.Sprintf("email hash is invalid for UserSignup [%s]", userSignup.Name), err.Error())
+
+		// Confirm the UserSignup has not been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.NoError(t, err)
+		require.NotNil(t, userSignup)
+	})
+
+	t.Run("test that a UserSignup without an email address returns an error and is not deleted", func(t *testing.T) {
+		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
+			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
+
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+			commonsignup.WithActivations("1"))
+		userSignup.Spec.IdentityClaims.Email = ""
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, fmt.Sprintf("could not determine email address for UserSignup [%s]", userSignup.Name), err.Error())
 
 		// Confirm the UserSignup has not been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
