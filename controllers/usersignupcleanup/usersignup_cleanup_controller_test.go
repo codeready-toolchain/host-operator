@@ -2,13 +2,13 @@ package usersignupcleanup
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"os"
 	"testing"
 	"time"
+
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -101,7 +101,7 @@ func TestUserCleanup(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
 		statusErr := &apierrors.StatusError{}
-		require.True(t, errors.As(err, &statusErr))
+		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
@@ -125,7 +125,7 @@ func TestUserCleanup(t *testing.T) {
 		require.True(t, apierrors.IsNotFound(err))
 		require.IsType(t, &apierrors.StatusError{}, err)
 		statusErr := &apierrors.StatusError{}
-		require.True(t, errors.As(err, &statusErr))
+		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
@@ -150,8 +150,8 @@ func TestUserCleanup(t *testing.T) {
 		require.True(t, apierrors.IsNotFound(err))
 		assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
 		// and verify the metrics
-		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
-		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // incremented
+		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0.01)    // unchanged
+		assert.InDelta(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0.01) // incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
@@ -352,7 +352,7 @@ func TestUserCleanup(t *testing.T) {
 					require.True(t, apierrors.IsNotFound(err))
 					require.IsType(t, &apierrors.StatusError{}, err)
 					statusErr := &apierrors.StatusError{}
-					require.True(t, errors.As(err, &statusErr))
+					require.ErrorAs(t, err, &statusErr)
 					require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 				} else {
 					// Confirm the UserSignup has not been deleted
