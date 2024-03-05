@@ -31,7 +31,7 @@ jobs:
         make test-with-coverage
 
     - name: Upload code coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./build/_output/coverage/coverage.txt
