@@ -54,7 +54,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		requests := MapSpaceToMasterUserRecord(client)(space)
 
 		// then
-		assert.Len(t, requests, 0)
+		assert.Empty(t, requests)
 	})
 
 	t.Run("when list fails", func(t *testing.T) {
@@ -68,7 +68,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		requests := MapSpaceToMasterUserRecord(client)(space)
 
 		// then
-		assert.Len(t, requests, 0)
+		assert.Empty(t, requests)
 	})
 }
 

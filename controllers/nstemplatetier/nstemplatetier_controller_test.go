@@ -164,8 +164,7 @@ func TestReconcile(t *testing.T) {
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
-				require.Error(t, err)
-				assert.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error")
+				require.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
