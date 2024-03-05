@@ -66,7 +66,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to a member failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl.MockGet = func(_ context.Context, _ types.NamespacedName, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -88,11 +88,11 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to multiple members failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl.MockGet = func(_ context.Context, _ types.NamespacedName, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCl2 := test.NewFakeClient(t)
-			memberCl2.MockGet = func(_ context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+			memberCl2.MockGet = func(_ context.Context, _ types.NamespacedName, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client2 error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -196,7 +196,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
-			memberCl.MockUpdate = func(_ context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			memberCl.MockUpdate = func(_ context.Context, _ runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("client update error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)

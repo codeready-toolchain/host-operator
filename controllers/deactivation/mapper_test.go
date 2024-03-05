@@ -56,7 +56,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		req := MapUserSignupToMasterUserRecord()(userSignup)
 
 		// then
-		require.Len(t, req, 0)
+		require.Empty(t, req)
 	})
 
 	t.Run("test non-UserSignup doesn't map", func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		req := MapUserSignupToMasterUserRecord()(mur)
 
 		// then
-		require.Len(t, req, 0)
+		require.Empty(t, req)
 	})
 
 }

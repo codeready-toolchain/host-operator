@@ -494,7 +494,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Len(t, secrets.Items, 1)
-				require.Equal(t, secrets.Items[0].Generation, int64(1))
+				require.Equal(t, int64(1), secrets.Items[0].Generation)
 			})
 		})
 
