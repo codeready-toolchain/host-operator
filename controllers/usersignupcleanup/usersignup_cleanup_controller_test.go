@@ -249,178 +249,118 @@ func TestUserCleanup(t *testing.T) {
 		require.False(t, res.Requeue)
 	})
 
-	t.Run("test that a UserSignup older than 2 years, with 1 activation and not banned, is deleted", func(t *testing.T) {
+	t.Run("test old deactivated UserSignup cleanup", func(t *testing.T) {
 		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
 			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
 
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("1"))
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
-		// Confirm the UserSignup has been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.Error(t, err)
-		require.True(t, apierrors.IsNotFound(err))
-		require.IsType(t, &apierrors.StatusError{}, err)
-		statusErr := &apierrors.StatusError{}
-		require.True(t, errors.As(err, &statusErr))
-		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
-	})
-
-	t.Run("test that a UserSignup older than 2 years, with indeterminate activations and not banned, is deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("unknown"))
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
-		// Confirm the UserSignup has been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.Error(t, err)
-		require.True(t, apierrors.IsNotFound(err))
-		require.IsType(t, &apierrors.StatusError{}, err)
-		statusErr := &apierrors.StatusError{}
-		require.True(t, errors.As(err, &statusErr))
-		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
-	})
-
-	t.Run("test that a UserSignup 1 year old, with 1 activation and not banned, is not deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(oneYear),
-			commonsignup.WithActivations("1"))
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
-		// Confirm the UserSignup has not been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.NoError(t, err)
-		require.NotNil(t, userSignup)
-	})
-
-	t.Run("test that a UserSignup older than 2 years, with 2 activations and not banned, is not deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("2"))
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-
-		// Confirm the UserSignup has not been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.NoError(t, err)
-		require.NotNil(t, userSignup)
-	})
-
-	t.Run("test that a UserSignup older than 2 years, with 1 activation but has been banned, is not deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("1"))
-
-		bannedUser := &toolchainv1alpha1.BannedUser{
-			ObjectMeta: corev1.ObjectMeta{
-				Labels: map[string]string{
-					toolchainv1alpha1.BannedUserEmailHashLabelKey: userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey],
-				},
+		tests := map[string]struct {
+			userSignup          *toolchainv1alpha1.UserSignup
+			banned              bool
+			expectedError       string
+			expectedToBeDeleted bool
+		}{
+			"test that a UserSignup older than 2 years, with 1 activation and not banned, is deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("1")),
+				expectedError:       "",
+				expectedToBeDeleted: true,
 			},
-			Spec: toolchainv1alpha1.BannedUserSpec{
-				Email: userSignup.Spec.IdentityClaims.Email,
+			"test that a UserSignup older than 2 years, with indeterminate activations and not banned, is deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("unknown")),
+				expectedError:       "",
+				expectedToBeDeleted: true,
+			},
+			"test that a UserSignup 1 year old, with 1 activation and not banned, is not deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(oneYear),
+					commonsignup.WithActivations("1")),
+				expectedError:       "",
+				expectedToBeDeleted: false,
+			},
+			"test that a UserSignup older than 2 years, with 2 activations and not banned, is not deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("2")),
+				expectedError:       "",
+				expectedToBeDeleted: false,
+			},
+			"test that a UserSignup older than 2 years, with 1 activation but has been banned, is not deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("1")),
+				banned:              true,
+				expectedError:       "",
+				expectedToBeDeleted: false,
+			},
+			"test that a banned UserSignup with an invalid email hash returns an error and is not deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("1"),
+					commonsignup.WithName("invalid-email-user"),
+					commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "INVALID")),
+				banned:              true,
+				expectedError:       "email hash is invalid for UserSignup [invalid-email-user]",
+				expectedToBeDeleted: false,
+			},
+			"test that a UserSignup without an email address returns an error and is not deleted": {
+				userSignup: commonsignup.NewUserSignup(
+					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.WithActivations("1"),
+					commonsignup.WithName("without-email-user"),
+					commonsignup.WithEmail("")),
+				expectedError:       "could not determine email address for UserSignup [without-email-user]",
+				expectedToBeDeleted: false,
 			},
 		}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config, bannedUser)
+		for k, tc := range tests {
+			t.Run(k, func(t *testing.T) {
+				var r *Reconciler
+				var req reconcile.Request
+				if tc.banned {
+					bannedUser := &toolchainv1alpha1.BannedUser{
+						ObjectMeta: corev1.ObjectMeta{
+							Labels: map[string]string{
+								toolchainv1alpha1.BannedUserEmailHashLabelKey: tc.userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey],
+							},
+						},
+						Spec: toolchainv1alpha1.BannedUserSpec{
+							Email: tc.userSignup.Spec.IdentityClaims.Email,
+						},
+					}
+					r, req, _ = prepareReconcile(t, tc.userSignup.Name, tc.userSignup, config, bannedUser)
+				} else {
+					r, req, _ = prepareReconcile(t, tc.userSignup.Name, tc.userSignup, config)
+				}
 
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
+				_, err := r.Reconcile(context.TODO(), req)
+				if tc.expectedError != "" {
+					require.Error(t, err)
+					require.Equal(t, tc.expectedError, err.Error())
+				} else {
+					require.NoError(t, err)
+				}
 
-		// Confirm the UserSignup has not been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.NoError(t, err)
-		require.NotNil(t, userSignup)
-	})
-
-	t.Run("test that a banned UserSignup with an invalid email hash returns an error and is not deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("1"))
-		userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey] = "INVALID"
-
-		bannedUser := &toolchainv1alpha1.BannedUser{
-			ObjectMeta: corev1.ObjectMeta{
-				Labels: map[string]string{
-					toolchainv1alpha1.BannedUserEmailHashLabelKey: userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey],
-				},
-			},
-			Spec: toolchainv1alpha1.BannedUserSpec{
-				Email: userSignup.Spec.IdentityClaims.Email,
-			},
+				key := test.NamespacedName(test.HostOperatorNs, tc.userSignup.Name)
+				err = r.Client.Get(context.Background(), key, tc.userSignup)
+				if tc.expectedToBeDeleted {
+					// Confirm the UserSignup has been deleted
+					require.Error(t, err)
+					require.True(t, apierrors.IsNotFound(err))
+					require.IsType(t, &apierrors.StatusError{}, err)
+					statusErr := &apierrors.StatusError{}
+					require.True(t, errors.As(err, &statusErr))
+					require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+				} else {
+					// Confirm the UserSignup has not been deleted
+					require.NoError(t, err)
+					require.NotNil(t, tc.userSignup)
+				}
+			})
 		}
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config, bannedUser)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("email hash is invalid for UserSignup [%s]", userSignup.Name), err.Error())
-
-		// Confirm the UserSignup has not been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.NoError(t, err)
-		require.NotNil(t, userSignup)
-	})
-
-	t.Run("test that a UserSignup without an email address returns an error and is not deleted", func(t *testing.T) {
-		config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-			testconfig.Deactivation().UserSignupDeactivatedRetentionDays(720))
-
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.DeactivatedWithLastTransitionTime(twoYears),
-			commonsignup.WithActivations("1"))
-		userSignup.Spec.IdentityClaims.Email = ""
-
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, config)
-
-		_, err := r.Reconcile(context.TODO(), req)
-		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("could not determine email address for UserSignup [%s]", userSignup.Name), err.Error())
-
-		// Confirm the UserSignup has not been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.NoError(t, err)
-		require.NotNil(t, userSignup)
 	})
 
 	t.Run("test propagation policy", func(t *testing.T) {
