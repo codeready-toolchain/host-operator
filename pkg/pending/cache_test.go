@@ -125,7 +125,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 func approve(t *testing.T, cl *test.FakeClient, signup *toolchainv1alpha1.UserSignup) {
 	commonsignup.WithStateLabel("approved")(signup)
 	err := cl.Update(context.TODO(), signup)
-	require.NoError(t, err)
+	assert.NoError(t, err) //  approve contains assertions that must only be used in the goroutine running the test function (testifylint)
 }
 
 func assignCluster(t *testing.T, cl *test.FakeClient, sp *toolchainv1alpha1.Space) {
@@ -267,14 +267,14 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 			}
 			for _, signup := range allSingups {
 				err := cl.Create(ctx, signup)
-				require.NoError(t, err)
+				assert.NoError(t, err) // require must only be used in the goroutine running the test function (testifylint)
 			}
 
 			for _, pending := range []*toolchainv1alpha1.UserSignup{pending1, pending2} {
 				go func(toApprove *toolchainv1alpha1.UserSignup) {
 					defer waitForFinished.Done()
 					oldestPendingApproval := cache.getOldestPendingObject(ctx, test.HostOperatorNs)
-					require.NotNil(t, oldestPendingApproval)
+					assert.NotNil(t, oldestPendingApproval) // require must only be used in the goroutine running the test function (testifylint)
 					approve(t, cl, toApprove)
 				}(pending)
 			}
