@@ -20,6 +20,8 @@ objects:
         templateRef: ${MAINTAINER_TEMPL_REF}
       contributor:
         templateRef: ${CONTRIBUTOR_TEMPL_REF}
+    spaceRequestConfig:
+      serviceAccountName: namespace-manager
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF

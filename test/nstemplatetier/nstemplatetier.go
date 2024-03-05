@@ -99,23 +99,29 @@ var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
-// AppStudioTemplates current templates for the "appstudio" tier
-var AppStudioTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+// AppStudioEnvTemplates current templates for the "appstudio-env" tier
+var AppStudioEnvTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
-			TemplateRef: "appstudio-dev-123456new",
+			TemplateRef: "appstudio-env-88b275d-88b275d",
 		},
 	},
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-		TemplateRef: "appstudio-clusterresources-123456new",
+		TemplateRef: "appstudio-env-clusterresources-e0e1f34-e0e1f34",
 	},
 	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 		"admin": {
-			TemplateRef: "appstudio-admin-123456new",
+			TemplateRef: "appstudio-env-admin-ba5db27-ba5db27",
 		},
-		"viewer": {
-			TemplateRef: "appstudio-viewer-123456new",
+		"contributor": {
+			TemplateRef: "appstudio-env-contributor-88b275d-88b275d",
 		},
+		"maintainer": {
+			TemplateRef: "appstudio-env-maintainer-0d170ba-0d170ba",
+		},
+	},
+	SpaceRequestConfig: &toolchainv1alpha1.SpaceRequestConfig{
+		ServiceAccountName: toolchainv1alpha1.AdminServiceAccountName,
 	},
 }
 
@@ -124,9 +130,9 @@ func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, option
 	return Tier(t, "base1ns", spec, options...)
 }
 
-// AppStudioTier returns an "appstudio" NSTemplateTier with template refs in the given spec
-func AppStudioTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
-	return Tier(t, "appstudio", spec, options...)
+// AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
+func AppStudioEnvTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return Tier(t, "appstudio-env", spec, options...)
 }
 
 func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
