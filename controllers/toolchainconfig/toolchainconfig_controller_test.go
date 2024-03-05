@@ -321,7 +321,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		// test
 		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, nil, "failed to load the latest configuration")
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("status updated", func(t *testing.T) {
