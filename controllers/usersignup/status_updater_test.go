@@ -66,7 +66,7 @@ func TestUpdateHomeSpaceStatus(t *testing.T) {
 		// if the UserSignup would be updated, then the function would return an error because
 		// we didn't add the UserSignup to the FakeClient as part of the setup
 		// (there is nothing to be updated), thus we expect no error returned
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("home space status updated", func(t *testing.T) {

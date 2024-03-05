@@ -9,9 +9,9 @@ import (
 )
 
 func AssertMetricsCounterEquals(t *testing.T, expected int, c prometheus.Counter) {
-	assert.Equal(t, float64(expected), promtestutil.ToFloat64(c))
+	assert.InDelta(t, float64(expected), promtestutil.ToFloat64(c), 0.01)
 }
 
 func AssertMetricsGaugeEquals(t *testing.T, expected int, g prometheus.Gauge, msgAndArgs ...interface{}) {
-	assert.Equal(t, float64(expected), promtestutil.ToFloat64(g), msgAndArgs...)
+	assert.InDelta(t, float64(expected), promtestutil.ToFloat64(g), 0.01, msgAndArgs...)
 }
