@@ -45,7 +45,7 @@ func AssertNoNotificationsExist(t test.T, cl runtimeclient.Client) {
 	notifications := &toolchainv1alpha1.NotificationList{}
 	err := cl.List(context.TODO(), notifications)
 	require.NoError(t, err)
-	require.Len(t, notifications.Items, 0)
+	require.Empty(t, notifications.Items)
 }
 
 type Assert func(test.T, toolchainv1alpha1.Notification)

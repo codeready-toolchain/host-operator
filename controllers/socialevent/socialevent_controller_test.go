@@ -103,8 +103,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 			// then
-			require.Error(t, err)
-			assert.EqualError(t, err, "unable to get the 'notfound' UserTier: mock error")
+			require.EqualError(t, err, "unable to get the 'notfound' UserTier: mock error")
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
 				HasConditions(toolchainv1alpha1.Condition{

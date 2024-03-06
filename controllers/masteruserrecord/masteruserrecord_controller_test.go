@@ -1164,9 +1164,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Contains(t, notification.Name, userAccount.Name+"-provisioned-")
-		assert.True(t, len(notification.Name) > len(userAccount.Name+"-provisioned-"))
+		assert.Greater(t, len(notification.Name), len(userAccount.Name+"-provisioned-"))
 		assert.Equal(t, mur.Namespace, notification.Namespace)
-		require.Equal(t, 1, len(notification.OwnerReferences))
+		require.Len(t, notification.OwnerReferences, 1)
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 		AssertThatCountersAndMetrics(t).

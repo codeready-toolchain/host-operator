@@ -683,7 +683,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to update MUR john")
-			assert.Len(t, provisionedMur.Status.UserAccounts, 0)
+			assert.Empty(t, provisionedMur.Status.UserAccounts)
 		})
 
 		t.Run("when the UserAccount was added", func(t *testing.T) {

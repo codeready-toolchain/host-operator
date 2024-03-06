@@ -262,6 +262,14 @@ objects:
   - kind: ServiceAccount
     namespace: ${SPACE_NAME}-tenant
     name: appstudio-pipeline
+- apiVersion: v1
+  data: {}
+  kind: ConfigMap
+  metadata:
+    labels:
+      config.openshift.io/inject-trusted-cabundle: "true"
+    name: trusted-ca
+    namespace: ${SPACE_NAME}-tenant
 parameters:
 - name: SPACE_NAME
   required: true
