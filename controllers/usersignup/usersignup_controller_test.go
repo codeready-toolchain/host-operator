@@ -1592,7 +1592,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 				}),
 			))
 
-			fakeClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+			fakeClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.CreateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.MasterUserRecord:
 					if testcase.testName == "create mur error" {
@@ -1700,7 +1700,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -2278,7 +2278,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Len(t, notifications.Items, 1)
 		notification := notifications.Items[0]
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
-		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
+		assert.Greater(t, len(notification.Name), len("john-doe-deactivated-"))
 		require.Equal(t, userSignup.Spec.IdentityClaims.Sub, notification.Spec.Context["Sub"])
 		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)

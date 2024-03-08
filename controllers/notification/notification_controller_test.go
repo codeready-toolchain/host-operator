@@ -61,8 +61,8 @@ func TestNotificationSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
-		assert.True(t, result.RequeueAfter < cast.ToDuration("10s"))
-		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
+		assert.Greater(t, cast.ToDuration("10s"), result.RequeueAfter)
+		assert.Greater(t, result.RequeueAfter, cast.ToDuration("1s"))
 		ntest.AssertThatNotification(t, notification.Name, cl).
 			HasConditions(sentCond())
 	})
