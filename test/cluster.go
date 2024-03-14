@@ -20,7 +20,7 @@ func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) clu
 		for _, memberCluster := range memberClusters {
 			clusters[memberCluster.Name] = memberCluster
 		}
-		filteredClusters := cluster.Filter(cluster.Member, clusters, conditions...)
+		filteredClusters := cluster.Filter(clusters, conditions...)
 		var filteredClustersInOrder []*cluster.CachedToolchainCluster
 		for _, givenCluster := range memberClusters {
 			for _, filteredCluster := range filteredClusters {
@@ -81,7 +81,6 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 				Config: &cluster.Config{
 					Name:              name,
 					APIEndpoint:       fmt.Sprintf("https://api.%s:6433", name),
-					Type:              cluster.Member,
 					OperatorNamespace: test.MemberOperatorNs,
 					OwnerClusterName:  test.HostClusterName,
 					Labels:            map[string]string{},
