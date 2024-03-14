@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,6 +57,12 @@ func hasMemberEnoughMemoryCapacity(memberStatus toolchainv1alpha1.Member, thresh
 func isProvisioningEnabled() spaceProvisionerConfigPredicate {
 	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
 		return spc.Spec.Enabled
+	}
+}
+
+func isReady() spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		return condition.IsTrue(spc.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	}
 }
 
@@ -131,6 +138,7 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 	optimalSpaceProvisioners, err := b.getOptimalTargetClusters(
 		ctx,
 		optimalClusterFilter.PreferredCluster,
+		isReady(),
 		isProvisioningEnabled(),
 		hasPlacementRoles(optimalClusterFilter.ClusterRoles),
 		hasNotReachedMaxNumberOfSpacesThreshold(counts),
