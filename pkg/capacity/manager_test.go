@@ -523,3 +523,70 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	require.EqualError(t, err, "unable to get the number of provisioned spaces: counter is not initialized")
 	assert.Equal(t, "", clusterName)
 }
+
+func TestGetOptimalTargetClusterWithSpaceProvisionerConfig(t *testing.T) {
+	t.Run("explicitly disabled", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+			WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+
+		spc1 := spc.NewValidSpaceProvisionerConfigWithTenantRole(
+			"member1Spc",
+			commontest.HostOperatorNs,
+			"member1")
+		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole(
+			"member2Spc",
+			commontest.HostOperatorNs,
+			"member2")
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			context.TODO(),
+			capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
+	t.Run("not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+			WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+
+		spc1 := spc.NewSpaceProvisionerConfig(
+			"member1Spc",
+			commontest.HostOperatorNs,
+			spc.ReferencingToolchainCluster("member1"),
+			spc.WithReadyConditionInvalid("because we're testing it"),
+			spc.Enabled(true),
+			spc.WithPlacementRoles(cluster.RoleLabel(cluster.Role("tenant"))))
+
+		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole(
+			"member2Spc",
+			commontest.HostOperatorNs,
+			"member2")
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			context.TODO(),
+			capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
+}
