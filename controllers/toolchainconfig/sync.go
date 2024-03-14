@@ -14,11 +14,11 @@ import (
 )
 
 type Synchronizer struct {
-	getMembersFunc cluster.GetMemberClustersFunc
+	getMembersFunc cluster.GetClustersFunc
 	logger         logr.Logger
 }
 
-func NewSynchronizer(logger logr.Logger, getMembersFunc cluster.GetMemberClustersFunc) Synchronizer {
+func NewSynchronizer(logger logr.Logger, getMembersFunc cluster.GetClustersFunc) Synchronizer {
 	return Synchronizer{
 		getMembersFunc: getMembersFunc,
 		logger:         logger,

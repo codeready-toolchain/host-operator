@@ -56,7 +56,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
 	Client             runtimeclient.Client
-	GetMembersFunc     cluster.GetMemberClustersFunc
+	GetMembersFunc     cluster.GetClustersFunc
 	Scheme             *runtime.Scheme
 	RegServiceTemplate *templatev1.Template
 }

@@ -14,7 +14,7 @@ import (
 
 type GetMemberClusterFunc func(clusters ...ClientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
 
-func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) cluster.GetMemberClustersFunc {
+func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) cluster.GetClustersFunc {
 	return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
 		clusters := map[string]*cluster.CachedToolchainCluster{}
 		for _, memberCluster := range memberClusters {

@@ -3877,7 +3877,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetClustersFunc, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 

@@ -213,7 +213,7 @@ func TestCreateSpace(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, getMemberClusters cluster.GetMemberClustersFunc) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, getMemberClusters cluster.GetClustersFunc) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)

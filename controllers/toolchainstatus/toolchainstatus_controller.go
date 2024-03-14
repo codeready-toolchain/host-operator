@@ -119,7 +119,7 @@ type HTTPClient interface {
 type Reconciler struct {
 	Client              runtimeclient.Client
 	Scheme              *runtime.Scheme
-	GetMembersFunc      cluster.GetMemberClustersFunc
+	GetMembersFunc      cluster.GetClustersFunc
 	HTTPClientImpl      HTTPClient
 	Namespace           string
 	VersionCheckManager status.VersionCheckManager

@@ -363,7 +363,7 @@ func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) 
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationDays())
 }
 
-func newController(t *testing.T, hostCl runtimeclient.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
+func newController(t *testing.T, hostCl runtimeclient.Client, members cluster.GetClustersFunc) toolchainconfig.Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := clientgoscheme.Scheme
 	err := apis.AddToScheme(s)

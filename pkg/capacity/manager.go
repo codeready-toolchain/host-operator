@@ -52,7 +52,7 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
-func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl runtimeclient.Client) *ClusterManager {
+func NewClusterManager(getMemberClusters cluster.GetClustersFunc, cl runtimeclient.Client) *ClusterManager {
 	return &ClusterManager{
 		getMemberClusters: getMemberClusters,
 		client:            cl,
@@ -60,7 +60,7 @@ func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl runti
 }
 
 type ClusterManager struct {
-	getMemberClusters cluster.GetMemberClustersFunc
+	getMemberClusters cluster.GetClustersFunc
 	client            runtimeclient.Client
 	lastUsed          string
 }
@@ -142,7 +142,7 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 // If the preferred target cluster was not provided or not available, but a list of clusterRoles was provided, then it filters only the available clusters matching all those roles.
 // If no cluster roles were provided then it returns all the available clusters.
 // The function returns a slice with an empty string if not optimal target clusters where found.
-func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, clusterRoles []string, conditions ...cluster.Condition) []string {
+func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetClustersFunc, clusterRoles []string, conditions ...cluster.Condition) []string {
 	emptyTargetCluster := []string{""}
 	// Automatic cluster selection based on cluster readiness
 	members := getMemberClusters(append(conditions, cluster.Ready)...)
