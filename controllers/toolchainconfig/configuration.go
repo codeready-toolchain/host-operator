@@ -129,7 +129,7 @@ func (c *ToolchainConfig) ToolchainStatus() ToolchainStatusConfig {
 }
 
 func (c *ToolchainConfig) Users() UsersConfig {
-	return UsersConfig{c.cfg.Host.Users}
+	return UsersConfig{c.PublicViewer(), c.cfg.Host.Users}
 }
 
 func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
@@ -360,7 +360,8 @@ func (d ToolchainStatusConfig) ToolchainStatusRefreshTime() time.Duration {
 }
 
 type UsersConfig struct {
-	c toolchainv1alpha1.UsersConfig
+	pv PublicViewerConfig
+	c  toolchainv1alpha1.UsersConfig
 }
 
 func (d UsersConfig) MasterUserRecordUpdateFailureThreshold() int {
@@ -369,6 +370,9 @@ func (d UsersConfig) MasterUserRecordUpdateFailureThreshold() int {
 
 func (d UsersConfig) ForbiddenUsernamePrefixes() []string {
 	prefixes := commonconfig.GetString(d.c.ForbiddenUsernamePrefixes, "openshift,kube,default,redhat,sandbox")
+	if u := d.pv.Username(); u != nil {
+		prefixes = strings.Join([]string{prefixes, *u}, ",")
+	}
 	v := strings.FieldsFunc(prefixes, func(c rune) bool {
 		return c == ','
 	})

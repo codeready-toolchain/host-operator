@@ -464,6 +464,13 @@ func TestUsers(t *testing.T) {
 		assert.Equal(t, []string{"openshift", "kube", "default", "redhat", "sandbox"}, toolchainCfg.Users().ForbiddenUsernamePrefixes())
 		assert.Equal(t, []string{"admin"}, toolchainCfg.Users().ForbiddenUsernameSuffixes())
 	})
+	t.Run("public-viewer", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+		toolchainCfg.cfg.Global.PublicViewer = &toolchainv1alpha1.PublicViewerConfig{Username: "public-viewer"}
+
+		assert.Equal(t, []string{"openshift", "kube", "default", "redhat", "sandbox", "public-viewer"}, toolchainCfg.Users().ForbiddenUsernamePrefixes())
+	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Users().MasterUserRecordUpdateFailureThreshold(10).ForbiddenUsernamePrefixes("bread,butter").ForbiddenUsernameSuffixes("sugar,cream"))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
