@@ -428,7 +428,7 @@ func main() { // nolint:gocyclo
 }
 
 func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
-	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
+	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
 	}
