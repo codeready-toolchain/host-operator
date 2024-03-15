@@ -32,7 +32,6 @@ objects:
           - toolchain.dev.openshift.com
         resources:
           - masteruserrecords
-          - usertiers
           - socialevents
           - spacebindings
           - spaces
