@@ -114,3 +114,5 @@ require (
 )
 
 go 1.20
+
+replace github.com/codeready-toolchain/api => ../api

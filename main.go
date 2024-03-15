@@ -341,10 +341,11 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err = (&spacebindingcleanup.Reconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Namespace:      namespace,
-		MemberClusters: clusterScopedMemberClusters,
+		Client:             mgr.GetClient(),
+		Scheme:             mgr.GetScheme(),
+		Namespace:          namespace,
+		MemberClusters:     clusterScopedMemberClusters,
+		PublicViewerConfig: crtConfig.PublicViewer(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
 		os.Exit(1)

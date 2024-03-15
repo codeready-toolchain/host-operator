@@ -136,8 +136,6 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20240322110702-5ab3840476e9 h1:Lm7bFLrzfJzrUiRGVqtsSaZMpj+akLiR/fvAFjjE9gM=
-github.com/codeready-toolchain/api v0.0.0-20240322110702-5ab3840476e9/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240322131000-8d44f7428e83 h1:j+3snE8RGTyB5MdwPUqIfmAm9C2aScCni+ma1EveC4c=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240322131000-8d44f7428e83/go.mod h1:OJ3L9aaTRMGjxr2WeH/9l6m5OjExwEK3Bp/+P+efoGg=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=

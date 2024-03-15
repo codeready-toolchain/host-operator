@@ -72,6 +72,7 @@ type Reconciler struct {
 	Scheme         *runtime.Scheme
 	SegmentClient  *segment.Client
 	ClusterManager *capacity.ClusterManager
+	PublicViewer   toolchainconfig.PublicViewerConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups,verbs=get;list;watch;create;update;patch;delete

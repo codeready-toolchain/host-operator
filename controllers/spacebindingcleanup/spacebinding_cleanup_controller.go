@@ -43,9 +43,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconciler reconciles a SpaceBinding object
 type Reconciler struct {
 	runtimeclient.Client
-	Scheme         *runtime.Scheme
-	Namespace      string
-	MemberClusters map[string]cluster.Cluster
+	Scheme             *runtime.Scheme
+	Namespace          string
+	MemberClusters     map[string]cluster.Cluster
+	PublicViewerConfig toolchainconfig.PublicViewerConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch;create;update;patch;delete
@@ -87,6 +88,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		// error while reading space
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
+	}
+
+	// If PublicViewer is enabled and spacebinding references the PublicViewer user, skip SpaceBinding deletion
+	if r.PublicViewerConfig.IsPublicViewer(spaceBinding.Spec.MasterUserRecord) {
+		logger.Info("skipping deletion of spacebinding for PublicViewer", "username", spaceBinding.Spec.MasterUserRecord, "spacebinding", spaceBinding.Name)
+		return ctrl.Result{}, nil
 	}
 
 	murName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.MasterUserRecord}

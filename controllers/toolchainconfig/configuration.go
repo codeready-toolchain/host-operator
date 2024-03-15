@@ -132,6 +132,33 @@ func (c *ToolchainConfig) Users() UsersConfig {
 	return UsersConfig{c.cfg.Host.Users}
 }
 
+func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
+	return PublicViewerConfig{c.cfg.Global.PublicViewer}
+}
+
+type PublicViewerConfig struct {
+	*toolchainv1alpha1.PublicViewerConfig
+}
+
+func (c PublicViewerConfig) Enabled() bool {
+	return c.PublicViewerConfig != nil
+}
+
+func (c PublicViewerConfig) Username() *string {
+	if !c.Enabled() {
+		return nil
+	}
+
+	return &c.PublicViewerConfig.Username
+}
+
+func (c PublicViewerConfig) IsPublicViewer(username string) bool {
+	if !c.Enabled() {
+		return false
+	}
+	return c.PublicViewerConfig.Username == username
+}
+
 type AutoApprovalConfig struct {
 	approval toolchainv1alpha1.AutomaticApprovalConfig
 }
