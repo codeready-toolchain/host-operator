@@ -136,6 +136,8 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
+github.com/codeready-toolchain/api v0.0.0-20240315232251-d61ff49647b6 h1:tyvpf4+lSvMoTJ+jtXRknz5dXOJswvSaNBkFO+eTBYE=
+github.com/codeready-toolchain/api v0.0.0-20240315232251-d61ff49647b6/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240313081501-5cafefaa6598 h1:06nit/nCQFVKp51ZtIOyY49ncmxEK5shJGTaM+Ogicw=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240313081501-5cafefaa6598/go.mod h1:c2JxboVI7keMD5fx5bB7LwzowFYYTwbepJhzPWSYXVs=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -550,8 +552,6 @@ github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
-github.com/sbryzak/api v0.0.0-20240315004742-2bf1b7174519 h1:bjZzrJVZNzqAkGT47yd3nbBnUZSbIwSEVtQOJNayLvo=
-github.com/sbryzak/api v0.0.0-20240315004742-2bf1b7174519/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
 github.com/scylladb/go-set v1.0.2/go.mod h1:DkpGd78rljTxKAnTDPFqXSGxvETQnJyuSOQwsHycqfs=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/analytics-go/v3 v3.2.1 h1:G+f90zxtc1p9G+WigVyTR0xNfOghOGs/PYAlljLOyeg=
