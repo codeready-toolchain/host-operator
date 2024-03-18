@@ -231,13 +231,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
 		// given
-		spc1 := spc.NewSpaceProvisionerConfig("member1Spc", commontest.HostOperatorNs,
-			spc.Enabled(false),
-			spc.WithReadyConditionValid(),
-			spc.WithPlacementRoles(spc.PlacementRole("tenant")),
-			spc.ReferencingToolchainCluster("member1"),
-			spc.MaxNumberOfSpaces(1000),
-			spc.MaxMemoryUtilizationPercent(70))
+		spc1 := spc.NewValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
 		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
@@ -309,6 +303,28 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",                             // request specifically this member eve if it doesn't match the cluster-roles from below
+				ClusterRoles:             []string{spc.PlacementRole("tenant")}, // set
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
+
+	// given
+	t.Run("choose one of the configured clusters because the preferred one is missing the SPC", func(t *testing.T) {
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			ctx,
+			capacity.OptimalTargetClusterFilter{
+				PreferredCluster:         "member3",                             // request specifically this member eve if it doesn't match the cluster-roles from below
 				ClusterRoles:             []string{spc.PlacementRole("tenant")}, // set
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
