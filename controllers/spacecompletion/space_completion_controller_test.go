@@ -26,7 +26,7 @@ import (
 )
 
 func TestCreateSpace(t *testing.T) {
-	spc := spaceprovisionerconfig.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1")
+	spc := spaceprovisionerconfig.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
 
 	t.Run("without any field set - then it sets only tierName", func(t *testing.T) {
 		// given

@@ -47,8 +47,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.AutomaticApproval().
 				Enabled(true),
 		)
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -64,8 +64,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters available, the second one has required cluster-role label", func(t *testing.T) {
 		// given
 		signup := commonsignup.NewUserSignup()
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithoutPlacementRoles("member1Spc", test.HostOperatorNs, "member1")
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidSPC("member1Spc", test.HostOperatorNs, "member1")
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true),
@@ -91,8 +91,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true))
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithoutPlacementRoles("member1Spc", test.HostOperatorNs, "member1")
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidSPC("member1Spc", test.HostOperatorNs, "member1")
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -124,8 +124,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1")
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t), spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -140,8 +140,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("ToolchainConfig not found and user not approved", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1")
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -156,8 +156,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("ToolchainConfig not found and user manually approved without target cluster", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1")
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -173,8 +173,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved but no cluster has capacity", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1", spc.MaxMemoryUtilizationPercent(50))
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(50))
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1", spc.MaxMemoryUtilizationPercent(50))
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(50))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -190,8 +190,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved and second cluster has capacity", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(62))
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(62))
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(62))
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(62))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -207,8 +207,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000))
-		spc2 := spc.NewEnabledValidSpaceProvisionerConfigWithTenantRole("member2Spc", test.HostOperatorNs, "member2")
+		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000))
+		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", test.HostOperatorNs, "member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
