@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -45,8 +44,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")
 
 	t.Run("publicViewer config is enabled", func(t *testing.T) {
-		publicViewerConfig := toolchainconfig.PublicViewerConfig{
-			PublicViewerConfig: toolchainv1alpha1.PublicViewerConfig{
+		publicViewerConfig := commonconfig.PublicViewerConfig{
+			Config: toolchainv1alpha1.PublicViewerConfig{
 				Enabled:  true,
 				Username: "public-viewer",
 			},
@@ -82,8 +81,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	})
 
 	t.Run("publicViewer config is disabled", func(t *testing.T) {
-		publicViewerConfig := toolchainconfig.PublicViewerConfig{
-			PublicViewerConfig: toolchainv1alpha1.PublicViewerConfig{
+		publicViewerConfig := commonconfig.PublicViewerConfig{
+			Config: toolchainv1alpha1.PublicViewerConfig{
 				Enabled:  false,
 				Username: "public-viewer",
 			},

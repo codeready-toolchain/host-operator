@@ -6,6 +6,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/go-logr/logr"
@@ -46,7 +47,7 @@ type Reconciler struct {
 	Scheme             *runtime.Scheme
 	Namespace          string
 	MemberClusters     map[string]cluster.Cluster
-	PublicViewerConfig toolchainconfig.PublicViewerConfig
+	PublicViewerConfig commonconfig.PublicViewerConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch;create;update;patch;delete

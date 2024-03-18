@@ -132,28 +132,8 @@ func (c *ToolchainConfig) Users() UsersConfig {
 	return UsersConfig{c.PublicViewer(), c.cfg.Host.Users}
 }
 
-func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
-	return PublicViewerConfig{c.cfg.Global.PublicViewer}
-}
-
-type PublicViewerConfig struct {
-	toolchainv1alpha1.PublicViewerConfig
-}
-
-func (c PublicViewerConfig) Enabled() bool {
-	return c.PublicViewerConfig.Enabled
-}
-
-func (c PublicViewerConfig) Username() *string {
-	return &c.PublicViewerConfig.Username
-}
-
-func (c PublicViewerConfig) IsPublicViewer(username string) bool {
-	if !c.Enabled() {
-		return false
-	}
-
-	return c.PublicViewerConfig.Username == username
+func (c *ToolchainConfig) PublicViewer() commonconfig.PublicViewerConfig {
+	return commonconfig.PublicViewerConfig{Config: c.cfg.Global.PublicViewer}
 }
 
 type AutoApprovalConfig struct {
@@ -357,7 +337,7 @@ func (d ToolchainStatusConfig) ToolchainStatusRefreshTime() time.Duration {
 }
 
 type UsersConfig struct {
-	pv PublicViewerConfig
+	pv commonconfig.PublicViewerConfig
 	c  toolchainv1alpha1.UsersConfig
 }
 
