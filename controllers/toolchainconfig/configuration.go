@@ -137,18 +137,14 @@ func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
 }
 
 type PublicViewerConfig struct {
-	*toolchainv1alpha1.PublicViewerConfig
+	toolchainv1alpha1.PublicViewerConfig
 }
 
 func (c PublicViewerConfig) Enabled() bool {
-	return c.PublicViewerConfig != nil
+	return c.PublicViewerConfig.Enabled
 }
 
 func (c PublicViewerConfig) Username() *string {
-	if !c.Enabled() {
-		return nil
-	}
-
 	return &c.PublicViewerConfig.Username
 }
 
@@ -156,6 +152,7 @@ func (c PublicViewerConfig) IsPublicViewer(username string) bool {
 	if !c.Enabled() {
 		return false
 	}
+
 	return c.PublicViewerConfig.Username == username
 }
 

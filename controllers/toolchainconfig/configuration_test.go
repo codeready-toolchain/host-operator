@@ -467,7 +467,7 @@ func TestUsers(t *testing.T) {
 	t.Run("public-viewer", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
-		toolchainCfg.cfg.Global.PublicViewer = &toolchainv1alpha1.PublicViewerConfig{Username: "public-viewer"}
+		toolchainCfg.cfg.Global.PublicViewer = toolchainv1alpha1.PublicViewerConfig{Username: "public-viewer"}
 
 		assert.Equal(t, []string{"openshift", "kube", "default", "redhat", "sandbox", "public-viewer"}, toolchainCfg.Users().ForbiddenUsernamePrefixes())
 	})

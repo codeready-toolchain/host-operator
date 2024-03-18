@@ -48,9 +48,17 @@ spec:
                   publicViewer:
                     description: PublicViewer used to enable public-viewer support
                     properties:
+                      enabled:
+                        default: false
+                        type: boolean
                       username:
                         default: public-viewer
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                         type: string
+                    required:
+                    - enabled
                     type: object
                 type: object
               host:
