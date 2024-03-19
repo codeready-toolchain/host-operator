@@ -16,7 +16,7 @@ jobs:
     
     - name: check
       run: |
-        if [[ -n "$(grep 'replace github.com/codeready-toolchain/.*' go.mod || true)" ]]; then
-          echo "forbidden replacement in go.mod"
+        if go list -m all | grep --color=never -E 'github.com/(codeready-toolchain|kubesaw)/.+\s*=>'; then
+          echo "the above replacement(s) are not allowed in go.mod"
           exit 1
         fi
