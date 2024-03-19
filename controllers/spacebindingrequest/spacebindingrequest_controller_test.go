@@ -15,6 +15,7 @@ import (
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	spacebindingcommon "github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -527,6 +528,36 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				Exists()
 		})
 
+		t.Run("if MUR is public-viewer, the SBR is invalid", func(t *testing.T) {
+			// given
+			cfg := commonconfig.PublicViewerConfig{Config: toolchainv1alpha1.PublicViewerConfig{Enabled: true, Username: "public-viewer"}}
+			sbr := sbrtestcommon.NewSpaceBindingRequest("jane", "jane-tenant",
+				sbrtestcommon.WithMUR(*cfg.Username()),
+				sbrtestcommon.WithSpaceRole("viewer"),
+			)
+
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr), "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur)
+			ctrl := newReconciler(t, hostClient, member1)
+			ctrl.PublicViewerConfig = cfg
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbr))
+
+			// then
+			require.NoError(t, err)
+
+			// spacebindingrequest exists with expected config and finalizer
+			sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
+				HasSpecSpaceRole("viewer").
+				HasSpecMasterUserRecord(*cfg.Username()).
+				HasConditions(toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SpaceBindingRequestInvalidReason,
+					Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", *r.Username()),
+				})
+		})
 	})
 }
 

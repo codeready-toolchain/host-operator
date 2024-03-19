@@ -8,6 +8,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -27,10 +28,11 @@ import (
 
 // Reconciler reconciles a SpaceBindingRequest object
 type Reconciler struct {
-	Client         runtimeclient.Client
-	Scheme         *runtime.Scheme
-	Namespace      string
-	MemberClusters map[string]cluster.Cluster
+	Client             runtimeclient.Client
+	Scheme             *runtime.Scheme
+	Namespace          string
+	MemberClusters     map[string]cluster.Cluster
+	PublicViewerConfig commonconfig.PublicViewerConfig
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
@@ -94,20 +96,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.ensureSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest)
-	if err != nil {
-		if errStatus := r.setStatusFailedToCreateSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err); errStatus != nil {
-			logger.Error(errStatus, "error updating SpaceBindingRequest status")
+	if r.PublicViewerConfig.IsPublicViewer(spaceBindingRequest.Spec.MasterUserRecord) {
+		// set ready condition on spaceBindingRequest
+		err = r.updateStatus(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceBindingRequestInvalidReason,
+			Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", *r.PublicViewerConfig.Username()),
+		})
+	} else {
+		if err := r.ensureSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest); err != nil {
+			if errStatus := r.setStatusFailedToCreateSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest, err); errStatus != nil {
+				logger.Error(errStatus, "error updating SpaceBindingRequest status")
+			}
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
-	}
 
-	// set ready condition on spaceBindingRequest
-	err = r.updateStatus(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.SpaceBindingRequestProvisionedReason,
-	})
+		// set ready condition on spaceBindingRequest
+		err = r.updateStatus(ctx, spaceBindingRequest, memberClusterWithSpaceBindingRequest, toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.SpaceBindingRequestProvisionedReason,
+		})
+	}
 
 	return ctrl.Result{}, err
 }
