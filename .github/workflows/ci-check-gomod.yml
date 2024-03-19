@@ -13,10 +13,5 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
     - name: check
-      run: |
-        if go list -m all | grep --color=never -E 'github.com/(codeready-toolchain|kubesaw)/.+\s*=>'; then
-          echo "the above replacement(s) are not allowed in go.mod"
-          exit 1
-        fi
+      uses: codeready-toolchain/toolchain-cicd/gomod-check@master
