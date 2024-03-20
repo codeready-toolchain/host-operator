@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -41,12 +42,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
-		spaceProvisionerConfig := spc.NewEnabledValidTenantSPC(
-			"member1Spc",
-			commontest.HostOperatorNs,
-			"member1",
-			spc.MaxNumberOfSpaces(1000),
-			spc.MaxMemoryUtilizationPercent(70))
+		spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spaceProvisionerConfig)
 		InitializeCounters(t, toolchainStatus)
 
@@ -65,9 +61,9 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the first one)", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(10000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(300), spc.MaxMemoryUtilizationPercent(75))
-		spc3 := spc.NewEnabledValidTenantSPC("member3Spc", commontest.HostOperatorNs, "member3", spc.MaxNumberOfSpaces(400), spc.MaxMemoryUtilizationPercent(80))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(300), spc.MaxMemoryUtilizationPercent(75))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(400), spc.MaxMemoryUtilizationPercent(80))
 
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 		InitializeCounters(t, toolchainStatus)
@@ -87,9 +83,9 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the third one)", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
-		spc3 := spc.NewEnabledValidTenantSPC("member3Spc", commontest.HostOperatorNs, "member3", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(80))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(80))
 
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 		InitializeCounters(t, toolchainStatus)
@@ -108,8 +104,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them, but the second one is the preferred", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -129,8 +125,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(60))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(60))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -149,8 +145,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches max number of Spaces, so the second one is returned even when the first is defined as the preferred one", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(700), spc.MaxMemoryUtilizationPercent(90))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(95))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(700), spc.MaxMemoryUtilizationPercent(90))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(95))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -170,8 +166,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters, none of them is returned since it reaches max number of Spaces, no matter what is defined as preferred", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(60))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(95))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(60))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(95))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -191,8 +187,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters but only the second one has enough capacity - using the default values", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxMemoryUtilizationPercent(62))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(62))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(62))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(62))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -211,8 +207,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters but none of them has enough capacity - using the default memory values", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxMemoryUtilizationPercent(1))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxMemoryUtilizationPercent(1))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(1))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(1))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -231,8 +227,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
 		// given
-		spc1 := spc.NewValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -251,8 +247,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them but passing specific placement-role", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -272,8 +268,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and not enough capacity on the cluster with specific placement-role", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(1))
-		spc2 := spc.NewEnabledValidSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(1))
+		spc2 := hspc.NewEnabledValidSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -293,8 +289,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters, the preferred one is returned if it has the required placement-roles", func(t *testing.T) {
 		// given
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -315,8 +311,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	// given
 	t.Run("choose one of the configured clusters because the preferred one is missing the SPC", func(t *testing.T) {
-		spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
@@ -406,9 +402,9 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						WithMember("member3", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 					// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
-					spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1")
-					spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(limit))
-					spc3 := spc.NewEnabledValidTenantSPC("member3Spc", commontest.HostOperatorNs, "member3", spc.MaxNumberOfSpaces(limit))
+					spc1 := hspc.NewEnabledValidTenantSPC("member1")
+					spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(limit))
+					spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(limit))
 
 					fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 					InitializeCounters(t, toolchainStatus)
@@ -547,14 +543,8 @@ func TestGetOptimalTargetClusterWithSpaceProvisionerConfig(t *testing.T) {
 			WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 			WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 
-		spc1 := spc.NewValidTenantSPC(
-			"member1Spc",
-			commontest.HostOperatorNs,
-			"member1")
-		spc2 := spc.NewEnabledValidTenantSPC(
-			"member2Spc",
-			commontest.HostOperatorNs,
-			"member2")
+		spc1 := hspc.NewValidTenantSPC("member1")
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 		InitializeCounters(t, toolchainStatus)
@@ -585,10 +575,7 @@ func TestGetOptimalTargetClusterWithSpaceProvisionerConfig(t *testing.T) {
 			spc.Enabled(true),
 			spc.WithPlacementRoles(cluster.RoleLabel(cluster.Role("tenant"))))
 
-		spc2 := spc.NewEnabledValidTenantSPC(
-			"member2Spc",
-			commontest.HostOperatorNs,
-			"member2")
+		spc2 := hspc.NewEnabledValidTenantSPC("member1")
 
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 		InitializeCounters(t, toolchainStatus)

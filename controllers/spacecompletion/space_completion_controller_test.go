@@ -13,9 +13,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
+	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,7 +26,7 @@ import (
 )
 
 func TestCreateSpace(t *testing.T) {
-	spc := spaceprovisionerconfig.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
+	spc := hspc.NewEnabledValidTenantSPC("member1")
 
 	t.Run("without any field set - then it sets only tierName", func(t *testing.T) {
 		// given
