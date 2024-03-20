@@ -13,10 +13,5 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
     - name: check
-      run: |
-        if [[ -n "$(grep 'replace github.com/codeready-toolchain/.*' go.mod || true)" ]]; then
-          echo "forbidden replacement in go.mod"
-          exit 1
-        fi
+      uses: codeready-toolchain/toolchain-cicd/gomod-check@master
