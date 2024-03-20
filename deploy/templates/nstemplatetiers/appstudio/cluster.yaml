@@ -132,7 +132,7 @@ parameters:
 - name: DEPLOYMENT_QUOTA
   value: "30"
 - name: POD_QUOTA
-  value: "300"
+  value: "600"
 - name: ROUTE_QUOTA
   value: "30"
 - name: SERVICE_QUOTA
