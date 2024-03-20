@@ -406,7 +406,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						WithMember("member3", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 					// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
-					spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1", spc.MaxNumberOfSpaces(1000))
+					spc1 := spc.NewEnabledValidTenantSPC("member1Spc", commontest.HostOperatorNs, "member1")
 					spc2 := spc.NewEnabledValidTenantSPC("member2Spc", commontest.HostOperatorNs, "member2", spc.MaxNumberOfSpaces(limit))
 					spc3 := spc.NewEnabledValidTenantSPC("member3Spc", commontest.HostOperatorNs, "member3", spc.MaxNumberOfSpaces(limit))
 

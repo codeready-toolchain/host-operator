@@ -202,8 +202,8 @@ func matches(spc *toolchainv1alpha1.SpaceProvisionerConfig, predicates []spacePr
 // getOptimalTargetClusters checks if a preferred target cluster was provided and available from the cluster pool.
 // If the preferred target cluster was not provided or not available, but a list of clusterRoles was provided, then it filters only the available clusters matching all those roles.
 // If no cluster roles were provided then it returns all the available clusters.
-// The function returns a slice with an empty string if not optimal target clusters where found.
-func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferredCluster string, conditions ...spaceProvisionerConfigPredicate) ([]toolchainv1alpha1.SpaceProvisionerConfig, error) {
+// The function returns a slice of matching SpaceProvisionerConfigs. If there are no matches, the empty slice is represented by a nil value (which is the default value in Go).
+func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferredCluster string, predicates ...spaceProvisionerConfigPredicate) ([]toolchainv1alpha1.SpaceProvisionerConfig, error) {
 	list := &toolchainv1alpha1.SpaceProvisionerConfigList{}
 	if err := b.client.List(ctx, list, runtimeclient.InNamespace(b.namespace)); err != nil {
 		return nil, err
@@ -213,7 +213,7 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 
 	for _, spc := range list.Items {
 		spc := spc
-		if matches(&spc, conditions) {
+		if matches(&spc, predicates) {
 			matching = append(matching, spc)
 		}
 	}

@@ -892,8 +892,10 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
 
-	spc1 := spc.NewValidTenantSPC("member1Spc", test.HostOperatorNs, "member1", spc.Enabled(false), spc.MaxNumberOfSpaces(1))
-	spc2 := spc.NewValidTenantSPC("member2Spc", test.HostOperatorNs, "member2", spc.Enabled(false))
+	spc1 := spc.NewSpaceProvisionerConfig("member1Spc", test.HostOperatorNs,
+		spc.ReferencingToolchainCluster("member1"), spc.Enabled(true), spc.MaxNumberOfSpaces(1), spc.WithReadyConditionInvalid("intentionally invalid"))
+	spc2 := spc.NewSpaceProvisionerConfig("member2Spc", test.HostOperatorNs,
+		spc.ReferencingToolchainCluster("member2"), spc.Enabled(true), spc.WithReadyConditionInvalid("intentionally invalid"))
 
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, config, baseNSTemplateTier)
@@ -3546,9 +3548,15 @@ func TestDeathBy100Signups(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup(
 				commonsignup.WithName(testusername.username),
 				commonsignup.ApprovedManually())
+			spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
 			initObjs := make([]runtime.Object, 0, 110)
-			initObjs = append(initObjs, userSignup, deactivate30Tier)
-			initObjs = append(initObjs, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+			initObjs = append(initObjs,
+				userSignup,
+				deactivate30Tier,
+				commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+				baseNSTemplateTier,
+				spc1,
+			)
 
 			// create 100 MURs and Spaces that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
 			initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
@@ -3568,11 +3576,6 @@ func TestDeathBy100Signups(t *testing.T) {
 				initObjs = append(initObjs,
 					spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i)))
 			}
-
-			initObjs = append(initObjs, baseNSTemplateTier)
-
-			spc1 := spc.NewEnabledValidTenantSPC("member1Spc", test.HostOperatorNs, "member1")
-			initObjs = append(initObjs, spc1)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, initObjs...)
 			InitializeCounters(t, NewToolchainStatus(
