@@ -436,8 +436,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/metlos/api v0.0.0-20240314081338-76a32fbf3e1b h1:7qMl1HbUjcLdyNCZL1PRDUSL2+Y0sH5dnY1voQ8hvms=
 github.com/metlos/api v0.0.0-20240314081338-76a32fbf3e1b/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
-github.com/metlos/toolchain-common v0.0.0-20240318095315-a3450f07214d h1:53LkR5nC8DuKJW28of5UBgrWXUmnwOFz90+0Bn7+oDo=
-github.com/metlos/toolchain-common v0.0.0-20240318095315-a3450f07214d/go.mod h1:P1/S8ozmtmZ6xNWPIBOodAGSJXMqVqKqtguusNWSn7Y=
+github.com/metlos/toolchain-common v0.0.0-20240320123413-fbbfc13e8d4f h1:WIXUbaaNIQlVe0ViAu78CZpUq7M3YzAouV6gu87aEUY=
+github.com/metlos/toolchain-common v0.0.0-20240320123413-fbbfc13e8d4f/go.mod h1:P1/S8ozmtmZ6xNWPIBOodAGSJXMqVqKqtguusNWSn7Y=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
 github.com/migueleliasweb/go-github-mock v0.0.18/go.mod h1:CcgXcbMoRnf3rRVHqGssuBquZDIcaplxL2W6G+xs7kM=
