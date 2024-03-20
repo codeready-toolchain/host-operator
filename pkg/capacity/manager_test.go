@@ -575,7 +575,7 @@ func TestGetOptimalTargetClusterWithSpaceProvisionerConfig(t *testing.T) {
 			spc.Enabled(true),
 			spc.WithPlacementRoles(cluster.RoleLabel(cluster.Role("tenant"))))
 
-		spc2 := hspc.NewEnabledValidTenantSPC("member1")
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 		InitializeCounters(t, toolchainStatus)
