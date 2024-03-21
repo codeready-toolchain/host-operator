@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -13,18 +12,18 @@ import (
 
 type Option func(spaceRequest *toolchainv1alpha1.SpaceBinding)
 
-func NewSpaceBinding(mur, space, spaceRole, creator string, options ...Option) *v1alpha1.SpaceBinding {
-	sb := &v1alpha1.SpaceBinding{
+func NewSpaceBinding(mur, space, spaceRole, creator string, options ...Option) *toolchainv1alpha1.SpaceBinding {
+	sb := &toolchainv1alpha1.SpaceBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", mur, space),
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				v1alpha1.SpaceCreatorLabelKey:                 creator,
-				v1alpha1.SpaceBindingMasterUserRecordLabelKey: mur,
-				v1alpha1.SpaceBindingSpaceLabelKey:            space,
+				toolchainv1alpha1.SpaceCreatorLabelKey:                 creator,
+				toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur,
+				toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space,
 			},
 		},
-		Spec: v1alpha1.SpaceBindingSpec{
+		Spec: toolchainv1alpha1.SpaceBindingSpec{
 			MasterUserRecord: mur,
 			Space:            space,
 			SpaceRole:        spaceRole,

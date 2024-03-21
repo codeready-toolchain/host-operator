@@ -24,7 +24,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -309,7 +308,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	hostCl := test.NewFakeClient(t, config)
 	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
-	logger := logf.Log.WithName("test")
+	logger := log.Log.WithName("test")
 	ctx := log.IntoContext(context.TODO(), logger)
 
 	t.Run("no error provided", func(t *testing.T) {
