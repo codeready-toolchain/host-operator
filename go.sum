@@ -190,10 +190,10 @@ github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwo
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/filariow/toolchain-api v0.0.0-20240322104820-8a9034b5d047 h1:RYjaty4k8pSHB9YORl5r5Yd3De6sPv1gpH8wm2pcy5w=
-github.com/filariow/toolchain-api v0.0.0-20240322104820-8a9034b5d047/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
-github.com/filariow/toolchain-common v0.0.0-20240322163135-a8003afd1bab h1:/on0gwcC+nyTUUCiqK9+2xokokOo0uOWPCBT68eT2fc=
-github.com/filariow/toolchain-common v0.0.0-20240322163135-a8003afd1bab/go.mod h1:jEB2iKx29h3+dXMKqGDaHE5FkgroqkcAzdOyq4LwdIU=
+github.com/filariow/toolchain-api v0.0.0-20240322163859-f974f2dbbc8e h1:h+uO6jYovPD3j9VIo9JajpmTZIyl7x6wSap/4RjS6aw=
+github.com/filariow/toolchain-api v0.0.0-20240322163859-f974f2dbbc8e/go.mod h1:cfNN6YPX4TORvhhZXMSjSPesqAHlB3nD/WAfGe4WLKQ=
+github.com/filariow/toolchain-common v0.0.0-20240322165115-87027670d9b3 h1:k1kjVkS1CUazxpA8Hu0X6M4ChubNhGmHSQUEUhfGo4I=
+github.com/filariow/toolchain-common v0.0.0-20240322165115-87027670d9b3/go.mod h1:2vTPf4wRr6Q9Pq3zkJ5I3wBNagXEMvyjmdk8w0/UJRE=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
