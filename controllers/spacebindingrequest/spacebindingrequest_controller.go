@@ -102,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceBindingRequestInvalidReason,
-			Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", *r.PublicViewerConfig.Username()),
+			Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", r.PublicViewerConfig.Username()),
 		})
 	} else {
 		if err := r.ensureSpaceBinding(ctx, memberClusterWithSpaceBindingRequest, spaceBindingRequest); err != nil {

@@ -347,8 +347,8 @@ func (d UsersConfig) MasterUserRecordUpdateFailureThreshold() int {
 
 func (d UsersConfig) ForbiddenUsernamePrefixes() []string {
 	prefixes := commonconfig.GetString(d.c.ForbiddenUsernamePrefixes, "openshift,kube,default,redhat,sandbox")
-	if u := d.pv.Username(); u != nil {
-		prefixes = strings.Join([]string{prefixes, *u}, ",")
+	if d.pv.Enabled() {
+		prefixes = strings.Join([]string{prefixes, d.pv.Username()}, ",")
 	}
 	v := strings.FieldsFunc(prefixes, func(c rune) bool {
 		return c == ','

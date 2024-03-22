@@ -532,7 +532,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			// given
 			cfg := commonconfig.PublicViewerConfig{Config: toolchainv1alpha1.PublicViewerConfig{Enabled: true, Username: "public-viewer"}}
 			sbr := sbrtestcommon.NewSpaceBindingRequest("jane", "jane-tenant",
-				sbrtestcommon.WithMUR(*cfg.Username()),
+				sbrtestcommon.WithMUR(cfg.Username()),
 				sbrtestcommon.WithSpaceRole("viewer"),
 			)
 
@@ -550,12 +550,12 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			// spacebindingrequest exists with expected config and finalizer
 			sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 				HasSpecSpaceRole("viewer").
-				HasSpecMasterUserRecord(*cfg.Username()).
+				HasSpecMasterUserRecord(cfg.Username()).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
 					Reason:  toolchainv1alpha1.SpaceBindingRequestInvalidReason,
-					Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", *r.Username()),
+					Message: fmt.Sprintf("%s is reserved and can not be used in SpaceBinding's MasterUserRecord", cfg.Username()),
 				})
 		})
 	})

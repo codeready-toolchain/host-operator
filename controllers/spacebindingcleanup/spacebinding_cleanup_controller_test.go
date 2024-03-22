@@ -62,7 +62,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			// then
 			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 			require.NoError(t, err)
-			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, *publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
+			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
 		})
 
 		t.Run("public-viewer SpaceBinding is NOT removed when MUR is missing", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			// then
 			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 			require.NoError(t, err)
-			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, *publicViewerConfig.Username(), "redhat", fakeClient).Exists()
+			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, publicViewerConfig.Username(), "redhat", fakeClient).Exists()
 		})
 	})
 
@@ -99,7 +99,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			// then
 			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 			require.NoError(t, err)
-			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, *publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
+			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
 		})
 
 		t.Run("public-viewer SpaceBinding is removed when MUR is missing", func(t *testing.T) {
@@ -113,7 +113,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			// then
 			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 			require.NoError(t, err)
-			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, *publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
+			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, publicViewerConfig.Username(), "redhat", fakeClient).DoesNotExist()
 		})
 	})
 
