@@ -33,7 +33,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
-	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster_cache"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -215,7 +215,7 @@ func main() { // nolint:gocyclo
 	}
 
 	// Setup all Controllers
-	if err = toolchaincluster.NewReconciler(
+	if err = toolchaincluster_cache.NewReconciler(
 		mgr,
 		namespace,
 		memberClientTimeout,
@@ -382,7 +382,7 @@ func main() { // nolint:gocyclo
 		}
 
 		setupLog.Info("Starting ToolchainCluster health checks.")
-		toolchaincluster.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
+		toolchaincluster_cache.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
