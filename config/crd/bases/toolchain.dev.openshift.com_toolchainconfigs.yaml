@@ -41,6 +41,26 @@ spec:
             description: ToolchainConfigSpec contains all configuration for host and
               member operators
             properties:
+              global:
+                description: Contains all the configuration that applies to both host
+                  and member operators
+                properties:
+                  publicViewer:
+                    description: PublicViewer used to enable public-viewer support
+                    properties:
+                      enabled:
+                        default: false
+                        type: boolean
+                      username:
+                        default: public-viewer
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - enabled
+                    type: object
+                type: object
               host:
                 description: Contains all host operator configuration
                 properties:
