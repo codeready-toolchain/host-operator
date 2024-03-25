@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -353,7 +352,7 @@ func AssertThatNotificationIsDeleted(t *testing.T, cl runtimeclient.Client, name
 func sentCond() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.NotificationSent,
-		Status:             apiv1.ConditionTrue,
+		Status:             corev1.ConditionTrue,
 		Reason:             "Sent",
 		LastTransitionTime: metav1.Time{Time: time.Now()},
 	}
@@ -371,7 +370,7 @@ func deliveryErrorCond(msg string) toolchainv1alpha1.Condition {
 func deletionCond(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.NotificationDeletionError,
-		Status:             apiv1.ConditionTrue,
+		Status:             corev1.ConditionTrue,
 		Reason:             toolchainv1alpha1.NotificationDeletionErrorReason,
 		Message:            msg,
 		LastTransitionTime: metav1.Time{Time: time.Now()},

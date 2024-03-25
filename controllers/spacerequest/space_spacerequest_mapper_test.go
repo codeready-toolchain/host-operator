@@ -7,7 +7,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +18,7 @@ func TestMapToSpaceRequestByLabel(t *testing.T) {
 	// given
 	spaceRequest := spacerequesttest.NewSpaceRequest("mySpaceRequest", "jane")
 	// following space has a spaceRequest associated
-	subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace", space.WithLabel(v1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()), space.WithLabel(v1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()))
+	subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace", spacetest.WithLabel(v1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()), spacetest.WithLabel(v1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()))
 	// following space has no spaceRequest associated
 	spacenosr := spacetest.NewSpace(test.HostOperatorNs, "nospacerequest")
 
