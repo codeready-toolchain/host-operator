@@ -16,7 +16,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
@@ -73,7 +72,6 @@ type Reconciler struct {
 	Scheme         *runtime.Scheme
 	SegmentClient  *segment.Client
 	ClusterManager *capacity.ClusterManager
-	PublicViewer   commonconfig.PublicViewerConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups,verbs=get;list;watch;create;update;patch;delete
