@@ -2,48 +2,50 @@ package capacity
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func hasNotReachedMaxNumberOfSpacesThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
-	return func(cluster *cluster.CachedToolchainCluster) bool {
-		numberOfSpaces := counts.SpacesPerClusterCounts[cluster.Name]
-		threshold := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[cluster.Name]
+type (
+	spaceProvisionerConfigPredicate func(*toolchainv1alpha1.SpaceProvisionerConfig) bool
+)
+
+func hasNotReachedMaxNumberOfSpacesThreshold(counts counter.Counts) spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		numberOfSpaces := uint(counts.SpacesPerClusterCounts[spc.Spec.ToolchainCluster])
+		threshold := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
 		return threshold == 0 || numberOfSpaces < threshold
 	}
 }
 
-func hasEnoughResources(config toolchainconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
-	return func(cluster *cluster.CachedToolchainCluster) bool {
-		threshold, found := config.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
-		if !found {
-			threshold = config.CapacityThresholds().ResourceCapacityThresholdDefault()
-		}
+func hasEnoughMemoryCapacity(status *toolchainv1alpha1.ToolchainStatus) spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		threshold := spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent
 		if threshold == 0 {
 			return true
 		}
 		for _, memberStatus := range status.Status.Members {
-			if memberStatus.ClusterName == cluster.Name {
-				return hasMemberREnoughResources(memberStatus, threshold)
+			if memberStatus.ClusterName == spc.Spec.ToolchainCluster {
+				return hasMemberEnoughMemoryCapacity(memberStatus, threshold)
 			}
 		}
 		return false
 	}
 }
 
-func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold int) bool {
+func hasMemberEnoughMemoryCapacity(memberStatus toolchainv1alpha1.Member, threshold uint) bool {
 	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
 		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-			if usagePerNode >= threshold {
+			if uint(usagePerNode) >= threshold {
 				return false
 			}
 		}
@@ -52,17 +54,52 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
-func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl runtimeclient.Client) *ClusterManager {
+func isProvisioningEnabled() spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		return spc.Spec.Enabled
+	}
+}
+
+func isReady() spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		return condition.IsTrue(spc.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	}
+}
+
+func hasPlacementRoles(placementRoles []string) spaceProvisionerConfigPredicate {
+	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+		if len(placementRoles) == 0 {
+			// by default it should pick the `tenant` placement role, if no specific placement role was provided
+			placementRoles = []string{cluster.RoleLabel(cluster.Tenant)}
+		}
+
+		// filter member cluster having the required placement role
+	placementCheck:
+		for _, placement := range placementRoles {
+			for _, requiredPlacement := range spc.Spec.PlacementRoles {
+				if requiredPlacement == placement {
+					continue placementCheck
+				}
+			}
+			return false
+		}
+
+		// all placement roles were matched
+		return true
+	}
+}
+
+func NewClusterManager(namespace string, cl runtimeclient.Client) *ClusterManager {
 	return &ClusterManager{
-		getMemberClusters: getMemberClusters,
-		client:            cl,
+		namespace: namespace,
+		client:    cl,
 	}
 }
 
 type ClusterManager struct {
-	getMemberClusters cluster.GetMemberClustersFunc
-	client            runtimeclient.Client
-	lastUsed          string
+	namespace string
+	client    runtimeclient.Client
+	lastUsed  string
 }
 
 // OptimalTargetClusterFilter is used by GetOptimalTargetCluster
@@ -89,41 +126,55 @@ type OptimalTargetClusterFilter struct {
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 // In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
 func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
-	config, err := toolchainconfig.GetToolchainConfig(b.client)
-	if err != nil {
-		return "", errors.Wrapf(err, "unable to get ToolchainConfig")
-	}
-
 	counts, err := counter.GetCounts()
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to get the number of provisioned spaces")
+		return "", fmt.Errorf("unable to get the number of provisioned spaces: %w", err)
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
 	if err := b.client.Get(ctx, types.NamespacedName{Namespace: optimalClusterFilter.ToolchainStatusNamespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
-		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
+		return "", fmt.Errorf("unable to read ToolchainStatus resource: %w", err)
 	}
-	optimalTargetClusters := getOptimalTargetClusters(optimalClusterFilter.PreferredCluster, b.getMemberClusters, optimalClusterFilter.ClusterRoles, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))
-
-	if len(optimalTargetClusters) == 1 {
-		return optimalTargetClusters[0], nil
+	optimalSpaceProvisioners, err := b.getOptimalTargetClusters(
+		ctx,
+		optimalClusterFilter.PreferredCluster,
+		isReady(),
+		isProvisioningEnabled(),
+		hasPlacementRoles(optimalClusterFilter.ClusterRoles),
+		hasNotReachedMaxNumberOfSpacesThreshold(counts),
+		hasEnoughMemoryCapacity(status))
+	if err != nil {
+		return "", fmt.Errorf("failed to find the optimal space provisioner config: %w", err)
 	}
 
-	for _, cluster := range optimalTargetClusters {
-		if cluster == b.lastUsed {
-			provisioned := counts.SpacesPerClusterCounts[cluster]
+	if len(optimalSpaceProvisioners) == 0 {
+		return "", nil
+	}
+
+	if len(optimalSpaceProvisioners) == 1 {
+		return optimalSpaceProvisioners[0].Spec.ToolchainCluster, nil
+	}
+
+	for _, spc := range optimalSpaceProvisioners {
+		clusterName := spc.Spec.ToolchainCluster
+		if clusterName == b.lastUsed {
+			provisioned := counts.SpacesPerClusterCounts[clusterName]
 			if provisioned%50 != 0 {
-				return cluster, nil
+				return clusterName, nil
 			}
 		}
 	}
 
-	sort.Slice(optimalTargetClusters, func(i, j int) bool {
-		provisioned1 := counts.SpacesPerClusterCounts[optimalTargetClusters[i]]
-		threshold1 := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[optimalTargetClusters[i]]
+	sort.Slice(optimalSpaceProvisioners, func(i, j int) bool {
+		spc1 := optimalSpaceProvisioners[i]
+		cluster1 := spc1.Spec.ToolchainCluster
+		provisioned1 := counts.SpacesPerClusterCounts[cluster1]
+		threshold1 := spc1.Spec.CapacityThresholds.MaxNumberOfSpaces
 
-		provisioned2 := counts.SpacesPerClusterCounts[optimalTargetClusters[j]]
-		threshold2 := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[optimalTargetClusters[j]]
+		spc2 := optimalSpaceProvisioners[j]
+		cluster2 := spc2.Spec.ToolchainCluster
+		provisioned2 := counts.SpacesPerClusterCounts[cluster2]
+		threshold2 := spc2.Spec.CapacityThresholds.MaxNumberOfSpaces
 
 		// Let's round the number of provisioned users down to the closest multiple of 50
 		// This is a trick we need to do before comparing the capacity, so we can distribute the users in batches by 50 (if the clusters have the same limit)
@@ -134,64 +185,52 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 		return float64(provisioned1By50)/float64(threshold1) < float64(provisioned2By50)/float64(threshold2)
 	})
 
-	b.lastUsed = optimalTargetClusters[0]
-	return optimalTargetClusters[0], nil
+	b.lastUsed = optimalSpaceProvisioners[0].Spec.ToolchainCluster
+	return b.lastUsed, nil
+}
+
+func matches(spc *toolchainv1alpha1.SpaceProvisionerConfig, predicates []spaceProvisionerConfigPredicate) bool {
+	for _, p := range predicates {
+		if !p(spc) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // getOptimalTargetClusters checks if a preferred target cluster was provided and available from the cluster pool.
 // If the preferred target cluster was not provided or not available, but a list of clusterRoles was provided, then it filters only the available clusters matching all those roles.
 // If no cluster roles were provided then it returns all the available clusters.
-// The function returns a slice with an empty string if not optimal target clusters where found.
-func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, clusterRoles []string, conditions ...cluster.Condition) []string {
-	emptyTargetCluster := []string{""}
-	// Automatic cluster selection based on cluster readiness
-	members := getMemberClusters(append(conditions, cluster.Ready)...)
-	if len(members) == 0 {
-		return emptyTargetCluster
+// The function returns a slice of matching SpaceProvisionerConfigs. If there are no matches, the empty slice is represented by a nil value (which is the default value in Go).
+func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferredCluster string, predicates ...spaceProvisionerConfigPredicate) ([]toolchainv1alpha1.SpaceProvisionerConfig, error) {
+	list := &toolchainv1alpha1.SpaceProvisionerConfigList{}
+	if err := b.client.List(ctx, list, runtimeclient.InNamespace(b.namespace)); err != nil {
+		return nil, err
 	}
 
-	// extract only names of the available clusters
-	var memberNames []string
-	for _, member := range members {
-		// if cluster-role labels were provided, it will check for matching on the member labels
-		// if no clusterRoles labels are required, then the function will return all member cluster with the `tenant` cluster role label
-		if hasClusterRoles(clusterRoles, member) {
-			memberNames = append(memberNames, member.Name)
+	matching := make([]toolchainv1alpha1.SpaceProvisionerConfig, 0, len(list.Items))
+
+	for _, spc := range list.Items {
+		spc := spc
+		if matches(&spc, predicates) {
+			matching = append(matching, spc)
 		}
 	}
 
-	// return empty string if no members available with roles
-	if len(memberNames) == 0 {
-		return emptyTargetCluster
+	if len(matching) == 0 {
+		return nil, nil
 	}
 
 	// if the preferred cluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one
 	if preferredCluster != "" {
-		for _, memberName := range memberNames {
-			if preferredCluster == memberName {
-				return []string{memberName}
+		for _, member := range matching {
+			if preferredCluster == member.Spec.ToolchainCluster {
+				return []toolchainv1alpha1.SpaceProvisionerConfig{member}, nil
 			}
 		}
 	}
 
 	// return the member names in case some were found
-	return memberNames
-}
-
-func hasClusterRoles(clusterRoles []string, member *cluster.CachedToolchainCluster) bool {
-	if len(clusterRoles) == 0 {
-		// by default it should pick the `tenant` cluster role, if no specific cluster role was provided
-		clusterRoles = []string{cluster.RoleLabel(cluster.Tenant)}
-	}
-
-	// filter member cluster having the required cluster role
-	for _, clusterRoleLabel := range clusterRoles {
-		if _, hasRole := member.Labels[clusterRoleLabel]; !hasRole {
-			// missing cluster role
-			return false
-		}
-	}
-
-	// all cluster roles were matched
-	return true
+	return matching, nil
 }
