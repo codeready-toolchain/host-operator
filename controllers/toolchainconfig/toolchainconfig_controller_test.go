@@ -24,7 +24,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -34,7 +33,6 @@ func TestReconcile(t *testing.T) {
 	specificMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("success", func(t *testing.T) {
-
 		t.Run("config not found", func(t *testing.T) {
 			hostCl := test.NewFakeClient(t)
 			member1 := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
@@ -62,13 +60,12 @@ func TestReconcile(t *testing.T) {
 			_, err = getMemberConfig(member2)
 			assert.Error(t, err)
 			assert.True(t, errors.IsNotFound(err))
-
 		})
 
 		t.Run("config exists", func(t *testing.T) {
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
+				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -182,12 +179,11 @@ func TestReconcile(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("error getting the toolchainconfig resource", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
+				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -216,7 +212,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
+				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -248,7 +244,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
+				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
 			hostCl := test.NewFakeClient(t, config)
 			hostCl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				return fmt.Errorf("create error")
@@ -276,7 +272,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("sync failed", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
+				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
@@ -305,11 +301,11 @@ func TestReconcile(t *testing.T) {
 func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	// given
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
+		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
 	hostCl := test.NewFakeClient(t, config)
 	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
-	logger := logf.Log.WithName("test")
+	logger := log.Log.WithName("test")
 	ctx := log.IntoContext(context.TODO(), logger)
 
 	t.Run("no error provided", func(t *testing.T) {
@@ -321,7 +317,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		// test
 		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, nil, "failed to load the latest configuration")
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("status updated", func(t *testing.T) {

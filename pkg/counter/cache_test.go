@@ -14,9 +14,10 @@ import (
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -506,7 +507,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			defer waitForFinished.Done()
 			latch.Wait()
 			err := counter.Synchronize(context.TODO(), fakeClient, toolchainStatus)
-			require.NoError(t, err)
+			assert.NoError(t, err) // require must only be used in the goroutine running the test function (testifylint)
 		}()
 	}
 

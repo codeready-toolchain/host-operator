@@ -88,7 +88,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 		HTTPClientImpl: httpTestClient,
 		Scheme:         s,
 		Namespace:      test.HostOperatorNs,
-		GetMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		GetMembersFunc: func(_ ...cluster.Condition) []*cluster.CachedToolchainCluster {
 			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))
 			for i, clusterName := range memberClusters {
 				clusters[i] = cachedToolchainCluster(fakeClient, clusterName, corev1.ConditionTrue, metav1.Now())
@@ -1786,7 +1786,7 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 
 		// then
 		require.Equal(t, "stone-stg-host.qc0p.p1.openshiftapps.com", domain)
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 	})
 
@@ -1796,7 +1796,7 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 
 		// then
 		require.Equal(t, "", domain)
-		require.NotNil(t, err)
+		require.Error(t, err)
 
 	})
 
@@ -1829,7 +1829,6 @@ func cachedToolchainCluster(cl runtimeclient.Client, name string, status corev1.
 	return &cluster.CachedToolchainCluster{
 		Config: &cluster.Config{
 			Name:              name,
-			Type:              cluster.Host,
 			OperatorNamespace: test.MemberOperatorNs,
 			OwnerClusterName:  test.MemberClusterName,
 			APIEndpoint:       "http://api.devcluster.openshift.com",

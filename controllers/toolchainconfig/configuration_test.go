@@ -181,7 +181,6 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 			assert.Equal(t, "unit-tests", toolchainCfg.Environment())               // returns actual value
 			assert.Equal(t, "def456", toolchainCfg.Notifications().MailgunAPIKey()) // returns actual value
 		})
-
 	})
 
 	t.Run("error retrieving config object", func(t *testing.T) {
@@ -260,7 +259,7 @@ func TestCapacityThresholdsConfig(t *testing.T) {
 		assert.Empty(t, toolchainCfg.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster())
 	})
 	t.Run("non-default", func(t *testing.T) {
-		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)).ResourceCapacityThreshold(456, testconfig.PerMemberCluster("member1", 654)))
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)).ResourceCapacityThreshold(456, testconfig.PerMemberCluster("member1", 654))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, cfg.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, toolchainCfg.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
@@ -336,7 +335,7 @@ func TestNotifications(t *testing.T) {
 		assert.Empty(t, toolchainCfg.Notifications().MailgunReplyToEmail())
 		assert.Equal(t, "mailgun", toolchainCfg.Notifications().NotificationDeliveryService())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Notifications().DurationBeforeNotificationDeletion())
-		assert.Equal(t, "sandbox", toolchainCfg.Notifications().TemplateSetName()) //default notificationEnv
+		assert.Equal(t, "sandbox", toolchainCfg.Notifications().TemplateSetName()) // default notificationEnv
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t,

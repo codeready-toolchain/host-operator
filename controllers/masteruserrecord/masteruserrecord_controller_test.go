@@ -31,7 +31,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -40,7 +39,7 @@ var testLog = ctrl.Log.WithName("test")
 
 func TestAddFinalizer(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel("john-123"))
@@ -197,7 +196,7 @@ func TestAddFinalizer(t *testing.T) {
 
 func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"))
@@ -249,7 +248,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 
 func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("ricky-123"))
@@ -332,7 +331,7 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 
 func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
@@ -380,7 +379,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 
 func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
@@ -626,7 +625,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts(commontest.Member2ClusterName), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
@@ -673,7 +672,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -974,7 +973,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 // todo change test to support updates of multiple UserAccounts
 func TestModifyUserAccount(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
@@ -1033,7 +1032,7 @@ func TestModifyUserAccount(t *testing.T) {
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(commontest.HostOperatorNs, "john-space",
@@ -1164,9 +1163,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Contains(t, notification.Name, userAccount.Name+"-provisioned-")
-		assert.True(t, len(notification.Name) > len(userAccount.Name+"-provisioned-"))
+		assert.Greater(t, len(notification.Name), len(userAccount.Name+"-provisioned-"))
 		assert.Equal(t, mur.Namespace, notification.Namespace)
-		require.Equal(t, 1, len(notification.OwnerReferences))
+		require.Len(t, notification.OwnerReferences, 1)
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 		AssertThatCountersAndMetrics(t).
@@ -1193,7 +1192,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		// given
-		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.ToBeDeleted())
@@ -1233,7 +1232,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 	t.Run("test wait for UserAccount deletion in progress before removing MUR finalizer", func(t *testing.T) {
 		// given
-		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
@@ -1277,7 +1276,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 	t.Run("test wait for UserAccount deletion takes too long", func(t *testing.T) {
 		// given
-		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
 
 		// A basic userSignup to set as the mur owner
@@ -1313,7 +1312,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 	t.Run("test UserAccount deletion has foreground propagation policy", func(t *testing.T) {
 		// given
-		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
@@ -1345,7 +1344,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -1400,7 +1399,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 
 func TestDisablingMasterUserRecord(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
@@ -1464,7 +1463,6 @@ func newController(hostCl runtimeclient.Client, s *runtime.Scheme, memberCl ...C
 		r.MemberClusters[name] = cluster.Cluster{
 			Config: &commoncluster.Config{
 				Name:              name,
-				Type:              commoncluster.Member,
 				OperatorNamespace: commontest.MemberOperatorNs,
 				OwnerClusterName:  commontest.MemberClusterName,
 			},

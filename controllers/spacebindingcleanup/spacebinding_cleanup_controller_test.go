@@ -162,7 +162,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 		res, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 		// then
-		require.Equal(t, res.RequeueAfter, 10*time.Second)
+		require.Equal(t, 10*time.Second, res.RequeueAfter)
 		require.NoError(t, err)
 		sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spacebindingrequest was deleted
 	})
@@ -235,7 +235,6 @@ func prepareReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters
 	for _, c := range memberClusters {
 		clusters[c.Name] = cluster.Cluster{
 			Config: &commoncluster.Config{
-				Type:              commoncluster.Member,
 				OperatorNamespace: c.OperatorNamespace,
 				OwnerClusterName:  test.MemberClusterName,
 			},

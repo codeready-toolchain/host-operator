@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -683,7 +682,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to update MUR john")
-			assert.Len(t, provisionedMur.Status.UserAccounts, 0)
+			assert.Empty(t, provisionedMur.Status.UserAccounts)
 		})
 
 		t.Run("when the UserAccount was added", func(t *testing.T) {
@@ -840,7 +839,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 func TestRoutes(t *testing.T) {
 	// given
 	l := zap.New(zap.UseDevMode(true))
-	logf.SetLogger(l)
+	log.SetLogger(l)
 	apiScheme(t)
 
 	masterUserRec := murtest.NewMasterUserRecord(t, "john",
@@ -982,7 +981,6 @@ func newMemberCluster(cl runtimeclient.Client) cluster.Cluster {
 		Config: &commoncluster.Config{
 			Name:              test.MemberClusterName,
 			APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
-			Type:              commoncluster.Member,
 			OperatorNamespace: test.HostOperatorNs,
 			OwnerClusterName:  test.HostClusterName,
 		},

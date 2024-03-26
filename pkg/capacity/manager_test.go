@@ -2,6 +2,7 @@ package capacity_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -10,14 +11,15 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -40,17 +42,12 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spaceProvisionerConfig)
 		InitializeCounters(t, toolchainStatus)
 
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
-
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -64,16 +61,15 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the first one)", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 10000), testconfig.PerMemberCluster("member2", 300), testconfig.PerMemberCluster("member3", 400)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(300), spc.MaxMemoryUtilizationPercent(75))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(400), spc.MaxMemoryUtilizationPercent(80))
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -87,16 +83,15 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the third one)", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000), testconfig.PerMemberCluster("member3", 2000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(80))
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -109,16 +104,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them, but the second one is the preferred", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
@@ -133,16 +125,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(60))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -156,16 +145,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches max number of Spaces, so the second one is returned even when the first is defined as the preferred one", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 700), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 90), testconfig.PerMemberCluster("member2", 95)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(700), spc.MaxMemoryUtilizationPercent(90))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(95))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member1",
@@ -180,16 +166,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters, none of them is returned since it reaches max number of Spaces, no matter what is defined as preferred", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 1)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(60))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(95))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
@@ -204,16 +187,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters but only the second one has enough capacity - using the default values", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces().
-				ResourceCapacityThreshold(62))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(62))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(62))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -227,16 +207,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters but none of them has enough capacity - using the default memory values", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces().
-				ResourceCapacityThreshold(1))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(1))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(1))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -250,16 +227,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionFalse), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -271,21 +245,15 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member2", clusterName)
 	})
 
-	t.Run("with two clusters and enough capacity in both of them but passing specific cluster-role label", func(t *testing.T) {
+	t.Run("with two clusters and enough capacity in both of them but passing specific placement-role", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(
-			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue),
-			NewMemberClusterWithoutClusterRoles(t, "member2", corev1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
-		)
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -298,21 +266,15 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member1", clusterName) // only member one has required label
 	})
 
-	t.Run("with two clusters and not enough capacity on the cluster with specific cluster-role label", func(t *testing.T) {
+	t.Run("with two clusters and not enough capacity on the cluster with specific placement-role", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1), spc.MaxMemoryUtilizationPercent(1))
+		spc2 := hspc.NewEnabledValidSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(
-			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue),
-			NewMemberClusterWithoutClusterRoles(t, "member2", corev1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
-		)
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -325,21 +287,41 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "", clusterName) // only member one has required label but no capacity
 	})
 
-	t.Run("with two clusters, the preferred one is returned if it has the required cluster-roles", func(t *testing.T) {
+	t.Run("with two clusters, the preferred one is returned if it has the required placement-roles", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t)
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(
-			NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue),
-			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue)) // this is set as preferred
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 			ctx,
 			capacity.OptimalTargetClusterFilter{
-				PreferredCluster:         "member2",                                   // request specifically this member eve if it doesn't match the cluster-roles from below
-				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)}, // set
+				PreferredCluster:         "member2",                             // request specifically this member eve if it doesn't match the cluster-roles from below
+				ClusterRoles:             []string{spc.PlacementRole("tenant")}, // set
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
+
+	// given
+	t.Run("choose one of the configured clusters because the preferred one is missing the SPC", func(t *testing.T) {
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			ctx,
+			capacity.OptimalTargetClusterFilter{
+				PreferredCluster:         "member3",                             // request specifically this member eve if it doesn't match the cluster-roles from below
+				ClusterRoles:             []string{spc.PlacementRole("tenant")}, // set
 				ToolchainStatusNamespace: commontest.HostOperatorNs,
 			},
 		)
@@ -350,18 +332,20 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-		t.Run("unable to get ToolchainConfig", func(t *testing.T) {
+		t.Run("unable to list SpaceProvisionerConfigs", func(t *testing.T) {
 			// given
 			fakeClient := commontest.NewFakeClient(t, toolchainStatus)
 			InitializeCounters(t, toolchainStatus)
-			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
-				return fmt.Errorf("some error")
+			fakeClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
+				if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
+					return errors.New("some error")
+				}
+				return fakeClient.Client.List(ctx, list, opts...)
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 				ctx,
 				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -369,7 +353,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			)
 
 			// then
-			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
+			require.EqualError(t, err, "failed to find the optimal space provisioner config: some error")
 			assert.Equal(t, "", clusterName)
 		})
 
@@ -383,10 +367,9 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				return fakeClient.Client.Get(ctx, key, obj, opts...)
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 				ctx,
 				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -403,12 +386,10 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *testing.T) {
 	// given
 	ctx := context.TODO()
-	for _, limit := range []int{800, 1000, 1234, 2500, 10000} {
+	for _, limit := range []uint{800, 1000, 1234, 2500, 10000} {
 		t.Run(fmt.Sprintf("for the given limit of max number of spaces per cluster: %d", limit), func(t *testing.T) {
-
 			for _, numberOfSpaces := range []int{0, 8, 50, 88, 100, 123, 555} {
 				t.Run(fmt.Sprintf("when there is a number of spaces at the very beginning %d", numberOfSpaces), func(t *testing.T) {
-
 					toolchainStatus := NewToolchainStatus(
 						WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 							string(metrics.Internal): 1000,
@@ -421,14 +402,13 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						WithMember("member3", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 					// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
-					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-						testconfig.CapacityThresholds().
-							MaxNumberOfSpaces(testconfig.PerMemberCluster("member2", limit), testconfig.PerMemberCluster("member3", limit)))
+					spc1 := hspc.NewEnabledValidTenantSPC("member1")
+					spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(limit))
+					spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(limit))
 
-					fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
+					fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, spc3)
 					InitializeCounters(t, toolchainStatus)
-					clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", corev1.ConditionTrue))
-					clusterBalancer := capacity.NewClusterManager(clusters, fakeClient)
+					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
 					member2CurrentCount := numberOfSpaces
@@ -439,7 +419,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						// this 50 users should go into member2 - it will be always 50
 						for i := 0; i < member2MissingTo50; i++ {
 							t.Run(fmt.Sprintf("cycle %d user %d for member2", cycle, i), func(t *testing.T) {
-								//given
+								// given
 								// even when the counter of the other member is decremented, it should still use the last used one
 								// but we can decrement it only in the second cycle when the member3 has at least 50 Spaces
 								if i == 2 && cycle > 1 {
@@ -542,10 +522,9 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 	fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-	clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 	// when
-	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+	clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
 		context.TODO(),
 		capacity.OptimalTargetClusterFilter{
 			ToolchainStatusNamespace: commontest.HostOperatorNs,
@@ -555,4 +534,62 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	// then
 	require.EqualError(t, err, "unable to get the number of provisioned spaces: counter is not initialized")
 	assert.Equal(t, "", clusterName)
+}
+
+func TestGetOptimalTargetClusterWithSpaceProvisionerConfig(t *testing.T) {
+	t.Run("explicitly disabled", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+			WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+
+		spc1 := hspc.NewValidTenantSPC("member1")
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			context.TODO(),
+			capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
+	t.Run("not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+			WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+
+		spc1 := spc.NewSpaceProvisionerConfig(
+			"member1Spc",
+			commontest.HostOperatorNs,
+			spc.ReferencingToolchainCluster("member1"),
+			spc.WithReadyConditionInvalid("because we're testing it"),
+			spc.Enabled(true),
+			spc.WithPlacementRoles(cluster.RoleLabel(cluster.Role("tenant"))))
+
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
+
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, toolchainStatus)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient).GetOptimalTargetCluster(
+			context.TODO(),
+			capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: commontest.HostOperatorNs,
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member2", clusterName)
+	})
 }
