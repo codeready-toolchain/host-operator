@@ -356,17 +356,20 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		}
 		logger.Info("MasterUserRecord exists", "Name", mur.Name)
 
-		// Set the Scheduled Deactivation Time
-		deactivationTimeoutDays := userTier.Spec.DeactivationTimeoutDays
-		scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(time.Duration(deactivationTimeoutDays*24) * time.Hour)
-		if time.Now().Before(scheduledDeactivationTime) {
-			if userSignup.Status.ScheduledDeactivationTimestamp.IsZero() || !userSignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
-				userSignup.Status.ScheduledDeactivationTimestamp = v1.NewTime(scheduledDeactivationTime)
-				if err := r.Client.Status().Update(ctx, userSignup); err != nil {
-					logger.Error(err, "failed to update usersignup status")
-					return true, err
+		// Set the Scheduled Deactivation Time if the provisioned time is set
+		if mur.Status.ProvisionedTime != nil {
+			deactivationTimeoutDays := userTier.Spec.DeactivationTimeoutDays
+			scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(time.Duration(deactivationTimeoutDays*24) * time.Hour)
+			if time.Now().Before(scheduledDeactivationTime) {
+				if userSignup.Status.ScheduledDeactivationTimestamp.IsZero() || !userSignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
+					userSignup.Status.ScheduledDeactivationTimestamp = v1.NewTime(scheduledDeactivationTime)
+					if err := r.Client.Status().Update(ctx, userSignup); err != nil {
+						logger.Error(err, "failed to update usersignup status")
+						return true, err
+					}
 				}
 			}
+
 		}
 
 		if shouldManageSpace(userSignup) {
