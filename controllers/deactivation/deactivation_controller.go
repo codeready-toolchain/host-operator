@@ -193,6 +193,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	if time.Now().Before(usersignup.Status.ScheduledDeactivationTimestamp.Time) && !usersignup.Status.ScheduledDeactivationTimestamp.Time.IsZero() {
+		// It is not yet time to deactivate so requeue when it will be
+		requeueAfterExpired := time.Until(usersignup.Status.ScheduledDeactivationTimestamp.Time)
+
+		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired,
+			"Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
+		return reconcile.Result{RequeueAfter: requeueAfterExpired}, nil
+	}
+
 	// Deactivate the user
 	if states.Deactivated(usersignup) {
 		// The UserSignup is already set for deactivation, nothing left to do
