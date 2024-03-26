@@ -1,8 +1,8 @@
 module github.com/codeready-toolchain/host-operator
 
 replace (
-	github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20240326141456-07cbb3679832
 	github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20240326131121-9509925cdd79
+	github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20240326141456-07cbb3679832
 )
 
 require (
