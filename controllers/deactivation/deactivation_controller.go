@@ -3,7 +3,6 @@ package deactivation
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
@@ -192,25 +191,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// created yet, then wait - the notification should be created shortly by the UserSignup controller
 		// once the "deactivating" state has been set which should cause a new reconciliation to be triggered here
 		return reconcile.Result{}, nil
-	}
-
-	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
-
-	if time.Now().Before(deactivationDueTime) {
-		// It is not yet time to deactivate so requeue when it will be
-		requeueAfterExpired := time.Until(deactivationDueTime)
-
-		if usersignup.Status.ScheduledDeactivationTimestamp.IsZero() || !usersignup.Status.ScheduledDeactivationTimestamp.Time.Equal(deactivationDueTime) {
-			usersignup.Status.ScheduledDeactivationTimestamp = v1.NewTime(deactivationDueTime)
-			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
-				logger.Error(err, "failed to update usersignup status")
-				return reconcile.Result{}, err
-			}
-		}
-
-		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired,
-			"Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
-		return reconcile.Result{RequeueAfter: requeueAfterExpired}, nil
 	}
 
 	// Deactivate the user
