@@ -11,7 +11,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
@@ -91,7 +90,7 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtime.Object {
 	spaces := make([]runtime.Object, number)
 	for index := range spaces {
-		spaces[index] = spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("%s%d", prefix, index), spacetest.WithSpecTargetCluster(targetCluster))
+		spaces[index] = spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("%s%d", prefix, index), spacetest.WithSpecTargetCluster(targetCluster))
 	}
 	return spaces
 }

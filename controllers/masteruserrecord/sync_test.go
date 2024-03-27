@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -840,7 +839,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 func TestRoutes(t *testing.T) {
 	// given
 	l := zap.New(zap.UseDevMode(true))
-	logf.SetLogger(l)
+	log.SetLogger(l)
 	apiScheme(t)
 
 	masterUserRec := murtest.NewMasterUserRecord(t, "john",
