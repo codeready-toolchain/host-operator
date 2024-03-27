@@ -220,7 +220,7 @@ func main() { // nolint:gocyclo
 		namespace,
 		memberClientTimeout,
 	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
 		os.Exit(1)
 	}
 	if err := (&deactivation.Reconciler{
