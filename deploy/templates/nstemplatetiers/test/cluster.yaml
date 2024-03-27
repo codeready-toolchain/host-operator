@@ -13,6 +13,7 @@ objects:
         count/deployments.apps: "30"
         count/deploymentconfigs.apps: "30"
         count/pods: "50"
+        count/virtualmachines.kubevirt.io: "2"
     selector:
       annotations: null
       labels:
