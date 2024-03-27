@@ -642,6 +642,11 @@ func (r *Reconciler) provisionMasterUserRecord(
 ) error {
 	logger := log.FromContext(ctx)
 
+	// If the Annotations property is nil then initialize it
+	if userSignup.Annotations == nil {
+		userSignup.Annotations = map[string]string{}
+	}
+
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
 	if err := r.Client.Update(ctx, userSignup); err != nil {

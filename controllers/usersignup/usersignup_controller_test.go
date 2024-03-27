@@ -3024,6 +3024,54 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	)
 }
 
+func TestUserSignupScheduledDeactivationTimestampSet(t *testing.T) {
+	// given
+	userSignup := commonsignup.NewUserSignup(commonsignup.WithTargetCluster("member1"), commonsignup.WithoutAnnotations())
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup,
+		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), deactivate30Tier)
+	InitializeCounters(t, NewToolchainStatus(
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
+	))
+
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
+	require.NoError(t, err)
+
+	// Ensure the MUR was created
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
+	require.NotNil(t, mur)
+
+	// Set the provisioned time for the MUR
+	now := metav1.NewTime(time.Now())
+	mur.Status.ProvisionedTime = &now
+
+	// Prepare another reconciliation with the new MUR
+	r, req, _ = prepareReconcile(t, userSignup.Name, userSignup, mur,
+		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+		deactivate30Tier, baseNSTemplateTier)
+
+	// Reconcile again now that the provisioned time is set
+	_, err = r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+
+	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
+	require.NoError(t, err)
+
+	// Confirm that the scheduled deactivation time is now not zero
+	require.False(t, userSignup.Status.ScheduledDeactivationTimestamp.IsZero())
+}
+
 func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
