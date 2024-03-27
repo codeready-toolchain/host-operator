@@ -69,6 +69,7 @@ func TestReconcile(t *testing.T) {
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name), murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)

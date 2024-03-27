@@ -193,6 +193,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	// We calculate the actual deactivation due time based on when the deactivating condition was set.  This may end up
+	// being significantly later than the scheduled deactivation time set in UserSignup.Status.ScheduledDeactivationTime, as
+	// in some rare circumstances the deactivating notification/status may fail to be set due to cluster downtime or
+	// other reasons.  Because of this, the scheduled deactivation time that is set in the UserSignup.Status should be
+	// treated as informational only.
 	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
 
 	if time.Now().Before(deactivationDueTime) {
