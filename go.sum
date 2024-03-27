@@ -191,8 +191,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
-github.com/fbm3307/toolchain-common v0.0.0-20240325124307-e711469fec6d h1:/g0OvY5tHYmmnSVSjgY1GxEHW1fFjl37NzxhgDVqhzw=
-github.com/fbm3307/toolchain-common v0.0.0-20240325124307-e711469fec6d/go.mod h1:OJ3L9aaTRMGjxr2WeH/9l6m5OjExwEK3Bp/+P+efoGg=
+github.com/fbm3307/toolchain-common v0.0.0-20240327060316-2473a65f2520 h1:monNakHFVRUBR+tJ/cPoQLwqljO0DYWy0tneNpAhuSI=
+github.com/fbm3307/toolchain-common v0.0.0-20240327060316-2473a65f2520/go.mod h1:OJ3L9aaTRMGjxr2WeH/9l6m5OjExwEK3Bp/+P+efoGg=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
