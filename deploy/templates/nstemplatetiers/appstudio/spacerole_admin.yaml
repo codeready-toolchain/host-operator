@@ -212,6 +212,21 @@ objects:
     - update
     - patch
     - delete
+  # Allow using the project-controller
+  - apiGroups:
+    - projctl.konflux.dev
+    resources:
+    - projects
+    - projectdevelopmentstreams
+    - projectdevelopmentstreamtemplates
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1

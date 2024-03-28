@@ -148,6 +148,16 @@ objects:
     - get
     - list
     - watch
+  - apiGroups:
+    - projctl.konflux.dev
+    resources:
+    - projects
+    - projectdevelopmentstreams
+    - projectdevelopmentstreamtemplates
+    verbs:
+    - get
+    - list
+    - watch
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
