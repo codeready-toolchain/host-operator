@@ -6,6 +6,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/go-logr/logr"
@@ -43,9 +44,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconciler reconciles a SpaceBinding object
 type Reconciler struct {
 	runtimeclient.Client
-	Scheme         *runtime.Scheme
-	Namespace      string
-	MemberClusters map[string]cluster.Cluster
+	Scheme             *runtime.Scheme
+	Namespace          string
+	MemberClusters     map[string]cluster.Cluster
+	PublicViewerConfig commonconfig.PublicViewerConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch;create;update;patch;delete
@@ -87,6 +89,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		// error while reading space
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
+	}
+
+	// If PublicViewer is enabled and spacebinding references the PublicViewer user, skip SpaceBinding deletion
+	if r.PublicViewerConfig.IsPublicViewer(spaceBinding.Spec.MasterUserRecord) {
+		logger.Info("skipping deletion of spacebinding for PublicViewer", "username", spaceBinding.Spec.MasterUserRecord, "spacebinding", spaceBinding.Name)
+		return ctrl.Result{}, nil
 	}
 
 	murName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.MasterUserRecord}
