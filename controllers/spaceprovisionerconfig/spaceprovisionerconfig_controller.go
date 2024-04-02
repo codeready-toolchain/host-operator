@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Reconciler is the reconciler for the SpaceProvisionerConfig CRs.
@@ -34,7 +33,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			// We want to trigger the reconciliation of SpaceProvisionerConfigs that reference some ToolChainCluster whenever
 			// the ToolChainClusters are created or deleted. We don't have to care about updates, the mere existence of the
 			// ToolchainCluster is enough for us.
-			&source.Kind{Type: &toolchainv1alpha1.ToolchainCluster{}},
+			&toolchainv1alpha1.ToolchainCluster{},
 			handler.EnqueueRequestsFromMapFunc(MapToolchainClusterToSpaceProvisionerConfigs(ctx, r.Client)),
 			builder.WithPredicates(predicate.Funcs{
 				CreateFunc: func(event.CreateEvent) bool {
