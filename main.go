@@ -24,6 +24,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
@@ -34,6 +35,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclustercache"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterresources"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -215,6 +217,14 @@ func main() { // nolint:gocyclo
 	}
 
 	// Setup all Controllers
+	if err = (&toolchainclusterresources.Reconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Templates: &deploy.ToolchainClusterTemplateFS,
+	}).SetupWithManager(mgr, namespace); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterResources")
+		os.Exit(1)
+	}
 	if err = toolchainclustercache.NewReconciler(
 		mgr,
 		namespace,
