@@ -32,7 +32,7 @@ require (
 
 require github.com/google/uuid v1.3.0 // indirect
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20240403092205-8439bbc15fa2
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20240403103433-189935dc05ef
 
 require (
 	cloud.google.com/go v0.97.0 // indirect

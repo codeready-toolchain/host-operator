@@ -430,8 +430,8 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/mailru/easyjson v0.7.6 h1:8yTIVnZgCoiM1TgqoeTl+LfU5Jg6/xL3QhGQnimLYnA=
 github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/matousjobanek/toolchain-common v0.0.0-20240403092205-8439bbc15fa2 h1:x1PVCNIzpE/iDB4ED/1yAQbXZck0L9uoh9RgTh/nBCM=
-github.com/matousjobanek/toolchain-common v0.0.0-20240403092205-8439bbc15fa2/go.mod h1:OJ3L9aaTRMGjxr2WeH/9l6m5OjExwEK3Bp/+P+efoGg=
+github.com/matousjobanek/toolchain-common v0.0.0-20240403103433-189935dc05ef h1:MIWToDWnd6pFAhdmAEedy1pYBZhlj3lPTI9aPqEDzLM=
+github.com/matousjobanek/toolchain-common v0.0.0-20240403103433-189935dc05ef/go.mod h1:Iat3N+zBZcVgm/HWxa/ltSEoelM/YCXQUvbL9C8OSTw=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=

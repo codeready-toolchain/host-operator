@@ -24,12 +24,15 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 		return errors.Wrapf(err, "unable to load templates")
 	}
 	metadata := make(map[string]string)
-	err = yaml.Unmarshal([]byte(metadataContent), &metadata)
+	err = yaml.Unmarshal(metadataContent, &metadata)
 	if err != nil {
 		return errors.Wrapf(err, "unable to load templates")
 	}
 	files := map[string][]byte{}
 	for _, name := range assets.Names() {
+		if name == "metadata.yaml" {
+			continue
+		}
 		content, err := assets.Asset(name)
 		if err != nil {
 			return errors.Wrapf(err, "unable to load templates")
