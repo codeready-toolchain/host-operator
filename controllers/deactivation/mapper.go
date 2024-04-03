@@ -1,6 +1,7 @@
 package deactivation
 
 import (
+	"context"
 	"errors"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -13,8 +14,8 @@ import (
 
 var mapperLog = ctrl.Log.WithName("UserSignupToMasterUserRecordMapper")
 
-func MapUserSignupToMasterUserRecord() func(object runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapUserSignupToMasterUserRecord() func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		if userSignup, ok := obj.(*toolchainv1alpha1.UserSignup); ok {
 
 			if userSignup.Status.CompliantUsername != "" {
