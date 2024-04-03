@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -48,16 +47,16 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) 
 		For(&toolchainv1alpha1.UserSignup{}, builder.WithPredicates(UserSignupChangedPredicate{})).
 		Owns(&toolchainv1alpha1.MasterUserRecord{}).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.BannedUser{}},
+			&toolchainv1alpha1.BannedUser{},
 			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.Space{}},
+			&toolchainv1alpha1.Space{},
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+			&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
+			&toolchainv1alpha1.ToolchainStatus{},
 			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.BuildMapToOldestPending(ctx)),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
 				client: mgr.GetClient(),
