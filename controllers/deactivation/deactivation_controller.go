@@ -3,6 +3,7 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
@@ -134,6 +135,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	deactivationTimeout := time.Duration(deactivationTimeoutDays*24) * time.Hour
+
+	// Set the Scheduled Deactivation Time
+	scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(deactivationTimeout)
+	if time.Now().Before(scheduledDeactivationTime) {
+		if usersignup.Status.ScheduledDeactivationTimestamp.IsZero() || !usersignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
+			usersignup.Status.ScheduledDeactivationTimestamp = v1.NewTime(scheduledDeactivationTime)
+			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+				logger.Error(err, "failed to update usersignup status")
+				return reconcile.Result{}, err
+			}
+		}
+	}
 
 	logger.Info("user account time values", "deactivation timeout duration", deactivationTimeout, "provisionedTimestamp", provisionedTimestamp)
 

@@ -19,13 +19,9 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
-	"github.com/redhat-cop/operator-utils/pkg/util"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strconv"
-	"time"
-
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strconv"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -355,22 +352,6 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 			return true, nil
 		}
 		logger.Info("MasterUserRecord exists", "Name", mur.Name)
-
-		// Set the Scheduled Deactivation Time if the provisioned time is set
-		if mur.Status.ProvisionedTime != nil {
-			deactivationTimeoutDays := userTier.Spec.DeactivationTimeoutDays
-			scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(time.Duration(deactivationTimeoutDays*24) * time.Hour)
-			if time.Now().Before(scheduledDeactivationTime) {
-				if userSignup.Status.ScheduledDeactivationTimestamp.IsZero() || !userSignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
-					userSignup.Status.ScheduledDeactivationTimestamp = v1.NewTime(scheduledDeactivationTime)
-					if err := r.Client.Status().Update(ctx, userSignup); err != nil {
-						logger.Error(err, "failed to update usersignup status")
-						return true, err
-					}
-				}
-			}
-
-		}
 
 		if shouldManageSpace(userSignup) {
 			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
