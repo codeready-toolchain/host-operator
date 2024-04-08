@@ -5,7 +5,8 @@ on:
       - master
     tags-ignore:
       - '*.*'
-  pull_request:
+  pull_request_target:
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches:
       - master
 
@@ -21,6 +22,10 @@ jobs:
     
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+        fetch-depth: 0
     
     - name: generate
       run: |
