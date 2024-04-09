@@ -81,6 +81,10 @@ func TestReconcile(t *testing.T) {
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
 			assertThatUserSignupDeactivated(t, cl, username, false)
+
+			// confirm that the scheduled deactivation time is set
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp.IsZero())
 		})
 
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'deactivate90' tier
