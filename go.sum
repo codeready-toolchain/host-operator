@@ -533,6 +533,7 @@ github.com/ranakan19/api v0.0.0-20240229043418-fb48d723557f h1:bqPhEnvaZDlH12o0C
 github.com/ranakan19/api v0.0.0-20240229043418-fb48d723557f/go.mod h1:InMOgwgGYp6RYMhdEYBvB6gR9hIvdLAXmdnqF3lSFpg=
 github.com/ranakan19/toolchain-common v0.0.0-20240320153453-bfa0fdfef982 h1:ItZ3MYmmgj1D3ZfluaaOj7KMwBAERXdNOzK1lHIEhqc=
 github.com/ranakan19/toolchain-common v0.0.0-20240320153453-bfa0fdfef982/go.mod h1:KcgADoBgrF6b+r5ta4yL4osTC+wUmPkAbhGPxHc8iW0=
+github.com/ranakan19/toolchain-common v0.0.0-20240405195257-0986552a3444/go.mod h1:3d6K8hEUooGh/Lp10SGOAwZneO5JZfRZUzgc+S4dltw=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf h1:fsZiv9XuFo8G7IyzFWjG02vqzJG7kSqFvD1Wiq3V/o8=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
