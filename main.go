@@ -34,6 +34,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclustercache"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterhealth"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -63,6 +64,7 @@ var (
 )
 
 const memberClientTimeout = 3 * time.Second
+const requeAfter = 10 * time.Second
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -223,6 +225,17 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
 		os.Exit(1)
 	}
+
+	if err := toolchainclusterhealth.NewReconciler(
+		mgr,
+		namespace,
+		memberClientTimeout,
+		requeAfter,
+	).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterHealth")
+		os.Exit(1)
+	}
+
 	if err := (&deactivation.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -380,9 +393,6 @@ func main() { // nolint:gocyclo
 			setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
-
-		setupLog.Info("Starting ToolchainCluster health checks.")
-		toolchainclustercache.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
