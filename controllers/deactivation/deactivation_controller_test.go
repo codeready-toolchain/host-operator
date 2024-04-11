@@ -84,7 +84,14 @@ func TestReconcile(t *testing.T) {
 
 			// confirm that the scheduled deactivation time is set
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-			require.False(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp.IsZero())
+			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+
+			// confirm that the scheduled deactivation time is ~30 days
+			expected := time.Now().Add(30 * time.Hour * 24)
+			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+			// accept if we're within 1 hour of the expected deactivation time
+			require.Less(t, comparison, time.Hour)
 		})
 
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'deactivate90' tier
@@ -104,6 +111,17 @@ func TestReconcile(t *testing.T) {
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
 			assertThatUserSignupDeactivated(t, cl, username, false)
+
+			// confirm that the scheduled deactivation time is set
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+
+			// confirm that the scheduled deactivation time is ~90 days
+			expected := time.Now().Add(90 * time.Hour * 24)
+			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+			// accept if we're within 1 hour of the expected deactivation time
+			require.Less(t, comparison, time.Hour)
 		})
 
 		// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
@@ -153,6 +171,10 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, false)
+
+			// confirm that the scheduled deactivation time is not set
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 	// in these tests, the controller should (eventually) deactivate the user
@@ -325,6 +347,8 @@ func TestReconcile(t *testing.T) {
 
 			// Set usersignup state as already set to deactivating
 			states.SetDeactivating(userSignupFoobar, true)
+			dt := metav1.NewTime(time.Now().Add(30 * 24 * time.Hour))
+			userSignupFoobar.Status.ScheduledDeactivationTimestamp = &dt
 
 			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
@@ -347,6 +371,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 			require.False(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
+			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 
