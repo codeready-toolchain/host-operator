@@ -202,6 +202,13 @@ func TestReconcile(t *testing.T) {
 			require.True(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
 
+			// The scheduled deactivation time should be set to the standard 30 days after the provisioned time (i.e. in exactly 2 days time)
+			expected := time.Now().Add(2 * time.Hour * 24)
+			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+			// accept if we're within 1 hour of the expected deactivation time
+			require.Less(t, comparison, time.Hour)
+
 			t.Run("reconciliation should be requeued when notification not yet sent", func(t *testing.T) {
 				r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 				// when
@@ -249,6 +256,14 @@ func TestReconcile(t *testing.T) {
 					// deactivated state should still be false
 					require.False(t, states.Deactivated(userSignupFoobar))
 
+					// The scheduled deactivation time should be set to 3 days after the LastTransitionTime of the
+					// deactivating notification (i.e. 3 days from now)
+					expected := time.Now().Add(3 * time.Hour * 24)
+					comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+					// accept if we're within 1 hour of the expected deactivation time
+					require.Less(t, comparison, time.Hour)
+
 					t.Run("usersignup should be deactivated", func(t *testing.T) {
 						// Set the notification status condition as sent, but this time 3 days in the past
 						userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
@@ -276,6 +291,9 @@ func TestReconcile(t *testing.T) {
 
 						// deactivated state should now be true
 						require.True(t, states.Deactivated(userSignupFoobar))
+
+						// Confirm that the scheduled deactivation time is set to nil since the user is now deactivated
+						require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 						t.Run("usersignup already deactivated", func(t *testing.T) {
 							// additional reconciles should find the usersignup is already deactivated
@@ -306,6 +324,12 @@ func TestReconcile(t *testing.T) {
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeue should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, true)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
+
+			// Reload the userSignup
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+
+			// Confirm that the scheduled deactivation time is set to nil since the user is now deactivated
+			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 
@@ -317,7 +341,7 @@ func TestReconcile(t *testing.T) {
 			// Set usersignup state as already set to deactivating
 			states.SetDeactivating(userSignupFoobar, true)
 
-			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
+			// Set the provisioned time so that we are now just 2 days from the original expected 30 day deactivation time (i.e. 28 days in the past)
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
 
 			// Now the MasterUserRecord has been promoted to the 90 day tier
@@ -339,6 +363,14 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 			require.False(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
+
+			// The scheduled deactivation time should have also been updated, and should now expire in ~62 days
+			expected := time.Now().Add(62 * time.Hour * 24)
+			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+			// accept if we're within 1 hour of the expected deactivation time
+			require.Less(t, comparison, time.Hour)
+
 		})
 
 		t.Run("when provisioning state is set but user is moved to a tier without deactivation", func(t *testing.T) {
@@ -371,6 +403,8 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 			require.False(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
+
+			// The scheduled deactivation time should now be set to nil
 			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})

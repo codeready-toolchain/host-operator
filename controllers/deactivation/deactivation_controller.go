@@ -185,6 +185,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if !states.Deactivating(usersignup) {
 		states.SetDeactivating(usersignup, true)
 
+		// Before we update the UserSignup in order to set the deactivating state, we should reset the scheduled
+		// deactivation time if required just in case the current value is nil or has somehow changed.  Since the UserSignup
+		// controller is going to be reconciling immediately after setting the deactivating state then it will be
+		// creating a deactivating notification, meaning that the scheduled deactivation time that we set here is going
+		// to be extremely temporary (as it will be recalculated after the next reconcile), however it is done for correctness
+		scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(deactivationTimeout)
+		if usersignup.Status.ScheduledDeactivationTimestamp == nil || !usersignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
+			ts := v1.NewTime(scheduledDeactivationTime)
+			usersignup.Status.ScheduledDeactivationTimestamp = &ts
+			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+				logger.Error(err, "failed to update usersignup status")
+				return reconcile.Result{}, err
+			}
+		}
+
 		logger.Info("setting usersignup state to deactivating")
 		if err := r.Client.Update(ctx, usersignup); err != nil {
 			logger.Error(err, "failed to update usersignup")
@@ -250,6 +265,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err := r.Client.Update(ctx, usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
+	}
+
+	// Set the scheduled deactivation time to nil since the UserSignup is now deactivated
+	if usersignup.Status.ScheduledDeactivationTimestamp != nil {
+		usersignup.Status.ScheduledDeactivationTimestamp = nil
+		if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
+		}
 	}
 
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
