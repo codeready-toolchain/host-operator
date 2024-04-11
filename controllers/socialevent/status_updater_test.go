@@ -74,7 +74,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 			socialeventtest.WithConditions(c1), // with pre-existing status condition
 		)
 		hostClient := test.NewFakeClient(t, event)
-		hostClient.MockStatusUpdate = func(_ context.Context, _ runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(_ context.Context, _ runtimeclient.Object, _ ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("mock error")
 		}
 		statusUpdater := StatusUpdater{Client: hostClient}

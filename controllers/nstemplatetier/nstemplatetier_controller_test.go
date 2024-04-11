@@ -155,7 +155,7 @@ func TestReconcile(t *testing.T) {
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 				initObjs := []runtime.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}

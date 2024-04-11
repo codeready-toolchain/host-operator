@@ -149,7 +149,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		r, req, cl := prepareReconcile(t, spc.DeepCopy())
 
 		expectedErr := errors.New("purposefully failing the get request")
-		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return expectedErr
 		}
 
