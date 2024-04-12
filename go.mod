@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20240322110702-5ab3840476e9
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240403070054-183e7d407080
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240404090512-046d250d7d78
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
@@ -32,7 +32,7 @@ require (
 
 require github.com/google/uuid v1.3.0 // indirect
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20240403103433-189935dc05ef
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20240412095916-4dcad487a248
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
