@@ -80,7 +80,7 @@ func TestReconcile(t *testing.T) {
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
 			// confirm that the scheduled deactivation time is set
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -110,7 +110,7 @@ func TestReconcile(t *testing.T) {
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
 			// confirm that the scheduled deactivation time is set
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -137,7 +137,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
 		// a mur that has not been provisioned yet
@@ -151,7 +151,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
 		// a user that belongs to the deactivation domain excluded list
@@ -170,11 +170,11 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
-			// confirm that the scheduled deactivation time is not set
+			// confirm that the scheduled deactivation time is still set (it will be set to nil after the usersignup Status is updated)
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 	// in these tests, the controller should (eventually) deactivate the user
@@ -292,16 +292,31 @@ func TestReconcile(t *testing.T) {
 						// deactivated state should now be true
 						require.True(t, states.Deactivated(userSignupFoobar))
 
-						// Confirm that the scheduled deactivation time is set to nil since the user is now deactivated
-						require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+						// Confirm that the scheduled deactivation time is not yet set to nil since the user is now deactivated
+						require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 						t.Run("usersignup already deactivated", func(t *testing.T) {
+							deactivatedCondition := toolchainv1alpha1.Condition{
+								Type:               toolchainv1alpha1.UserSignupComplete,
+								Status:             corev1.ConditionTrue,
+								Reason:             toolchainv1alpha1.UserSignupUserDeactivatedReason,
+								LastTransitionTime: metav1.Time{Time: time.Now()},
+							}
+							userSignupFoobar.Status.Conditions = condition.AddStatusConditions(userSignupFoobar.Status.Conditions,
+								deactivatedCondition)
+							r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
+
 							// additional reconciles should find the usersignup is already deactivated
 							res, err := r.Reconcile(context.TODO(), req)
 							// then
 							require.NoError(t, err)
 							require.False(t, res.Requeue, "requeue should not be set")
 							require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+
+							// But now the scheduled deactivation time should be set to nil - first reload the UserSignup
+							require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name,
+								Namespace: operatorNamespace}, userSignupFoobar))
+							require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 						})
 					})
 				})
@@ -322,7 +337,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeue should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, true)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, true)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 
 			// Reload the userSignup
@@ -422,7 +437,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), `usertiers.toolchain.dev.openshift.com "deactivate30" not found`)
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
 		// cannot get UserSignup
@@ -484,7 +499,7 @@ func TestReconcile(t *testing.T) {
 			require.Contains(t, err.Error(), "usersignup update error")
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 	})
 }
@@ -542,7 +557,7 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 	return us
 }
 
-func assertThatUserSignupDeactivated(t *testing.T, cl *commontest.FakeClient, name string, expected bool) {
+func assertThatUserSignupStateIsDeactivated(t *testing.T, cl *commontest.FakeClient, name string, expected bool) {
 	userSignup := &toolchainv1alpha1.UserSignup{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
 	require.NoError(t, err)

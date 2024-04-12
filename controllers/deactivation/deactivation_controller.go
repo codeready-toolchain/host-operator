@@ -96,6 +96,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If the usersignup is already deactivated then there's nothing else to do
 	if states.Deactivated(usersignup) {
+
+		deactivatedCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
+			toolchainv1alpha1.UserSignupComplete)
+
+		// If the user has now been deactivated (based on their Status) then we can set the scheduled deactivation time
+		// to nil
+		if found && deactivatedCondition.Status == corev1.ConditionTrue &&
+			deactivatedCondition.Reason == toolchainv1alpha1.UserSignupUserDeactivatedReason &&
+			usersignup.Status.ScheduledDeactivationTimestamp != nil {
+			usersignup.Status.ScheduledDeactivationTimestamp = nil
+			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+				logger.Error(err, "failed to update usersignup status")
+				return reconcile.Result{}, err
+			}
+		}
+
 		return reconcile.Result{}, nil
 	}
 
@@ -265,15 +281,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err := r.Client.Update(ctx, usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
-	}
-
-	// Set the scheduled deactivation time to nil since the UserSignup is now deactivated
-	if usersignup.Status.ScheduledDeactivationTimestamp != nil {
-		usersignup.Status.ScheduledDeactivationTimestamp = nil
-		if err := r.Client.Status().Update(ctx, usersignup); err != nil {
-			logger.Error(err, "failed to update usersignup status")
-			return reconcile.Result{}, err
-		}
 	}
 
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
