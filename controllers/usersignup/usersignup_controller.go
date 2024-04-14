@@ -138,7 +138,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivation notification
+	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivating notification
 	// status is set to false. This is especially important for cases when a user is deactivated and then reactivated
 	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
 	// be sent to the user again.

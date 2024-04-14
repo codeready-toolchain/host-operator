@@ -33,7 +33,7 @@ import (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("deactivation").
-		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateAndUpdateOnlyPredicate{})).
+		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateUpdateAndDeletePredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
 			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord())).
 		Complete(r)
