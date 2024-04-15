@@ -212,7 +212,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := runtime.NewScheme()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

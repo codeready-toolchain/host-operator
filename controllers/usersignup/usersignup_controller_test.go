@@ -43,7 +43,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -825,7 +824,7 @@ func TestUserSignupFailedMissingTier(t *testing.T) {
 				})
 			spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 
-			objs := []runtime.Object{userSignup, v.config, spaceProvisionerConfig}
+			objs := []runtimeclient.Object{userSignup, v.config, spaceProvisionerConfig}
 			if strings.Contains(v.description, "spacetier") { // when testing missing spacetier then create mur and usertier so that the error is about space tier
 				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier.Name, "foo"))
 				objs = append(objs, deactivate30Tier)
@@ -1577,7 +1576,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			space := NewSpace(userSignup, "member1", "foo", "base")
 
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
-			initObjs := []runtime.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
+			initObjs := []runtimeclient.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
 			if testcase.testName == "create space error" {
 				// mur must exist first, space is created on the reconcile after the mur is created
 				initObjs = append(initObjs, mur)
@@ -3550,7 +3549,7 @@ func TestDeathBy100Signups(t *testing.T) {
 				commonsignup.WithName(testusername.username),
 				commonsignup.ApprovedManually())
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
-			initObjs := make([]runtime.Object, 0, 110)
+			initObjs := make([]runtimeclient.Object, 0, 110)
 			initObjs = append(initObjs,
 				userSignup,
 				deactivate30Tier,
@@ -3871,7 +3870,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 		})
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
