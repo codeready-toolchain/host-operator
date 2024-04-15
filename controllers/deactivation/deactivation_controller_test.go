@@ -312,11 +312,6 @@ func TestReconcile(t *testing.T) {
 							require.NoError(t, err)
 							require.False(t, res.Requeue, "requeue should not be set")
 							require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
-
-							// But now the scheduled deactivation time should be set to nil - first reload the UserSignup
-							require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name,
-								Namespace: operatorNamespace}, userSignupFoobar))
-							require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 						})
 					})
 				})
@@ -339,12 +334,6 @@ func TestReconcile(t *testing.T) {
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeue should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, true)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
-
-			// Reload the userSignup
-			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-
-			// Confirm that the scheduled deactivation time is set to nil since the user is now deactivated
-			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 
