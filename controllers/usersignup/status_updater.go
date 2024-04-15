@@ -195,6 +195,7 @@ func (u *StatusUpdater) setStatusDeactivationInProgress(ctx context.Context, use
 }
 
 func (u *StatusUpdater) setStatusDeactivated(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	userSignup.Status.ScheduledDeactivationTimestamp = nil
 	return u.updateStatusConditions(
 		ctx,
 		userSignup,

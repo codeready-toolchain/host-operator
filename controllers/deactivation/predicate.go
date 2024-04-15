@@ -25,25 +25,3 @@ func (CreateAndUpdateOnlyPredicate) Delete(_ event.DeleteEvent) bool {
 func (CreateAndUpdateOnlyPredicate) Generic(_ event.GenericEvent) bool {
 	return false
 }
-
-type CreateUpdateAndDeletePredicate struct{}
-
-// Update implements default UpdateEvent filter for validating no generation change
-func (CreateUpdateAndDeletePredicate) Update(_ event.UpdateEvent) bool {
-	return true
-}
-
-// Create implements Predicate
-func (CreateUpdateAndDeletePredicate) Create(_ event.CreateEvent) bool {
-	return true
-}
-
-// Delete implements Predicate
-func (CreateUpdateAndDeletePredicate) Delete(_ event.DeleteEvent) bool {
-	return true
-}
-
-// Generic implements Predicate
-func (CreateUpdateAndDeletePredicate) Generic(_ event.GenericEvent) bool {
-	return false
-}
