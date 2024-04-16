@@ -35,7 +35,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 	t.Run("should return two SpaceBinding requests for comp space, when mapping from space", func(t *testing.T) {
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingSpaceLabelKey)(compSpace)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingSpaceLabelKey)(context.TODO(), compSpace)
 
 		// then
 		require.Len(t, requests, 2)
@@ -45,7 +45,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 	t.Run("should return two SpaceBindings for lara MUR, when mapping from mur", func(t *testing.T) {
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(laraMur)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(context.TODO(), laraMur)
 
 		// then
 		require.Len(t, requests, 2)
@@ -55,7 +55,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 	t.Run("should return one SpaceBinding request for joe MUR, when mapping from mur", func(t *testing.T) {
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(joeMur)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(context.TODO(), joeMur)
 
 		// then
 		require.Len(t, requests, 1)
@@ -64,7 +64,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 	t.Run("should not return any SpaceBinding request when there is no for the given space", func(t *testing.T) {
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingSpaceLabelKey)(orphanSpace)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingSpaceLabelKey)(context.TODO(), orphanSpace)
 
 		// then
 		require.Empty(t, requests)
@@ -72,7 +72,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 	t.Run("should not return any SpaceBinding request when there is no for the given MUR", func(t *testing.T) {
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(orphanMur)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(context.TODO(), orphanMur)
 
 		// then
 		require.Empty(t, requests)
@@ -86,7 +86,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 		}
 
 		// when
-		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(orphanMur)
+		requests := MapToSpaceBindingByBoundObjectName(cl, v1alpha1.SpaceBindingMasterUserRecordLabelKey)(context.TODO(), orphanMur)
 
 		// then
 		require.Empty(t, requests)
