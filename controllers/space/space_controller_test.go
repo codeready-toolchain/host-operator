@@ -471,7 +471,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -505,7 +505,7 @@ func TestCreateSpace(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("john", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
 			member1Client := test.NewFakeClient(t, nsTmplSet)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if space, ok := obj.(*toolchainv1alpha1.Space); ok {
 					if len(space.Status.ProvisionedNamespaces) > 0 {
 						return fmt.Errorf("update error")
@@ -2054,8 +2054,8 @@ func mockDeleteNSTemplateSetFail(cl runtimeclient.Client) func(ctx context.Conte
 	}
 }
 
-func mockUpdateSpaceStatusFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+func mockUpdateSpaceStatusFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 			return fmt.Errorf("mock error")
 		}

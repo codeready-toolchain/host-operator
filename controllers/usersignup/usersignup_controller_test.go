@@ -1702,7 +1702,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1748,7 +1748,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1793,7 +1793,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj := obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {
@@ -2611,7 +2611,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 		))
 
-		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			switch obj.(type) {
 			case *toolchainv1alpha1.UserSignup:
 				return errors.New("failed to update UserSignup status")
@@ -3487,7 +3487,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("mock error")
@@ -4431,7 +4431,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			}
 			return nil
 		}
-		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			s, ok := obj.(*toolchainv1alpha1.UserSignup)
 			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
 				return fmt.Errorf("some error")

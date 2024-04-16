@@ -176,7 +176,7 @@ func TestSynchronizeStatus(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -247,7 +247,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -295,7 +295,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -663,7 +663,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, provisionedMur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{

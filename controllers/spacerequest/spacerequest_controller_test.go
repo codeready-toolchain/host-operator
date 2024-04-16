@@ -764,7 +764,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 		t.Run("error while updating status", func(t *testing.T) {
 			member1Client := commontest.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -1346,11 +1346,11 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
 			member1Client := commontest.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Client.Update(ctx, obj, opts...)
+				return member1Client.Client.Status().Update(ctx, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := commontest.NewFakeClient(t, appstudioEnvTier, subSpace, parentSpace)
