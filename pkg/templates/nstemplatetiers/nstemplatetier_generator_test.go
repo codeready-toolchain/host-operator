@@ -165,7 +165,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create or update the '\\w+' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
+				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the '\\w+' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
 			})
 
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
