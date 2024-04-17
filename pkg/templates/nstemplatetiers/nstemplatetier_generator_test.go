@@ -83,27 +83,19 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	expectedSpaceRoleTmplRefs := map[string]map[string]string{}
 	require.Len(t, nstemplateTiers.Items, len(expectedProdTiers))
 	for _, tier := range expectedProdTiers {
-		t.Run(tier, func(t *testing.T) {
-			for _, nsTypeName := range nsTypes(tier) {
-				t.Run("ns-"+nsTypeName, func(t *testing.T) {
-					templateName := verifyTierTemplate(t, cl, namespace, tier, nsTypeName)
-					expectedNamespaceTmplRefs[tier] = append(expectedNamespaceTmplRefs[tier], templateName)
-				})
+		for _, nsTypeName := range nsTypes(tier) {
+			templateName := verifyTierTemplate(t, cl, namespace, tier, nsTypeName)
+			expectedNamespaceTmplRefs[tier] = append(expectedNamespaceTmplRefs[tier], templateName)
+		}
+		for _, role := range roles(tier) {
+			roleName := verifyTierTemplate(t, cl, namespace, tier, role)
+			if expectedSpaceRoleTmplRefs[tier] == nil {
+				expectedSpaceRoleTmplRefs[tier] = map[string]string{}
 			}
-			for _, role := range roles(tier) {
-				t.Run("spacerole-"+role, func(t *testing.T) {
-					roleName := verifyTierTemplate(t, cl, namespace, tier, role)
-					if expectedSpaceRoleTmplRefs[tier] == nil {
-						expectedSpaceRoleTmplRefs[tier] = map[string]string{}
-					}
-					expectedSpaceRoleTmplRefs[tier][role] = roleName
-				})
-			}
-			t.Run("clusterresources", func(t *testing.T) {
-				templateName := verifyTierTemplate(t, cl, namespace, tier, "clusterresources")
-				expectedClusterResourcesTmplRef[tier] = templateName
-			})
-		})
+			expectedSpaceRoleTmplRefs[tier][role] = roleName
+		}
+		templateName := verifyTierTemplate(t, cl, namespace, tier, "clusterresources")
+		expectedClusterResourcesTmplRef[tier] = templateName
 	}
 	// verify that each NSTemplateTier has the ClusterResources, Namespaces and SpaceRoles `TemplateRef` set as expected
 
@@ -154,7 +146,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
 				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
+					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "base" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
@@ -165,7 +157,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the '\\w+' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
+				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
 			})
 
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
