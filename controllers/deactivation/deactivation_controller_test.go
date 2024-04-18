@@ -3,6 +3,7 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"testing"
 	"time"
@@ -94,6 +95,35 @@ func TestReconcile(t *testing.T) {
 			require.Less(t, comparison, time.Hour)
 		})
 
+		t.Run("usersignup should not be deactivated but client update fails", func(t *testing.T) {
+			// given
+			murProvisionedTime := metav1.Now()
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name), murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+
+			userSignupFoobar.Status.ScheduledDeactivationTimestamp = nil
+
+			r, req, fakeClient := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
+
+			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.UserSignup:
+					return errors.New("mock error")
+				default:
+					return fakeClient.Client.Status().Update(ctx, obj)
+				}
+			}
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+			// then
+			require.Error(t, err)
+
+			// confirm that the scheduled deactivation time is not set due to the client update failure
+			require.NoError(t, fakeClient.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+		})
+
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'deactivate90' tier
 		t.Run("usersignup should not be deactivated - other tier (90 days)", func(t *testing.T) {
 			// given
@@ -157,7 +187,9 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(3))
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(3),
+				testconfig.Deactivation().DeactivationDomainsExcluded("@redhat.com"))
+			commonconfig.UpdateConfig(config, nil)
 			restore := commontest.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
 			defer restore()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutDeactivate30Tier*24) * time.Hour)}
@@ -171,10 +203,6 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
-
-			// confirm that the scheduled deactivation time is still set (it will be set to nil after the usersignup Status is updated)
-			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 	// in these tests, the controller should (eventually) deactivate the user
@@ -410,6 +438,49 @@ func TestReconcile(t *testing.T) {
 
 			// The scheduled deactivation time should now be set to nil
 			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+		})
+
+		t.Run("when provisioning state is set but user is moved to a tier without deactivation but client update fails", func(t *testing.T) {
+			// given
+			userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
+
+			// Set usersignup state as already set to deactivating
+			states.SetDeactivating(userSignupFoobar, true)
+			dt := metav1.NewTime(time.Now().Add(30 * 24 * time.Hour))
+			userSignupFoobar.Status.ScheduledDeactivationTimestamp = &dt
+
+			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
+
+			// Now the MasterUserRecord has been promoted to the tier without automatic deactivation
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTierNoDeactivation.Name), murtest.Account("cluster1"),
+				murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+
+			r, req, fakeClient := prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+
+			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.UserSignup:
+					return errors.New("mock error")
+				default:
+					return fakeClient.Client.Status().Update(ctx, obj)
+				}
+			}
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.Error(t, err)
+
+			// Reload the userSignup
+			require.NoError(t, fakeClient.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, states.Deactivating(userSignupFoobar))
+			require.False(t, states.Deactivated(userSignupFoobar))
+
+			// The scheduled deactivation time should not be set to nil because the update failed
+			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 
