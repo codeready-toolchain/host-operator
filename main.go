@@ -34,8 +34,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclustercache"
-	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterhealth"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterresources"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -66,7 +66,6 @@ var (
 )
 
 const memberClientTimeout = 3 * time.Second
-const requeAfter = 10 * time.Second
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -226,10 +225,11 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 
-	if err := toolchainclusterhealth.NewReconciler(
-		mgr,
-		requeAfter,
-	).SetupWithManager(mgr); err != nil {
+	if err := (&toolchaincluster.Reconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RequeAfter: 10 * time.Second,
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterHealth")
 		os.Exit(1)
 	}
