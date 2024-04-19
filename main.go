@@ -230,7 +230,7 @@ func main() { // nolint:gocyclo
 		Scheme:     mgr.GetScheme(),
 		RequeAfter: 10 * time.Second,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterHealth")
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
 	}
 
