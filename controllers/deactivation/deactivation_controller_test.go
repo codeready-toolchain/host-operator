@@ -195,6 +195,10 @@ func TestReconcile(t *testing.T) {
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutDeactivate30Tier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name), murtest.Account("cluster1"), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
+
+			now := metav1.NewTime(time.Now())
+			userSignupRedhat.Status.ScheduledDeactivationTimestamp = &now
+
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupRedhat, config)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -203,6 +207,12 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
+
+			// Reload the userSignup
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupRedhat.Name, Namespace: operatorNamespace}, userSignupRedhat))
+
+			// Confirm the scheduled deactivation time is set to nil
+			require.Nil(t, userSignupRedhat.Status.ScheduledDeactivationTimestamp)
 		})
 	})
 	// in these tests, the controller should (eventually) deactivate the user

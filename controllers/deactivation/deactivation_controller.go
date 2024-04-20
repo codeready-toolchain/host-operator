@@ -105,6 +105,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		for _, domain := range config.Deactivation().DeactivationDomainsExcluded() {
 			if strings.HasSuffix(usersignup.Spec.IdentityClaims.Email, domain) {
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
+
+				// Also set the Scheduled deactivation time to nil if it's not already
+				if usersignup.Status.ScheduledDeactivationTimestamp != nil {
+					usersignup.Status.ScheduledDeactivationTimestamp = nil
+					if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+						logger.Error(err, "failed to update usersignup status")
+						return reconcile.Result{}, err
+					}
+				}
+
 				return reconcile.Result{}, nil
 			}
 		}
