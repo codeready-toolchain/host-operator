@@ -47,6 +47,10 @@ spec:
                   automaticApproval:
                     description: Keeps parameters necessary for automatic approval
                     properties:
+                      domains:
+                        description: 'Comma-separated email domains to consider for
+                          auto-approval. For example: "redhat.com,ibm.com"'
+                        type: string
                       enabled:
                         description: Defines if the automatic approval is enabled
                           or not
