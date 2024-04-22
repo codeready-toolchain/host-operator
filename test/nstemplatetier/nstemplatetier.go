@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 	for i, nsType := range nsTypes {
 		revision := fmt.Sprintf("123abc%d", i+1)
 		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
-			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
+			TemplateRef: nstemplateset.NewTierTemplateName(tierName, nsType, revision),
 		}
 	}
 
@@ -30,7 +30,7 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
 			Namespaces: namespaces,
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", "654321b"),
+				TemplateRef: nstemplateset.NewTierTemplateName(tierName, "clusterresources", "654321b"),
 			},
 			SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 				"admin": {

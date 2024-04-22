@@ -26,7 +26,6 @@ vendor:
 
 NSTEMPLATES_BASEDIR = deploy/templates/nstemplatetiers
 NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
-NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 
 USERTEMPLATES_BASEDIR = deploy/templates/usertiers
 USERTEMPLATES_TEST_BASEDIR = test/templates/usertiers
@@ -57,9 +56,6 @@ generate-assets: go-bindata
 	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
 	@$(GO_BINDATA) -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
-	@echo "generating bindata for files in $(NSTEMPLATES_TEST_BASEDIR) ..."
-	@rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
-	@$(GO_BINDATA) -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
 	
 	@echo "generating bindata for files in $(USERTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/usertiers/usertier_assets.go 2>/dev/null || true
