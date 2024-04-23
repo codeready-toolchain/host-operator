@@ -140,4 +140,4 @@ parameters:
 - name: CONFIGMAP_QUOTA
   value: "100"
 - name: SECRET_QUOTA
-  value: "100"
+  value: "300"
