@@ -11,4 +11,12 @@ parameters:
 - name: CONFIGMAP_QUOTA
   value: "300"
 - name: SECRET_QUOTA
-  value: "300"
+  value: "900"
+- name: CPU_BUILD_LIMIT
+  value: "480"
+- name: CPU_BUILD_REQUEST
+  value: "48"
+- name: MEMORY_BUILD_LIMIT
+  value: "512Gi"
+- name: MEMORY_BUILD_REQUEST
+  value: "128Gi"
