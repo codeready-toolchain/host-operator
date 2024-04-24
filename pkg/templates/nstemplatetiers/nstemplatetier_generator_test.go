@@ -170,7 +170,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 					},
 				})
 				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
+					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "advanced" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
@@ -191,7 +191,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
 				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
-					if _, ok := obj.(*toolchainv1alpha1.TierTemplate); ok {
+					if strings.HasPrefix(obj.GetName(), "base1ns-dev-") {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
@@ -202,7 +202,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
+				assert.Regexp(t, fmt.Sprintf("unable to create TierTemplates: unable to create the 'base1ns-dev-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
 
