@@ -52,37 +52,6 @@ spec:
                           or not
                         type: boolean
                     type: object
-                  capacityThresholds:
-                    description: 'Keeps parameters necessary for configuring capacity
-                      limits Deprecated: This is no longer used for anything.'
-                    properties:
-                      maxNumberOfSpacesPerMemberCluster:
-                        additionalProperties:
-                          type: integer
-                        description: 'Contains a map of maximal number of spaces that
-                          can be provisioned per member cluster mapped by the cluster
-                          name Deprecated: This is no longer used for anything.'
-                        type: object
-                        x-kubernetes-map-type: atomic
-                      resourceCapacityThreshold:
-                        description: 'Contains capacity threshold configuration Deprecated:
-                          This is no longer used for anything.'
-                        properties:
-                          defaultThreshold:
-                            description: It is the default capacity threshold (in
-                              percentage of usage) to be used for all member clusters
-                              if no special threshold is defined
-                            type: integer
-                          specificPerMemberCluster:
-                            additionalProperties:
-                              type: integer
-                            description: Contains a map of specific capacity thresholds
-                              (in percentage of usage) for particular member clusters
-                              mapped by their names
-                            type: object
-                            x-kubernetes-map-type: atomic
-                        type: object
-                    type: object
                   deactivation:
                     description: Keeps parameters concerned with user deactivation
                     properties:

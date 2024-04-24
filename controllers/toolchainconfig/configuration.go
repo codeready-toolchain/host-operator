@@ -92,11 +92,6 @@ func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
 	return AutoApprovalConfig{c.cfg.Host.AutomaticApproval}
 }
 
-// Deprecated: This is no longer used for anything.
-func (c *ToolchainConfig) CapacityThresholds() CapacityThresholdsConfig {
-	return CapacityThresholdsConfig{c.cfg.Host.CapacityThresholds}
-}
-
 func (c *ToolchainConfig) SpaceConfig() SpaceConfig {
 	return SpaceConfig{c.cfg.Host.SpaceConfig}
 }
@@ -150,26 +145,6 @@ func (s SpaceConfig) SpaceRequestIsEnabled() bool {
 
 func (s SpaceConfig) SpaceBindingRequestIsEnabled() bool {
 	return commonconfig.GetBool(s.spaceConfig.SpaceBindingRequestEnabled, false)
-}
-
-// Deprecated: This is no longer used for anything.
-type CapacityThresholdsConfig struct {
-	capacityThresholds toolchainv1alpha1.CapacityThresholds
-}
-
-// Deprecated: This is no longer used for anything.
-func (c CapacityThresholdsConfig) MaxNumberOfSpacesSpecificPerMemberCluster() map[string]int {
-	return c.capacityThresholds.MaxNumberOfSpacesPerMemberCluster
-}
-
-// Deprecated: This is no longer used for anything.
-func (c CapacityThresholdsConfig) ResourceCapacityThresholdDefault() int {
-	return commonconfig.GetInt(c.capacityThresholds.ResourceCapacityThreshold.DefaultThreshold, 80)
-}
-
-// Deprecated: This is no longer used for anything.
-func (c CapacityThresholdsConfig) ResourceCapacityThresholdSpecificPerMemberCluster() map[string]int {
-	return c.capacityThresholds.ResourceCapacityThreshold.SpecificPerMemberCluster
 }
 
 type DeactivationConfig struct {
