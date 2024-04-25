@@ -1,10 +1,9 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20240322110702-5ab3840476e9
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240404090512-046d250d7d78
+	github.com/codeready-toolchain/api v0.0.0-20240424103940-03edc96d88fb
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240424171146-581ea6502cad
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
 	github.com/gofrs/uuid v4.4.0+incompatible
@@ -93,7 +92,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect

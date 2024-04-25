@@ -24,6 +24,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
@@ -33,7 +34,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclustercache"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterresources"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -81,20 +84,10 @@ func printVersion() {
 	setupLog.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
 }
 
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/finalizers,verbs=update
-
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/finalizers,verbs=update
-
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/finalizers,verbs=update
-
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=*,verbs=*
 //+kubebuilder:rbac:groups="",resources=secrets;configmaps;services;services/finalizers;serviceaccounts;pods,verbs=get;list;watch;update;patch;create;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;deployments/finalizers;replicasets,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io;authorization.openshift.io,resources=rolebindings;roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;update;patch;create;delete
 
 func main() { // nolint:gocyclo
@@ -215,6 +208,14 @@ func main() { // nolint:gocyclo
 	}
 
 	// Setup all Controllers
+	if err = (&toolchainclusterresources.Reconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Templates: &deploy.ToolchainClusterTemplateFS,
+	}).SetupWithManager(mgr, namespace); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterResources")
+		os.Exit(1)
+	}
 	if err = toolchainclustercache.NewReconciler(
 		mgr,
 		namespace,
@@ -223,6 +224,16 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
 		os.Exit(1)
 	}
+
+	if err := (&toolchaincluster.Reconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RequeAfter: 10 * time.Second,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
+		os.Exit(1)
+	}
+
 	if err := (&deactivation.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -380,9 +391,6 @@ func main() { // nolint:gocyclo
 			setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
-
-		setupLog.Info("Starting ToolchainCluster health checks.")
-		toolchainclustercache.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
