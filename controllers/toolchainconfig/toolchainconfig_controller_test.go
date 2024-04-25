@@ -65,7 +65,6 @@ func TestReconcile(t *testing.T) {
 		t.Run("config exists", func(t *testing.T) {
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -83,7 +82,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
 				HasConditions(
@@ -105,8 +103,6 @@ func TestReconcile(t *testing.T) {
 				// given
 				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
 				require.NoError(t, err)
-				threshold := 100
-				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				newRefreshPeriod := "20s"
 				config.Spec.Members.Default.MemberStatus.RefreshPeriod = &newRefreshPeriod
 				err = hostCl.Update(context.TODO(), config)
@@ -121,8 +117,6 @@ func TestReconcile(t *testing.T) {
 				actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
-				assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
-				assert.Equal(t, 100, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 					Exists().
 					HasConditions(
@@ -145,8 +139,6 @@ func TestReconcile(t *testing.T) {
 				// given
 				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
 				require.NoError(t, err)
-				threshold := 100
-				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
 				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
@@ -162,8 +154,6 @@ func TestReconcile(t *testing.T) {
 				actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
-				assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
-				assert.Equal(t, 100, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)
@@ -183,7 +173,6 @@ func TestReconcile(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -212,7 +201,6 @@ func TestReconcile(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)), //nolint:staticcheck // this will be removed once we also remove the deprecated method
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -243,8 +231,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("reg service deploy failed", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
-				testconfig.AutomaticApproval().Enabled(true),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
+				testconfig.AutomaticApproval().Enabled(true))
 			hostCl := test.NewFakeClient(t, config)
 			hostCl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				return fmt.Errorf("create error")
@@ -260,8 +247,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
-			assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
 				HasConditions(
@@ -271,8 +256,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("sync failed", func(t *testing.T) {
 			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
-				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
@@ -286,8 +270,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
-			assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
 				HasConditions(
@@ -300,8 +282,7 @@ func TestReconcile(t *testing.T) {
 
 func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	// given
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
-		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321))) //nolint:staticcheck // this will be removed once we also remove the deprecated method
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 	hostCl := test.NewFakeClient(t, config)
 	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
@@ -353,9 +334,6 @@ func newRequest() reconcile.Request {
 
 func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Empty(t, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
-	assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
-	assert.Empty(t, actual.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster())
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationDays())
 }
 

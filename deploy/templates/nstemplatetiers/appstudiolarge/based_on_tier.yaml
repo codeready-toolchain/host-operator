@@ -20,3 +20,5 @@ parameters:
   value: "512Gi"
 - name: MEMORY_BUILD_REQUEST
   value: "128Gi"
+- name: COUNT_PVC
+  value: "180"

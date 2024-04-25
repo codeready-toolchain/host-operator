@@ -66,7 +66,7 @@ objects:
       limits.ephemeral-storage: 50Gi
       requests.storage: 200Gi
       requests.ephemeral-storage: 50Gi
-      count/persistentvolumeclaims: "90"
+      count/persistentvolumeclaims: "${COUNT_PVC}"
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
@@ -285,3 +285,5 @@ parameters:
   value: "128Gi"
 - name: MEMORY_BUILD_REQUEST
   value: "64Gi"
+- name: COUNT_PVC
+  value: "90"
