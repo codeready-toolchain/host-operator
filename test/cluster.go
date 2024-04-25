@@ -87,7 +87,7 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 				},
 				Client: cl,
 				ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
-					Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
+					Conditions: []toolchainv1alpha1.Condition{{
 						Type:   toolchainv1alpha1.ToolchainClusterReady,
 						Status: status,
 					}},
