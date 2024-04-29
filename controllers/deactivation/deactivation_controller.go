@@ -226,8 +226,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
 		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then wait - the notification should be created shortly by the UserSignup controller
-		// once the "deactivating" state has been set which should cause a new reconciliation to be triggered here
+		// created yet, then set the deactivation timestamp to a temporary value, calculated as being the current
+		// timestamp plus the number of pre-deactivation days configured in the settings
+
+		deactivationDueTime := time.Now().Add(time.Duration(deactivatingNotificationDays) * 24 * time.Hour)
+		ts := v1.NewTime(deactivationDueTime)
+		usersignup.Status.ScheduledDeactivationTimestamp = &ts
+		if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
+		}
+
 		return reconcile.Result{}, nil
 	}
 
