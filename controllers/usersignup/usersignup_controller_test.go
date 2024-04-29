@@ -3929,7 +3929,8 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	require.Len(t, config.Users().ForbiddenUsernamePrefixes(), 5)
 	names := []string{"-Bob", "-Dave", "Linda", ""}
 
-	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
+	testingPrefixes := append(config.Users().ForbiddenUsernamePrefixes(), "kubesaw")
+	for _, prefix := range testingPrefixes {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("east"))
