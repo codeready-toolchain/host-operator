@@ -135,6 +135,14 @@ func (a AutoApprovalConfig) IsEnabled() bool {
 	return commonconfig.GetBool(a.approval.Enabled, false)
 }
 
+func (a AutoApprovalConfig) Domains() []string {
+	domains := commonconfig.GetString(a.approval.Domains, "")
+	v := strings.FieldsFunc(domains, func(c rune) bool {
+		return c == ','
+	})
+	return v
+}
+
 type SpaceConfig struct {
 	spaceConfig toolchainv1alpha1.SpaceConfig
 }
