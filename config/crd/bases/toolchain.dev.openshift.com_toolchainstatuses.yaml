@@ -401,7 +401,6 @@ spec:
                                       or Offline.
                                     type: string
                                 required:
-                                - lastProbeTime
                                 - status
                                 - type
                                 type: object
