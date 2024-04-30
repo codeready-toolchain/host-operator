@@ -3929,7 +3929,11 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	require.Len(t, config.Users().ForbiddenUsernamePrefixes(), 5)
 	names := []string{"-Bob", "-Dave", "Linda", ""}
 
-	testingPrefixes := append(config.Users().ForbiddenUsernamePrefixes(), "kubesaw")
+	testingPrefixes := config.Users().ForbiddenUsernamePrefixes()
+	// As 'kube' is already a forbidden prefix, so "kubesaw" is covered
+	// but testing it explicitly would prevent future changes from breaking this behavior.
+	testingPrefixes = append(testingPrefixes, "kubesaw")
+
 	for _, prefix := range testingPrefixes {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
