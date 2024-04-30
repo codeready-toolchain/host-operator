@@ -135,10 +135,12 @@ func (a AutoApprovalConfig) IsEnabled() bool {
 	return commonconfig.GetBool(a.approval.Enabled, false)
 }
 
+// Domains converts comma separated domains string in toolchain config manifest to a slice of domains
+// Having no domains defined in manifest or empty domains string means all domains.
 func (a AutoApprovalConfig) Domains() []string {
 	domains := commonconfig.GetString(a.approval.Domains, "")
 	v := strings.FieldsFunc(domains, func(c rune) bool {
-		return c == ','
+		return c == ',' || c == ' '
 	})
 	return v
 }

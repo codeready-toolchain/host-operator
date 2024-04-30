@@ -44,7 +44,8 @@ func stringInList(str string, list []string) bool {
 	return false
 }
 
-func isAutoApproved(userSignup *toolchainv1alpha1.UserSignup, config toolchainconfig.ToolchainConfig) (bool, error) {
+// isAutoApprovalEnabled checks if the auto-approval is enabled for the specific UserSignup
+func isAutoApprovalEnabled(userSignup *toolchainv1alpha1.UserSignup, config toolchainconfig.ToolchainConfig) (bool, error) {
 	enabled := config.AutomaticApproval().IsEnabled()
 	domains := config.AutomaticApproval().Domains()
 	email := userSignup.Spec.IdentityClaims.Email
@@ -79,7 +80,7 @@ func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSign
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
-	autoApproved, err := isAutoApproved(userSignup, config)
+	autoApproved, err := isAutoApprovalEnabled(userSignup, config)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to determine automatic approval")
 	}

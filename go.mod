@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20240425165440-d0a6da0060a5
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240424171146-581ea6502cad
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240429093002-78746c952644
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
