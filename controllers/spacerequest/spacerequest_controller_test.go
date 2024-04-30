@@ -818,7 +818,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace(commontest.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
-				spacetest.WithDeletionTimestamp(),                                                       // space is being deleted ...
+				spacetest.WithFinalizer(),         // finalizer needs to be added to add deletionTS
+				spacetest.WithDeletionTimestamp(), // space is being deleted ...
 				spacetest.WithSpecParentSpace("jane"))
 			hostClient := commontest.NewFakeClient(t, appstudioEnvTier, parentSpace, subSpace)
 			ctrl := newReconciler(t, hostClient, member1)
@@ -953,6 +954,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// given
 			parentSpace := spacetest.NewSpace(commontest.HostOperatorNs, "jane",
 				spacetest.WithCondition(spacetest.Terminating()),
+				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp()) // parent space for some reason is being deleted
 			member1Client := commontest.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)

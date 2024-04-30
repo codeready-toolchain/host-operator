@@ -92,7 +92,8 @@ func TestNotificationSentFailure(t *testing.T) {
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, cl := newController(t, ds, toolchainConfig)
+		controller, cl := newController(t, ds, toolchainConfig, &toolchainv1alpha1.Notification{})
+		// Add notification to fakeclient - update failing because notification status not found as subresource
 		cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -141,7 +142,7 @@ func TestNotificationDelivery(t *testing.T) {
 				},
 			},
 		}
-		controller, cl := newController(t, ds, userSignup)
+		controller, cl := newController(t, ds, userSignup, &toolchainv1alpha1.Notification{})
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithUserContext(userSignup).
@@ -189,7 +190,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 	t.Run("test admin notification delivery ok", func(t *testing.T) {
 		// given
-		controller, cl := newController(t, ds)
+		controller, cl := newController(t, ds, &toolchainv1alpha1.Notification{})
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
@@ -251,7 +252,7 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		// pass in nil for deliveryService since send won't be used (sending skipped)
-		controller, cl := newController(t, nil, userSignup, toolchainConfig)
+		controller, cl := newController(t, nil, userSignup, toolchainConfig, &toolchainv1alpha1.Notification{})
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			Create(context.TODO(), "jane@redhat.com")
@@ -292,7 +293,7 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		mds := &MockDeliveryService{}
-		controller, cl := newController(t, mds, userSignup)
+		controller, cl := newController(t, mds, userSignup, &toolchainv1alpha1.Notification{})
 
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			Create(context.TODO(), "foo@redhat.com")

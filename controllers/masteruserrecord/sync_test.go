@@ -235,6 +235,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 		// when
 		preSyncTime := metav1.Now()
+		// add a delay of a second to avoid flakiness
+		time.Sleep(1 * time.Second)
 		err := sync.synchronizeStatus(context.TODO())
 
 		// then
