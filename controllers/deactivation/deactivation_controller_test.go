@@ -200,8 +200,28 @@ func TestReconcile(t *testing.T) {
 			userSignupRedhat.Status.ScheduledDeactivationTimestamp = &now
 
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupRedhat, config)
+
+			// First cause the status update to fail
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.UserSignup:
+					return errors.New("mock error")
+				default:
+					return cl.Client.Status().Update(ctx, obj)
+				}
+			}
+
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
+			require.Error(t, err)
+			require.Equal(t, "mock error", err.Error())
+
+			// Remove the mock update
+			cl.MockStatusUpdate = nil
+
+			// Attempt the reconcile again
+			res, err = r.Reconcile(context.TODO(), req)
+
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
