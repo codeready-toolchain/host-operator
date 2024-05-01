@@ -73,7 +73,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("when is already being deleted", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace(test.HostOperatorNs, "being-deleted", spacetest.WithDeletionTimestamp())
+		space := spacetest.NewSpace(test.HostOperatorNs, "being-deleted", spacetest.WithDeletionTimestamp(), spacetest.WithFinalizer())
 		r, req, cl := prepareReconcile(t, space)
 
 		// when

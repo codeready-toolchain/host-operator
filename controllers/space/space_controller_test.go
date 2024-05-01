@@ -827,7 +827,7 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithFinalizer(),
 			)
 			hostClient := test.NewFakeClient(t, s)
-			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithFinalizer(), nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
