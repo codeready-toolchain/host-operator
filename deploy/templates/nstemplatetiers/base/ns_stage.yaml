@@ -214,6 +214,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-redhat-ods-app-to-mm
+    namespace: ${SPACE_NAME}-stage
   spec:
     podSelector:
       matchLabels:
