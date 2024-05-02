@@ -235,6 +235,21 @@ objects:
                 kubernetes.io/metadata.name: redhat-ods-applications
     policyTypes:
       - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-redhat-ods-app-to-mm
+  spec:
+    podSelector:
+      matchLabels:
+        modelmesh-service: modelmesh-serving
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: redhat-ods-applications
+    policyTypes:
+      - Ingress
 parameters:
 - name: SPACE_NAME
   required: true
