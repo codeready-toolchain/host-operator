@@ -36,7 +36,8 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Named("deactivation").
 		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateAndUpdateOnlyPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
-			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord())).
+			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord()),
+			builder.WithPredicates(GenerationOrConditionsChangedPredicate{})).
 		Complete(r)
 }
 
@@ -227,14 +228,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
 		// created yet, then set the deactivation timestamp to a temporary value, calculated as being the current
-		// timestamp plus the number of pre-deactivation days configured in the settings
-
+		// timestamp plus the number of pre-deactivation days configured in the settings, BUT only if it is currently nil
+		// OR the calculated value is more than 24 hours later than the current value
 		deactivationDueTime := time.Now().Add(time.Duration(deactivatingNotificationDays) * 24 * time.Hour)
-		ts := v1.NewTime(deactivationDueTime)
-		usersignup.Status.ScheduledDeactivationTimestamp = &ts
-		if err := r.Client.Status().Update(ctx, usersignup); err != nil {
-			logger.Error(err, "failed to update usersignup status")
-			return reconcile.Result{}, err
+		if usersignup.Status.ScheduledDeactivationTimestamp == nil ||
+			usersignup.Status.ScheduledDeactivationTimestamp.Time.Before(deactivationDueTime.Add(-24*time.Hour)) {
+			ts := v1.NewTime(deactivationDueTime)
+			usersignup.Status.ScheduledDeactivationTimestamp = &ts
+			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+				logger.Error(err, "failed to update usersignup status")
+				return reconcile.Result{}, err
+			}
 		}
 
 		return reconcile.Result{}, nil
