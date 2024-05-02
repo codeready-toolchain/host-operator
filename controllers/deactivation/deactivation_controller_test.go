@@ -212,7 +212,7 @@ func TestReconcile(t *testing.T) {
 			}
 
 			// when
-			res, err := r.Reconcile(context.TODO(), req)
+			_, err := r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
 			require.Equal(t, "mock error", err.Error())
 
@@ -220,7 +220,7 @@ func TestReconcile(t *testing.T) {
 			cl.MockStatusUpdate = nil
 
 			// Attempt the reconcile again
-			res, err = r.Reconcile(context.TODO(), req)
+			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
