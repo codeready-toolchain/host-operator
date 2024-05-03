@@ -83,85 +83,75 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
-	t.Run("single cluster, email domain in auto-approved domains", func(t *testing.T) {
-		// given
-		signup := commonsignup.NewUserSignup(commonsignup.WithEmail("tato@somedomain.org"))
-		spc1 := hspc.NewEnabledValidTenantSPC("member1")
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).Domains("somedomain.org,anotherdomain.edu"),
-		)
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-		InitializeCounters(t, toolchainStatus)
+	type TestFields struct {
+		UserSignupEmail        string
+		DomainConfiguartion    string
+		ExpectedApprovedStatus bool
+		ExpectedCluster        targetCluster
+		ErrorExpected          bool
+		ExpectedErrorMsg       string
+	}
 
-		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+	domainsTests := map[string]TestFields{
+		"single cluster, auto-approved domains is empty": {
+			UserSignupEmail:        "tato@somedomain.org",
+			DomainConfiguartion:    "",
+			ExpectedApprovedStatus: true,
+			ExpectedCluster:        "member1",
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, email domain not in auto-approved domains": {
+			UserSignupEmail:        "tato@mydomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: false,
+			ExpectedCluster:        unknown,
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, email domain in auto-approved domains": {
+			UserSignupEmail:        "tato@somedomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: true,
+			ExpectedCluster:        "member1",
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, invalid email format": {
+			UserSignupEmail:        "tato@mydomain@somedomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: false,
+			ExpectedCluster:        unknown,
+			ErrorExpected:          true,
+			ExpectedErrorMsg:       "unable to determine automatic approval: invalid email address: tato@mydomain@somedomain.org",
+		},
+	}
 
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName.getClusterName())
-	})
+	for testName, testFields := range domainsTests {
+		t.Run(testName, func(t *testing.T) {
+			// given
+			signup := commonsignup.NewUserSignup(commonsignup.WithEmail(testFields.UserSignupEmail))
+			spc1 := hspc.NewEnabledValidTenantSPC("member1")
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+				testconfig.AutomaticApproval().
+					Enabled(true).Domains(testFields.DomainConfiguartion),
+			)
+			fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
+			InitializeCounters(t, toolchainStatus)
 
-	t.Run("single cluster, auto-approved domains is empty", func(t *testing.T) {
-		// given
-		signup := commonsignup.NewUserSignup(commonsignup.WithEmail("tato@somedomain.org"))
-		spc1 := hspc.NewEnabledValidTenantSPC("member1")
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).Domains(""),
-		)
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-		InitializeCounters(t, toolchainStatus)
+			// when
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
 
-		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName.getClusterName())
-	})
-
-	t.Run("single cluster, email domain not in auto-approved domains", func(t *testing.T) {
-		// given
-		signup := commonsignup.NewUserSignup(commonsignup.WithEmail("tato@mydomain.org"))
-		spc1 := hspc.NewEnabledValidTenantSPC("member1")
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).Domains("somedomain.org,anotherdomain.edu"),
-		)
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-		InitializeCounters(t, toolchainStatus)
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
-
-		// then
-		require.NoError(t, err)
-		assert.False(t, approved)
-		assert.Equal(t, unknown, clusterName)
-	})
-
-	t.Run("single cluster, invalid email format", func(t *testing.T) {
-		// given
-		signup := commonsignup.NewUserSignup(commonsignup.WithEmail("tato@mydomain@somedomain.org"))
-		spc1 := hspc.NewEnabledValidTenantSPC("member1")
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).Domains("somedomain.org,anotherdomain.edu"),
-		)
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-		InitializeCounters(t, toolchainStatus)
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
-
-		// then
-		require.EqualError(t, err, "unable to determine automatic approval: invalid email address: tato@mydomain@somedomain.org")
-		assert.False(t, approved)
-		assert.Equal(t, unknown, clusterName)
-	})
+			// then
+			if testFields.ErrorExpected {
+				require.EqualError(t, err, testFields.ExpectedErrorMsg)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, testFields.ExpectedApprovedStatus, approved)
+			assert.Equal(t, testFields.ExpectedCluster, clusterName)
+		})
+	}
 
 	t.Run("don't return preferred cluster name if without required cluster role", func(t *testing.T) {
 		// given
