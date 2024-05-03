@@ -384,6 +384,10 @@ spec:
                                       one status to another.
                                     format: date-time
                                     type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
+                                    format: date-time
+                                    type: string
                                   message:
                                     description: Human readable message indicating
                                       details about last transition.
@@ -401,7 +405,6 @@ spec:
                                       or Offline.
                                     type: string
                                 required:
-                                - lastProbeTime
                                 - status
                                 - type
                                 type: object
