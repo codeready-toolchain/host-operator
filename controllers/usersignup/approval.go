@@ -47,22 +47,22 @@ func stringInList(str string, list []string) bool {
 // isAutoApprovalEnabled checks if the auto-approval is enabled for the specific UserSignup
 func isAutoApprovalEnabled(userSignup *toolchainv1alpha1.UserSignup, config toolchainconfig.ToolchainConfig) (bool, error) {
 	enabled := config.AutomaticApproval().IsEnabled()
+	if !enabled {
+		return false, nil
+	}
 	domains := config.AutomaticApproval().Domains()
+	if len(domains) == 0 {
+		return true, nil
+	}
 	email := userSignup.Spec.IdentityClaims.Email
 	domain, err := extractDomain(email)
-
 	if err != nil {
 		return false, err
-	}
-
-	if enabled && len(domains) == 0 {
-		return true, nil
 	}
 
 	if enabled && stringInList(domain, domains) {
 		return true, nil
 	}
-
 	return false, nil
 }
 
