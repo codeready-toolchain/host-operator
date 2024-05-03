@@ -256,9 +256,9 @@ parameters:
 - name: SPACE_NAME
   required: true
 - name: MEMORY_LIMIT
-  value: "14Gi"
+  value: "18Gi"
 - name: MEMORY_REQUEST
-  value: "14Gi"
+  value: "18Gi"
 - name: MEMORY_BUILD_LIMIT
   value: "14Gi"
 - name: MEMORY_BUILD_REQUEST
