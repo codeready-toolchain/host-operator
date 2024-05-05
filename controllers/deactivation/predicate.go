@@ -57,33 +57,3 @@ func (GenerationOrConditionsChangedPredicate) Update(e event.UpdateEvent) bool {
 
 	return false
 }
-
-/*
-func ConditionsMatch(first, second []toolchainv1alpha1.Condition) bool {
-	if len(first) != len(second) {
-		return false
-	}
-	for _, c := range first {
-		if !ContainsCondition(second, c) {
-			return false
-		}
-	}
-	for _, c := range second {
-		if !ContainsCondition(first, c) {
-			return false
-		}
-	}
-	return true
-}
-
-// ContainsCondition returns true if the specified list of conditions contains the specified condition and the statuses of the conditions match.
-// LastTransitionTime is ignored.
-func ContainsCondition(conditions []toolchainv1alpha1.Condition, contains toolchainv1alpha1.Condition) bool {
-	for _, c := range conditions {
-		if c.Type == contains.Type {
-			return contains.Status == c.Status && contains.Reason == c.Reason && contains.Message == c.Message
-		}
-	}
-	return false
-}
-*/
