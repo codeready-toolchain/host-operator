@@ -2,6 +2,7 @@ package deactivation
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -48,7 +49,7 @@ func (GenerationOrConditionsChangedPredicate) Update(e event.UpdateEvent) bool {
 	case *toolchainv1alpha1.UserSignup:
 		switch objOld := e.ObjectOld.(type) {
 		case *toolchainv1alpha1.UserSignup:
-			if !ConditionsMatch(objOld.Status.Conditions, objNew.Status.Conditions) {
+			if !test.ConditionsMatch(objOld.Status.Conditions, objNew.Status.Conditions...) {
 				return true
 			}
 		}
@@ -57,6 +58,7 @@ func (GenerationOrConditionsChangedPredicate) Update(e event.UpdateEvent) bool {
 	return false
 }
 
+/*
 func ConditionsMatch(first, second []toolchainv1alpha1.Condition) bool {
 	if len(first) != len(second) {
 		return false
@@ -74,7 +76,7 @@ func ConditionsMatch(first, second []toolchainv1alpha1.Condition) bool {
 	return true
 }
 
-// ContainsCondition returns true if the specified list of conditions contains the specified condition.
+// ContainsCondition returns true if the specified list of conditions contains the specified condition and the statuses of the conditions match.
 // LastTransitionTime is ignored.
 func ContainsCondition(conditions []toolchainv1alpha1.Condition, contains toolchainv1alpha1.Condition) bool {
 	for _, c := range conditions {
@@ -84,3 +86,4 @@ func ContainsCondition(conditions []toolchainv1alpha1.Condition, contains toolch
 	}
 	return false
 }
+*/
