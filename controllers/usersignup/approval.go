@@ -2,6 +2,8 @@ package usersignup
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -24,6 +26,46 @@ func (c targetCluster) getClusterName() string {
 	return string(c)
 }
 
+func extractDomain(email string) (string, error) {
+	emailParts := strings.Split(email, "@")
+	if len(emailParts) != 2 {
+		return "", fmt.Errorf("invalid email address: %s", email)
+	}
+
+	return emailParts[1], nil
+}
+
+func stringInList(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+// isAutoApprovalEnabled checks if the auto-approval is enabled for the specific UserSignup
+func isAutoApprovalEnabled(userSignup *toolchainv1alpha1.UserSignup, config toolchainconfig.ToolchainConfig) (bool, error) {
+	enabled := config.AutomaticApproval().IsEnabled()
+	if !enabled {
+		return false, nil
+	}
+	domains := config.AutomaticApproval().Domains()
+	if len(domains) == 0 {
+		return true, nil
+	}
+	email := userSignup.Spec.IdentityClaims.Email
+	domain, err := extractDomain(email)
+	if err != nil {
+		return false, err
+	}
+
+	if enabled && stringInList(domain, domains) {
+		return true, nil
+	}
+	return false, nil
+}
+
 // getClusterIfApproved checks if the user can be approved and provisioned to any member cluster.
 // If the user can be approved then the function returns true as the first returned value, the second value contains a cluster name the user should be provisioned to.
 // If there is no suitable member cluster, then it returns notFound as the second returned value.
@@ -38,7 +80,12 @@ func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSign
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
-	if !states.ApprovedManually(userSignup) && !config.AutomaticApproval().IsEnabled() {
+	autoApproved, err := isAutoApprovalEnabled(userSignup, config)
+	if err != nil {
+		return false, unknown, errors.Wrapf(err, "unable to determine automatic approval")
+	}
+
+	if !states.ApprovedManually(userSignup) && !autoApproved {
 		return false, unknown, nil
 	}
 
