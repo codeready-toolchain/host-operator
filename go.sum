@@ -136,10 +136,8 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20240424103940-03edc96d88fb h1:YvEVAetaNYLAyuwO8AmKTtWD9M7SZPhbBzTVMXhrGas=
-github.com/codeready-toolchain/api v0.0.0-20240424103940-03edc96d88fb/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240424171146-581ea6502cad h1:ka0mIrFO8+0H4uIgfhgCGh1lmRjGndRUYNEEV8O7fkQ=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240424171146-581ea6502cad/go.mod h1:4BqdcAO16K/+YmPbn5XmTKOU4UUyuQPlge7ms9F1NsU=
+github.com/codeready-toolchain/api v0.0.0-20240502171347-8db815b922bd h1:znIdWMiUgIJ/ypSQ17NemR+29V688DUjH6xrG3eBEMo=
+github.com/codeready-toolchain/api v0.0.0-20240502171347-8db815b922bd/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -193,6 +191,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
+github.com/fbm3307/toolchain-common v0.0.0-20240506111634-a7d67ac8e37b h1:C3pxbm0lMis8PqEpD5CFtZyz8VZguqO/4Y2kgFm97wQ=
+github.com/fbm3307/toolchain-common v0.0.0-20240506111634-a7d67ac8e37b/go.mod h1:tT/m6IA9jY+7/gsCsHv9CA4Q0E1VjaRVKSXgf9ucJ78=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
