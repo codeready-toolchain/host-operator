@@ -4,7 +4,7 @@ replace github.com/codeready-toolchain/toolchain-common => github.com/fbm3307/to
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20240502171347-8db815b922bd
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240429224949-78585f71122a
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240429093002-78746c952644
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
