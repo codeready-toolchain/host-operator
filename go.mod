@@ -3,8 +3,8 @@ module github.com/codeready-toolchain/host-operator
 replace github.com/codeready-toolchain/toolchain-common => github.com/fbm3307/toolchain-common v0.0.0-20240506111634-a7d67ac8e37b
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20240502171347-8db815b922bd
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240429093002-78746c952644
+	github.com/codeready-toolchain/api v0.0.0-20240507023248-73662d6db2c5
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240506145250-db635e46e690
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.3
@@ -32,7 +32,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-require github.com/google/uuid v1.3.0 // indirect
+require github.com/google/uuid v1.6.0 // indirect
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
