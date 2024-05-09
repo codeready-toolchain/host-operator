@@ -241,11 +241,47 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 
 		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
 	})
-	t.Run("non-default", func(t *testing.T) {
+	t.Run("non-default no domains", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
+	})
+
+	t.Run("non-default single domain", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().
+			Enabled(true).Domains("somedomain.org"))
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
+		assert.Equal(t, []string{"somedomain.org"}, toolchainCfg.AutomaticApproval().Domains())
+	})
+
+	t.Run("non-default multiple domains", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().
+			Enabled(true).Domains("somedomain.org,otherdomain.edu"))
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
+		assert.Equal(t, []string{"somedomain.org", "otherdomain.edu"}, toolchainCfg.AutomaticApproval().Domains())
+	})
+
+	t.Run("non-default multiple domains with spaces", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().
+			Enabled(true).Domains(" somedomain.org, otherdomain.edu "))
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
+		assert.Equal(t, []string{"somedomain.org", "otherdomain.edu"}, toolchainCfg.AutomaticApproval().Domains())
+	})
+
+	t.Run("non-default empty domains", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().
+			Enabled(true).Domains(""))
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
+		assert.Equal(t, len(toolchainCfg.AutomaticApproval().Domains()), 0)
 	})
 }
 
