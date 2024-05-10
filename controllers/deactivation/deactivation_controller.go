@@ -3,6 +3,7 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	usersignup2 "github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -36,8 +37,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Named("deactivation").
 		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateAndUpdateOnlyPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
-			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord()),
-			builder.WithPredicates(GenerationOrConditionsChangedPredicate{})).
+			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord())).
 		Complete(r)
 }
 
@@ -59,6 +59,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
+	statusUpdater := usersignup2.StatusUpdater{
+		Client: r.Client,
 	}
 
 	// Fetch the MasterUserRecord instance
@@ -144,8 +148,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		// Set the scheduled deactivation time to nil
 		if usersignup.Status.ScheduledDeactivationTimestamp != nil {
-			usersignup.Status.ScheduledDeactivationTimestamp = nil
-			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+			if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
 				logger.Error(err, "failed to update usersignup status")
 				return reconcile.Result{}, err
 			}
@@ -225,20 +228,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
 	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
-		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
+		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason &&
+			usersignup.Status.ScheduledDeactivationTimestamp != nil {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then set the deactivation timestamp to a temporary value, calculated as being the current
-		// timestamp plus the number of pre-deactivation days configured in the settings, BUT only if it is currently nil
-		// OR the calculated value is more than 12 hours later than the current value
-		deactivationDueTime := time.Now().Add(time.Duration(deactivatingNotificationDays) * 12 * time.Hour)
-		if usersignup.Status.ScheduledDeactivationTimestamp == nil ||
-			usersignup.Status.ScheduledDeactivationTimestamp.Time.Before(deactivationDueTime.Add(-12*time.Hour)) {
-			ts := v1.NewTime(deactivationDueTime)
-			usersignup.Status.ScheduledDeactivationTimestamp = &ts
-			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
-				logger.Error(err, "failed to update usersignup status")
-				return reconcile.Result{}, err
-			}
+		// created yet, then set the deactivation timestamp to nil temporarily
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
 		}
 
 		return reconcile.Result{}, nil
@@ -255,8 +251,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Update the ScheduledDeactivationTimestamp to the recalculated time base on when the deactivating notification was sent
 		if usersignup.Status.ScheduledDeactivationTimestamp == nil || !usersignup.Status.ScheduledDeactivationTimestamp.Time.Equal(deactivationDueTime) {
 			ts := v1.NewTime(deactivationDueTime)
-			usersignup.Status.ScheduledDeactivationTimestamp = &ts
-			if err := r.Client.Status().Update(ctx, usersignup); err != nil {
+			if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &ts); err != nil {
 				logger.Error(err, "failed to update usersignup status")
 				return reconcile.Result{}, err
 			}

@@ -268,9 +268,6 @@ func TestReconcile(t *testing.T) {
 			require.Less(t, comparison, time.Hour)
 
 			t.Run("reconciliation should be requeued when notification not yet sent", func(t *testing.T) {
-				// Clear the scheduled deactivation time
-				userSignupFoobar.Status.ScheduledDeactivationTimestamp = nil
-
 				r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
 				// First cause the status update to fail
@@ -308,12 +305,8 @@ func TestReconcile(t *testing.T) {
 				// deactivated state should still be false
 				require.False(t, states.Deactivated(userSignupFoobar))
 
-				// Scheduled deactivation time should be set to 3 days in the future
-				expected := time.Now().Add(3 * time.Hour * 24)
-				comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
-
-				// accept if we're within 5 minutes of the expected deactivation time
-				require.Less(t, comparison, time.Minute*5)
+				// Scheduled deactivation time should be set to nil
+				require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 				t.Run("usersignup requeued after deactivating notification created for user", func(t *testing.T) {
 
