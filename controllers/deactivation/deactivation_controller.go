@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	usersignup2 "github.com/codeready-toolchain/host-operator/controllers/usersignup"
-	"github.com/go-logr/logr"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
@@ -113,12 +112,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
 
 				// Also set the Scheduled deactivation time to nil if it's not already
-				if usersignup.Status.ScheduledDeactivationTimestamp != nil {
-					usersignup.Status.ScheduledDeactivationTimestamp = nil
-					if err := r.Client.Status().Update(ctx, usersignup); err != nil {
-						logger.Error(err, "failed to update usersignup status")
-						return reconcile.Result{}, err
-					}
+				if err = statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+					logger.Error(err, "failed to update usersignup status")
+					return reconcile.Result{}, err
 				}
 
 				return reconcile.Result{}, nil
@@ -147,11 +143,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 		// Set the scheduled deactivation time to nil
-		if usersignup.Status.ScheduledDeactivationTimestamp != nil {
-			if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
-				logger.Error(err, "failed to update usersignup status")
-				return reconcile.Result{}, err
-			}
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
 		}
 
 		logger.Info("User belongs to a tier that does not have a deactivation timeout. The user will not be automatically deactivated")
@@ -180,7 +174,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		// Reset the scheduled deactivation time if required
-		err = setDeactivationTimestamp(ctx, r, mur, usersignup, deactivationTimeout, logger)
+		scheduledDeactivationTime := v1.NewTime((*mur.Status.ProvisionedTime).Add(deactivationTimeout))
+		err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -201,7 +196,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// controller is going to be reconciling immediately after setting the deactivating state then it will be
 		// creating a deactivating notification, meaning that the scheduled deactivation time that we set here is going
 		// to be extremely temporary (as it will be recalculated after the next reconcile), however it is done for correctness
-		err = setDeactivationTimestamp(ctx, r, mur, usersignup, deactivationTimeout, logger)
+		scheduledDeactivationTime := v1.NewTime((*mur.Status.ProvisionedTime).Add(deactivationTimeout))
+		err = statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -249,12 +245,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if time.Now().Before(deactivationDueTime) {
 		// Update the ScheduledDeactivationTimestamp to the recalculated time base on when the deactivating notification was sent
-		if usersignup.Status.ScheduledDeactivationTimestamp == nil || !usersignup.Status.ScheduledDeactivationTimestamp.Time.Equal(deactivationDueTime) {
-			ts := v1.NewTime(deactivationDueTime)
-			if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &ts); err != nil {
-				logger.Error(err, "failed to update usersignup status")
-				return reconcile.Result{}, err
-			}
+		ts := v1.NewTime(deactivationDueTime)
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &ts); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
 		}
 
 		// It is not yet time to deactivate so requeue when it will be
@@ -280,21 +274,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
 
 	return reconcile.Result{}, nil
-}
-
-func setDeactivationTimestamp(ctx context.Context, r *Reconciler, mur *toolchainv1alpha1.MasterUserRecord,
-	userSignup *toolchainv1alpha1.UserSignup, deactivationTimeout time.Duration, logger logr.Logger) error {
-	scheduledDeactivationTime := (*mur.Status.ProvisionedTime).Add(deactivationTimeout)
-	if userSignup.Status.ScheduledDeactivationTimestamp == nil || !userSignup.Status.ScheduledDeactivationTimestamp.Time.Equal(scheduledDeactivationTime) {
-		ts := v1.NewTime(scheduledDeactivationTime)
-		userSignup.Status.ScheduledDeactivationTimestamp = &ts
-		if err := r.Client.Status().Update(ctx, userSignup); err != nil {
-			logger.Error(err, "failed to update usersignup status")
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (r *Reconciler) resetDeactivatingState(ctx context.Context, usersignup *toolchainv1alpha1.UserSignup) error {
