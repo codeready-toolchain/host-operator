@@ -1,0 +1,20 @@
+# See the OWNERS docs: https://git.k8s.io/community/contributors/guide/owners.md
+
+approvers:
+- alexeykazakov
+- MatousJobanek
+- sbryzak
+- xcoulon
+- rajivnathan
+- ranakan19
+- mfrancisc
+
+reviewers:
+- alexeykazakov
+- MatousJobanek
+- michaelkleinhenz
+- sbryzak
+- xcoulon
+- rajivnathan
+- ranakan19
+- mfrancisc
