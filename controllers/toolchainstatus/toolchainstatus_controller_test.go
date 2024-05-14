@@ -1836,9 +1836,10 @@ func cachedToolchainCluster(cl runtimeclient.Client, name string, status corev1.
 		Client: cl,
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
-				Type:          toolchainv1alpha1.ToolchainClusterReady,
-				Status:        status,
-				LastProbeTime: lastProbeTime,
+				Type:            toolchainv1alpha1.ToolchainClusterReady,
+				Status:          status,
+				LastProbeTime:   lastProbeTime,
+				LastUpdatedTime: &lastProbeTime,
 			}},
 		},
 	}
