@@ -20,6 +20,8 @@ objects:
         templateRef: ${MAINTAINER_TEMPL_REF}
       contributor:
         templateRef: ${CONTRIBUTOR_TEMPL_REF}
+      viewer:
+        templateRef: ${VIEWER_TEMPL_REF}
     spaceRequestConfig:
       serviceAccountName: namespace-manager
 parameters:
@@ -29,3 +31,4 @@ parameters:
 - name: ADMIN_TEMPL_REF
 - name: MAINTAINER_TEMPL_REF
 - name: CONTRIBUTOR_TEMPL_REF
+- name: VIEWER_TEMPL_REF
