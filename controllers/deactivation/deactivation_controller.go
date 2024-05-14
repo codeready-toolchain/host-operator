@@ -223,11 +223,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
-	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
+	if (!found || deactivatingCondition.Status != corev1.ConditionTrue ||
 		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason &&
-			usersignup.Status.ScheduledDeactivationTimestamp != nil {
+			usersignup.Status.ScheduledDeactivationTimestamp != nil) && deactivatingNotificationDays > 0 {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then set the deactivation timestamp to nil temporarily
+		// created yet, then set the deactivation timestamp to nil temporarily - UNLESS the deactivating notification days
+		// is configured to be 0 (or less) in which case we don't care about setting the status and can go directly
+		// to deactivating the user
 		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
 			logger.Error(err, "failed to update usersignup status")
 			return reconcile.Result{}, err

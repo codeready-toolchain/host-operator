@@ -3,6 +3,7 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/pkg/errors"
 	"os"
 	"testing"
@@ -640,6 +641,48 @@ func TestReconcile(t *testing.T) {
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 	})
+}
+
+func TestAutomaticDeactivation(t *testing.T) {
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(0))
+
+	// UserTiers
+	userTier30 := testusertier.NewUserTier("deactivate30", 30)
+
+	userSignupMember1 := usersignup.NewUserSignup(
+		usersignup.WithUsername("usertoautodeactivate"),
+		usersignup.WithEmail("usertoautodeactivate@redhat.com"),
+		usersignup.ApprovedManually())
+
+	tierDeactivationDuration := time.Duration(userTier30.Spec.DeactivationTimeoutDays+1) * time.Hour * 24
+
+	mur := murtest.NewMasterUserRecord(t, "usertoautodeactivate",
+		murtest.WithOwnerLabel(userSignupMember1.Name),
+		murtest.TierName(userTier30.Name),
+		murtest.Account("cluster1"),
+		murtest.ProvisionedMur(&metav1.Time{Time: time.Now().Add(-tierDeactivationDuration)}),
+		murtest.UserIDFromUserSignup(userSignupMember1))
+
+	r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupMember1, config)
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+
+	// The user should be deactivating
+	reloaded := &toolchainv1alpha1.UserSignup{}
+	err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupMember1.Name, Namespace: operatorNamespace}, reloaded)
+	require.NoError(t, err)
+	require.True(t, states.Deactivating(reloaded))
+
+	// reconcile again
+	r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
+	_, err = r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+
+	// Reload the usersignup, they should now be in a deactivated state
+	err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupMember1.Name, Namespace: operatorNamespace}, reloaded)
+	require.NoError(t, err)
+	require.True(t, states.Deactivated(reloaded))
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *commontest.FakeClient) {
