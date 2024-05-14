@@ -451,7 +451,7 @@ func (u *StatusUpdater) updateStatusHomeSpace(ctx context.Context, userSignup *t
 }
 
 func (u *StatusUpdater) SetScheduledDeactivationStatus(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, scheduledTime *metav1.Time) error {
-	if userSignup.Status.ScheduledDeactivationTimestamp != scheduledTime {
+	if !userSignup.Status.ScheduledDeactivationTimestamp.Equal(scheduledTime) {
 		userSignup.Status.ScheduledDeactivationTimestamp = scheduledTime
 		return u.Client.Status().Update(ctx, userSignup)
 	}
