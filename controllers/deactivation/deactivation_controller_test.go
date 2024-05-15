@@ -94,6 +94,24 @@ func TestReconcile(t *testing.T) {
 
 			// accept if we're within 1 hour of the expected deactivation time
 			require.Less(t, comparison, time.Hour)
+
+			// Reload the usersignup
+			reloaded := &toolchainv1alpha1.UserSignup{}
+			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+			require.NoError(t, err)
+
+			scheduledDeactivationTime := reloaded.Status.ScheduledDeactivationTimestamp
+
+			// Reconcile again
+			r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
+			res, err = r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			// Ensure that the scheduled deactivation time has not been changed
+			reloaded = &toolchainv1alpha1.UserSignup{}
+			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+			require.NoError(t, err)
+			require.Equal(t, scheduledDeactivationTime, reloaded.Status.ScheduledDeactivationTimestamp)
 		})
 
 		t.Run("usersignup should not be deactivated but client update fails", func(t *testing.T) {
@@ -250,8 +268,28 @@ func TestReconcile(t *testing.T) {
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
+
+			// First cause the status update to fail
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.UserSignup:
+					return errors.New("mock error")
+				default:
+					return cl.Client.Status().Update(ctx, obj)
+				}
+			}
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+			require.Error(t, err)
+			require.Equal(t, "mock error", err.Error())
+
+			// Remove the mock update
+			cl.MockStatusUpdate = nil
+
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
+
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue)
