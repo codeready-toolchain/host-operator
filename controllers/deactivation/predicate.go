@@ -1,6 +1,8 @@
 package deactivation
 
-import "sigs.k8s.io/controller-runtime/pkg/event"
+import (
+	"sigs.k8s.io/controller-runtime/pkg/event"
+)
 
 // CreateAndUpdateOnlyPredicate will filter out all events except Create and Update
 type CreateAndUpdateOnlyPredicate struct {
