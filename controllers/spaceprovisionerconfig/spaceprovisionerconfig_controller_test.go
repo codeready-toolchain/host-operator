@@ -13,6 +13,7 @@ import (
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +23,7 @@ import (
 )
 
 func TestSpaceProvisionerConfigValidation(t *testing.T) {
-	t.Run("is not valid when non-existing ToolchainCluster is referenced", func(t *testing.T) {
+	t.Run("is not ready when non-existing ToolchainCluster is referenced", func(t *testing.T) {
 		// given
 		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("non-existent"))
 		r, req, cl := prepareReconcile(t, spc)
@@ -36,13 +37,21 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 	})
 
-	t.Run("is valid when existing ToolchainCluster is referenced", func(t *testing.T) {
+	t.Run("is ready when existing ready ToolchainCluster is referenced", func(t *testing.T) {
 		// given
 		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
 		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
 				Namespace: test.HostOperatorNs,
+			},
+			Status: toolchainv1alpha1.ToolchainClusterStatus{
+				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+					{
+						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Status: v1.ConditionTrue,
+					},
+				},
 			},
 		})
 
@@ -54,7 +63,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 		assert.NoError(t, reconcileErr)
 		AssertThat(t, spc, Is(Ready()))
 	})
-	t.Run("is invalid when no ToolchainCluster is referenced", func(t *testing.T) {
+	t.Run("is not ready when no ToolchainCluster is referenced", func(t *testing.T) {
 		// given
 		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs)
 		r, req, cl := prepareReconcile(t, spc)
@@ -67,7 +76,33 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 		assert.NoError(t, reconcileErr)
 		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 	})
-	t.Run("becomes valid when the referenced ToolchainCluster appears", func(t *testing.T) {
+	t.Run("is not ready when existing not-ready ToolchainCluster is referenced", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
+		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster1",
+				Namespace: test.HostOperatorNs,
+			},
+			Status: toolchainv1alpha1.ToolchainClusterStatus{
+				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+					{
+						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Status: v1.ConditionFalse,
+					},
+				},
+			},
+		})
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)))
+	})
+	t.Run("becomes ready when the referenced ToolchainCluster appears and is ready", func(t *testing.T) {
 		// given
 		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
 			ReferencingToolchainCluster("cluster1"),
@@ -76,6 +111,14 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
 				Namespace: test.HostOperatorNs,
+			},
+			Status: toolchainv1alpha1.ToolchainClusterStatus{
+				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+					{
+						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Status: v1.ConditionTrue,
+					},
+				},
 			},
 		})
 
@@ -87,7 +130,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 		assert.NoError(t, reconcileErr)
 		AssertThat(t, spc, Is(Ready()))
 	})
-	t.Run("becomes invalid when the referenced ToolchainCluster disappears", func(t *testing.T) {
+	t.Run("becomes not ready when the referenced ToolchainCluster disappears", func(t *testing.T) {
 		// given
 		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
 			ReferencingToolchainCluster("cluster1"),
@@ -101,6 +144,54 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 		// then
 		assert.NoError(t, reconcileErr)
 		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
+	})
+	t.Run("becomes not ready when the referenced ToolchainCluster is marked as not ready", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
+			ReferencingToolchainCluster("cluster1"),
+			WithReadyConditionValid())
+		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster1",
+				Namespace: test.HostOperatorNs,
+			},
+			Status: toolchainv1alpha1.ToolchainClusterStatus{
+				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+					{
+						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Status: v1.ConditionFalse,
+					},
+				},
+			},
+		})
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)))
+	})
+	t.Run("becomes not ready when the referenced ToolchainCluster no longer has ready condition", func(t *testing.T) {
+		// given
+		spc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
+			ReferencingToolchainCluster("cluster1"),
+			WithReadyConditionValid())
+		r, req, cl := prepareReconcile(t, spc, &toolchainv1alpha1.ToolchainCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster1",
+				Namespace: test.HostOperatorNs,
+			},
+		})
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)))
 	})
 }
 

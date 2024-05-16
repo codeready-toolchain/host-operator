@@ -12,7 +12,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -31,20 +30,9 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceProvisionerConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
-			// We want to trigger the reconciliation of SpaceProvisionerConfigs that reference some ToolChainCluster whenever
-			// the ToolChainClusters are created or deleted. We don't have to care about updates, the mere existence of the
-			// ToolchainCluster is enough for us.
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainCluster{}},
 			handler.EnqueueRequestsFromMapFunc(MapToolchainClusterToSpaceProvisionerConfigs(ctx, r.Client)),
-			builder.WithPredicates(predicate.Funcs{
-				CreateFunc: func(event.CreateEvent) bool {
-					return true
-				},
-				DeleteFunc: func(event.DeleteEvent) bool {
-					return true
-				},
-			},
-			)).
+		).
 		Complete(r)
 }
 
@@ -71,10 +59,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// check that there is a ToolchainCluster CR in the same namespace
+	readyCondition, reportedError := r.determineReadyState(ctx, spaceProvisionerConfig)
+
+	spaceProvisionerConfig.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(spaceProvisionerConfig.Status.Conditions,
+		readyCondition)
+
+	logger.Info("updating SpaceProvisionerConfig", "readyCondition", readyCondition)
+	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
+		if reportedError != nil {
+			logger.Info("failed to update the status (reported as failed reconciliation) with a previous unreported error during reconciliation", "unreportedError", reportedError)
+		}
+		reportedError = fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
+	}
+
+	return ctrl.Result{}, reportedError
+}
+
+func (r *Reconciler) determineReadyState(ctx context.Context, spc *toolchainv1alpha1.SpaceProvisionerConfig) (toolchainv1alpha1.Condition, error) {
 	toolchainCluster := &toolchainv1alpha1.ToolchainCluster{}
-	toolchainClusterKey := runtimeclient.ObjectKey{Name: spaceProvisionerConfig.Spec.ToolchainCluster, Namespace: spaceProvisionerConfig.Namespace}
-	toolchainPresent := corev1.ConditionTrue
+	toolchainClusterKey := runtimeclient.ObjectKey{Name: spc.Spec.ToolchainCluster, Namespace: spc.Namespace}
+	toolchainPresent := corev1.ConditionFalse
 	toolchainPresenceReason := toolchainv1alpha1.SpaceProvisionerConfigValidReason
 	var reportedError error
 	toolchainPresenceMessage := ""
@@ -91,23 +95,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason
 		toolchainPresent = corev1.ConditionFalse
-	}
-
-	spaceProvisionerConfig.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(spaceProvisionerConfig.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  toolchainPresent,
-			Reason:  toolchainPresenceReason,
-			Message: toolchainPresenceMessage,
-		})
-
-	logger.Info("updating SpaceProvisionerConfig", "status", toolchainPresent, "reason", toolchainPresenceReason)
-	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
-		if reportedError != nil {
-			logger.Info("failed to update the status (reported as failed reconciliation) with a previous unreported error during reconciliation", "unreportedError", reportedError)
+	} else {
+		for _, c := range toolchainCluster.Status.Conditions {
+			if c.Type == toolchainv1alpha1.ToolchainClusterReady {
+				toolchainPresent = c.Status
+				break
+			}
 		}
-		reportedError = fmt.Errorf("failed to update the SpaceProvisionerConfig status: %w", err)
+		if toolchainPresent != corev1.ConditionTrue {
+			toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason
+		}
 	}
 
-	return ctrl.Result{}, reportedError
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  toolchainPresent,
+		Message: toolchainPresenceMessage,
+		Reason:  toolchainPresenceReason,
+	}, reportedError
 }
