@@ -268,7 +268,7 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-admin-${USERNAME}-actions-user
+    name: appstudio-admin-${USERNAME}-actions-user-externalsecrets
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
