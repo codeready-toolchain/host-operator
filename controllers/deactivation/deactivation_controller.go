@@ -139,9 +139,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
 	if deactivationTimeoutDays == 0 {
 		// If the usersignup was already set to deactivating then reset it to false
-		if err := r.resetDeactivatingState(ctx, usersignup); err != nil {
+		updated, err := r.resetDeactivatingState(ctx, usersignup)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
+
+		// If the UserSignup was updated, reload it
+		if updated {
+			if err := r.Client.Get(ctx, types.NamespacedName{
+				Namespace: mur.Namespace,
+				Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
+			}, usersignup); err != nil {
+				// Error getting usersignup - requeue the request.
+				return reconcile.Result{}, err
+			}
+		}
+
 		// Set the scheduled deactivation time to nil
 		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
 			logger.Error(err, "failed to update usersignup status")
@@ -169,13 +182,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Example: promotion of a user after 28 days from a user tier with deactivationTimeoutDays = 30 to one with 90, and where deactivatingNotificationDays = 3
 		//   Usersignup would have spec.states[Deactivating] = true but there are now 62 days left before deactivation so the deactivating notification should be sent again
 		//   when it is 3 days left until deactivation
-		if err := r.resetDeactivatingState(ctx, usersignup); err != nil {
+		updated, err := r.resetDeactivatingState(ctx, usersignup)
+		if err != nil {
 			return reconcile.Result{}, err
+		}
+		// If the UserSignup was updated, reload it
+		if updated {
+			if err := r.Client.Get(ctx, types.NamespacedName{
+				Namespace: mur.Namespace,
+				Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
+			}, usersignup); err != nil {
+				// Error getting usersignup - requeue the request.
+				return reconcile.Result{}, err
+			}
 		}
 
 		// Reset the scheduled deactivation time if required
 		scheduledDeactivationTime := v1.NewTime((*mur.Status.ProvisionedTime).Add(deactivationTimeout))
-		err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
+		err = statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -278,13 +302,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) resetDeactivatingState(ctx context.Context, usersignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) resetDeactivatingState(ctx context.Context, usersignup *toolchainv1alpha1.UserSignup) (bool, error) {
 	if states.Deactivating(usersignup) {
 		states.SetDeactivating(usersignup, false)
 		if err := r.Client.Update(ctx, usersignup); err != nil {
 			log.FromContext(ctx).Error(err, "failed to reset usersignup deactivating state")
-			return err
+			return false, err
 		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
