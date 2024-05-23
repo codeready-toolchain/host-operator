@@ -227,7 +227,20 @@ objects:
     - update
     - patch
     - delete
-
+  # Allow CRUD permissions on SecretStore and ExternalSecret CRs to the user's SA
+  - apiGroups:
+    - external-secrets.io/v1beta1
+    resources:
+    - secretstores
+    - externalsecrets
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
