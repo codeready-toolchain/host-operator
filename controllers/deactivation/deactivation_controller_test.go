@@ -75,9 +75,25 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(context.TODO(), req)
+			_, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
+
+			// Reload the usersignup
+			reloaded := &toolchainv1alpha1.UserSignup{}
+			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+			require.NoError(t, err)
+
+			// Confirm the deactivating state has been unset in the UserSignup
+			require.False(t, states.Deactivating(reloaded))
+
+			// Prepare to reconcile again, with the updated UserSignup
+			r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
+
+			// Reconcile again
+			res, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
 			expectedTime := (time.Duration((expectedDeactivationTimeoutDeactivate30Tier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
@@ -95,8 +111,8 @@ func TestReconcile(t *testing.T) {
 			// accept if we're within 1 hour of the expected deactivation time
 			require.Less(t, comparison, time.Hour)
 
-			// Reload the usersignup
-			reloaded := &toolchainv1alpha1.UserSignup{}
+			// Reload the usersignup again
+			reloaded = &toolchainv1alpha1.UserSignup{}
 			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
 			require.NoError(t, err)
 
@@ -505,6 +521,22 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
+
+			// Reload the usersignup
+			reloaded := &toolchainv1alpha1.UserSignup{}
+			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+			require.NoError(t, err)
+
+			// Confirm the deactivating state has been unset in the UserSignup
+			require.False(t, states.Deactivating(reloaded))
+
+			// Prepare to reconcile again, with the updated UserSignup
+			r, req, cl = prepareReconcile(t, mur.Name, userTier90, mur, reloaded, config)
+
+			// Reconcile again
+			res, err = r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
 			// The RequeueAfter should be ~about 59 days...(28 days from the new deactivatingNotificationTimeout = 90-3-28) let's accept if it's within 1 hour of that
 			require.WithinDuration(t, time.Now().Add(time.Duration(59*24)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
 
@@ -553,8 +585,16 @@ func TestReconcile(t *testing.T) {
 			require.False(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
 
+			// Reconcile again
+			r, req, cl = prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+			res, err = r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+
 			// The scheduled deactivation time should now be set to nil
 			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+			require.False(t, res.Requeue)
 		})
 
 		t.Run("when provisioning state is set but user is moved to a tier without deactivation but client update fails", func(t *testing.T) {
@@ -576,6 +616,17 @@ func TestReconcile(t *testing.T) {
 
 			r, req, fakeClient := prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
 
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			// Reload the userSignup
+			require.NoError(t, fakeClient.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, states.Deactivating(userSignupFoobar))
+
+			// Reconcile again
+			r, req, fakeClient = prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+
 			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
@@ -585,10 +636,7 @@ func TestReconcile(t *testing.T) {
 				}
 			}
 
-			// when
-			_, err := r.Reconcile(context.TODO(), req)
-
-			// then
+			_, err = r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
 
 			// Reload the userSignup
