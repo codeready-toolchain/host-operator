@@ -517,7 +517,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier90, mur, userSignupFoobar, config)
 
 			// when
-			res, err := r.Reconcile(context.TODO(), req)
+			_, err := r.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -534,7 +534,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl = prepareReconcile(t, mur.Name, userTier90, mur, reloaded, config)
 
 			// Reconcile again
-			res, err = r.Reconcile(context.TODO(), req)
+			res, err := r.Reconcile(context.TODO(), req)
 			require.NoError(t, err)
 
 			// The RequeueAfter should be ~about 59 days...(28 days from the new deactivatingNotificationTimeout = 90-3-28) let's accept if it's within 1 hour of that
