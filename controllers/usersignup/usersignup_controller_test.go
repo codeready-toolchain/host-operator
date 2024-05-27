@@ -2274,6 +2274,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				"1,external": 2,
 			})
 
+		// Confirm that the scheduled deactivation time has been set to nil
+		require.Nil(t, userSignup.Status.ScheduledDeactivationTimestamp)
+
 		// A deactivated notification should have been created
 		notifications := &toolchainv1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notifications)
@@ -3929,7 +3932,12 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	require.Len(t, config.Users().ForbiddenUsernamePrefixes(), 5)
 	names := []string{"-Bob", "-Dave", "Linda", ""}
 
-	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
+	testingPrefixes := config.Users().ForbiddenUsernamePrefixes()
+	// As 'kube' is already a forbidden prefix, so "kubesaw" is covered
+	// but testing it explicitly would prevent future changes from breaking this behavior.
+	testingPrefixes = append(testingPrefixes, "kubesaw")
+
+	for _, prefix := range testingPrefixes {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("east"))

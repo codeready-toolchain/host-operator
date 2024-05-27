@@ -3,6 +3,8 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	usersignup2 "github.com/codeready-toolchain/host-operator/controllers/usersignup"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
@@ -48,6 +50,7 @@ type Reconciler struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+// nolint: gocyclo
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Deactivation")
@@ -55,6 +58,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
+	statusUpdater := usersignup2.StatusUpdater{
+		Client: r.Client,
 	}
 
 	// Fetch the MasterUserRecord instance
@@ -103,6 +110,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		for _, domain := range config.Deactivation().DeactivationDomainsExcluded() {
 			if strings.HasSuffix(usersignup.Spec.IdentityClaims.Email, domain) {
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
+
+				// Also set the Scheduled deactivation time to nil if it's not already
+				if err = statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+					logger.Error(err, "failed to update usersignup status")
+					return reconcile.Result{}, err
+				}
+
 				return reconcile.Result{}, nil
 			}
 		}
@@ -128,6 +142,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if err := r.resetDeactivatingState(ctx, usersignup); err != nil {
 			return reconcile.Result{}, err
 		}
+		// Set the scheduled deactivation time to nil
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
+		}
+
 		logger.Info("User belongs to a tier that does not have a deactivation timeout. The user will not be automatically deactivated")
 		// Users belonging to this tier will not be auto deactivated, no need to requeue.
 		return reconcile.Result{}, nil
@@ -153,6 +173,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 
+		// Reset the scheduled deactivation time if required
+		scheduledDeactivationTime := v1.NewTime((*mur.Status.ProvisionedTime).Add(deactivationTimeout))
+		err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// requeue until it will be time to send it
 		requeueAfterTimeToNotify := deactivatingNotificationTimeout - timeSinceProvisioned
 		logger.Info("requeueing request", "RequeueAfter", requeueAfterTimeToNotify,
@@ -163,6 +190,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If the usersignup state hasn't been set to deactivating, then set it now
 	if !states.Deactivating(usersignup) {
 		states.SetDeactivating(usersignup, true)
+
+		// Before we update the UserSignup in order to set the deactivating state, we should reset the scheduled
+		// deactivation time if required just in case the current value is nil or has somehow changed.  Since the UserSignup
+		// controller is going to be reconciling immediately after setting the deactivating state then it will be
+		// creating a deactivating notification, meaning that the scheduled deactivation time that we set here is going
+		// to be extremely temporary (as it will be recalculated after the next reconcile), however it is done for correctness
+		scheduledDeactivationTime := v1.NewTime((*mur.Status.ProvisionedTime).Add(deactivationTimeout))
+		err = statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &scheduledDeactivationTime)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
 		logger.Info("setting usersignup state to deactivating")
 		if err := r.Client.Update(ctx, usersignup); err != nil {
@@ -185,17 +223,36 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
-	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
-		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
+	if (!found || deactivatingCondition.Status != corev1.ConditionTrue ||
+		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason &&
+			usersignup.Status.ScheduledDeactivationTimestamp != nil) && deactivatingNotificationDays > 0 {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then wait - the notification should be created shortly by the UserSignup controller
-		// once the "deactivating" state has been set which should cause a new reconciliation to be triggered here
+		// created yet, then set the deactivation timestamp to nil temporarily - UNLESS the deactivating notification days
+		// is configured to be 0 (or less) in which case we don't care about setting the status and can go directly
+		// to deactivating the user
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, nil); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
+		}
+
 		return reconcile.Result{}, nil
 	}
 
+	// We calculate the actual deactivation due time based on when the deactivating condition was set.  This may end up
+	// being significantly later than the scheduled deactivation time set in UserSignup.Status.ScheduledDeactivationTime, as
+	// in some rare circumstances the deactivating notification/status may fail to be set due to cluster downtime or
+	// other reasons.  Because of this, the scheduled deactivation time that is set in the UserSignup.Status should be
+	// treated as informational only.
 	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
 
 	if time.Now().Before(deactivationDueTime) {
+		// Update the ScheduledDeactivationTimestamp to the recalculated time base on when the deactivating notification was sent
+		ts := v1.NewTime(deactivationDueTime)
+		if err := statusUpdater.SetScheduledDeactivationStatus(ctx, usersignup, &ts); err != nil {
+			logger.Error(err, "failed to update usersignup status")
+			return reconcile.Result{}, err
+		}
+
 		// It is not yet time to deactivate so requeue when it will be
 		requeueAfterExpired := time.Until(deactivationDueTime)
 

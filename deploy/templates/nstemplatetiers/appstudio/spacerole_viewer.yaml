@@ -1,15 +1,16 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-spacerole-admin # name is used in e2e tests
+  name: appstudio-spacerole-viewer # name is used in e2e tests
 objects:
 
+# RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
 # Role(s) and RoleBinding(s) that grant limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-admin-user-actions
+    name: appstudio-viewer-user-actions
   rules:
   - apiGroups:
     - appstudio.redhat.com
@@ -21,11 +22,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
-    - deletecollection
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -37,10 +33,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -50,10 +42,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - managed-gitops.redhat.com
     resources:
@@ -73,10 +61,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - results.tekton.dev
     resources:
@@ -89,20 +73,37 @@ objects:
   - apiGroups:
     - appstudio.redhat.com
     resources:
-    - enterprisecontractpolicies
     - integrationtestscenarios
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - enterprisecontractpolicies
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - releases
     - releasestrategies
     - releaseplans
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - releaseplanadmissions
     verbs:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - jvmbuildservice.io
     resources:
@@ -112,10 +113,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -123,15 +120,10 @@ objects:
     - spiaccesschecks
     - spiaccesstokens
     - spifilecontentrequests
-    - spiaccesstokendataupdates
     verbs:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -140,34 +132,14 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
-    - ""
-    resources:
-    - secrets
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-  - apiGroups:
-    - ""
+    - ''
     resources:
     - configmaps
     verbs:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -176,43 +148,6 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
-  # Allow to manage pipeline ServiceAccount for linking secrets used for repositories
-  - apiGroups:
-    - ""
-    resources:
-    - serviceaccounts
-    resourceNames:
-    - appstudio-pipeline
-    verbs:
-    - get
-    - list
-    - watch
-    - update
-    - patch
-  # Allow to exec (rsh) to pods
-  - apiGroups:
-      - ""
-    resources:
-      - pods/exec
-    verbs:
-      - create
-  - apiGroups:
-    - toolchain.dev.openshift.com
-    resources:
-    - spacebindingrequests
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-  # Allow using the project-controller
   - apiGroups:
     - projctl.konflux.dev
     resources:
@@ -223,38 +158,19 @@ objects:
     - get
     - list
     - watch
-    - create
-    - update
-    - patch
-    - delete
-  # Allow CRUD permissions on SecretStore and ExternalSecret CRs to the user's SA
-  - apiGroups:
-    - external-secrets.io/v1beta1
-    resources:
-    - secretstores
-    - externalsecrets
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-# RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-admin-${USERNAME}-actions-user
+    name: appstudio-viewer-${USERNAME}-actions-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: appstudio-admin-user-actions
+    name: appstudio-viewer-user-actions
   subjects:
   - kind: User
     name: ${USERNAME}
-# RoleBinding that grants view permissions to the User
+# Role & RoleBinding that grants view permissions to the user's SA
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:

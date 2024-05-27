@@ -3,8 +3,6 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	"strconv"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -21,10 +19,9 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
-	"github.com/redhat-cop/operator-utils/pkg/util"
-
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strconv"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -140,7 +138,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivation notification
+	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivating notification
 	// status is set to false. This is especially important for cases when a user is deactivated and then reactivated
 	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
 	// be sent to the user again.
@@ -625,6 +623,11 @@ func (r *Reconciler) provisionMasterUserRecord(
 	userTier *toolchainv1alpha1.UserTier,
 ) error {
 	logger := log.FromContext(ctx)
+
+	// If the Annotations property is nil then initialize it
+	if userSignup.Annotations == nil {
+		userSignup.Annotations = map[string]string{}
+	}
 
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
