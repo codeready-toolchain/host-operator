@@ -16,6 +16,7 @@ objects:
     resources:
     - applications
     - components
+    - imagerepositories
     - componentdetectionqueries
     verbs:
     - get
