@@ -189,8 +189,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
-github.com/fbm3307/toolchain-common v0.0.0-20240529065824-3c5d4e2aceac h1:WbOV613ZMtm/wzx1OOoDz7SiNgzlgN4KGusVL8vnMig=
-github.com/fbm3307/toolchain-common v0.0.0-20240529065824-3c5d4e2aceac/go.mod h1:D/yFnVW7yM+OhIMDY5H/7jGZGlKIgaeTkiA4F5DIc4g=
+github.com/fbm3307/toolchain-common v0.0.0-20240530072112-7bc983ca29b0 h1:bw/xnuqXBl9nmaL+5I+p5WxnBsMocSuRBDeu+K9oCUs=
+github.com/fbm3307/toolchain-common v0.0.0-20240530072112-7bc983ca29b0/go.mod h1:D/yFnVW7yM+OhIMDY5H/7jGZGlKIgaeTkiA4F5DIc4g=
 github.com/fbm3307/toolchainapi v0.0.0-20240529064820-9bb19ad24c69 h1:WiMpRk3NnsEeCVzQzD2gzc2EFx15eWCrkdfmGeG2ltU=
 github.com/fbm3307/toolchainapi v0.0.0-20240529064820-9bb19ad24c69/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
