@@ -372,13 +372,7 @@ spec:
                               description: Conditions is an array of current cluster
                                 conditions.
                               items:
-                                description: ToolchainClusterCondition describes current
-                                  state of a cluster.
                                 properties:
-                                  lastProbeTime:
-                                    description: Last time the condition was checked.
-                                    format: date-time
-                                    type: string
                                   lastTransitionTime:
                                     description: Last time the condition transit from
                                       one status to another.
@@ -401,8 +395,7 @@ spec:
                                       False, Unknown.
                                     type: string
                                   type:
-                                    description: Type of cluster condition, Ready
-                                      or Offline.
+                                    description: Type of condition
                                     type: string
                                 required:
                                 - status
