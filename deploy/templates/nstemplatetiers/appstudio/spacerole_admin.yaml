@@ -16,6 +16,7 @@ objects:
     resources:
     - applications
     - components
+    - imagerepositories
     - componentdetectionqueries
     verbs:
     - get
@@ -229,7 +230,7 @@ objects:
     - delete
   # Allow CRUD permissions on SecretStore and ExternalSecret CRs to the user's SA
   - apiGroups:
-    - external-secrets.io/v1beta1
+    - external-secrets.io
     resources:
     - secretstores
     - externalsecrets
