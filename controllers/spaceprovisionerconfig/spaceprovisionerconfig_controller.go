@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) determineReadyState(ctx context.Context, spc *toolchainv1alpha1.SpaceProvisionerConfig) (toolchainv1alpha1.Condition, error) {
 	toolchainCluster := &toolchainv1alpha1.ToolchainCluster{}
 	toolchainClusterKey := runtimeclient.ObjectKey{Name: spc.Spec.ToolchainCluster, Namespace: spc.Namespace}
-	toolchainPresent := corev1.ConditionFalse
+	var toolchainPresent corev1.ConditionStatus
 	toolchainPresenceReason := toolchainv1alpha1.SpaceProvisionerConfigValidReason
 	var reportedError error
 	toolchainPresenceMessage := ""
@@ -96,11 +96,11 @@ func (r *Reconciler) determineReadyState(ctx context.Context, spc *toolchainv1al
 		toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason
 		toolchainPresent = corev1.ConditionFalse
 	} else {
-		for _, c := range toolchainCluster.Status.Conditions {
-			if c.Type == toolchainv1alpha1.ToolchainClusterReady {
-				toolchainPresent = c.Status
-				break
-			}
+		readyCond, found := condition.FindConditionByType(toolchainCluster.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		if !found {
+			toolchainPresent = corev1.ConditionFalse
+		} else {
+			toolchainPresent = readyCond.Status
 		}
 		if toolchainPresent != corev1.ConditionTrue {
 			toolchainPresenceReason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason

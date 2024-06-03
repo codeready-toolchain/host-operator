@@ -46,9 +46,9 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 				Namespace: test.HostOperatorNs,
 			},
 			Status: toolchainv1alpha1.ToolchainClusterStatus{
-				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+				Conditions: []toolchainv1alpha1.Condition{
 					{
-						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Type:   toolchainv1alpha1.ConditionReady,
 						Status: v1.ConditionTrue,
 					},
 				},
@@ -67,9 +67,9 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 			// given
 			tc := &toolchainv1alpha1.ToolchainCluster{}
 			require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKey{Name: "cluster1", Namespace: test.HostOperatorNs}, tc))
-			tc.Status.Conditions = []toolchainv1alpha1.ToolchainClusterCondition{
+			tc.Status.Conditions = []toolchainv1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.ToolchainClusterReady,
+					Type:   toolchainv1alpha1.ConditionReady,
 					Status: v1.ConditionFalse,
 				},
 			}
@@ -108,9 +108,9 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 				Namespace: test.HostOperatorNs,
 			},
 			Status: toolchainv1alpha1.ToolchainClusterStatus{
-				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+				Conditions: []toolchainv1alpha1.Condition{
 					{
-						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Type:   toolchainv1alpha1.ConditionReady,
 						Status: v1.ConditionFalse,
 					},
 				},
@@ -130,9 +130,9 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 			tc := &toolchainv1alpha1.ToolchainCluster{}
 			require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKey{Name: "cluster1", Namespace: test.HostOperatorNs}, tc))
 
-			tc.Status.Conditions = []toolchainv1alpha1.ToolchainClusterCondition{
+			tc.Status.Conditions = []toolchainv1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.ToolchainClusterReady,
+					Type:   toolchainv1alpha1.ConditionReady,
 					Status: v1.ConditionTrue,
 				},
 			}
@@ -160,9 +160,9 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 				Namespace: test.HostOperatorNs,
 			},
 			Status: toolchainv1alpha1.ToolchainClusterStatus{
-				Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
+				Conditions: []toolchainv1alpha1.Condition{
 					{
-						Type:   toolchainv1alpha1.ToolchainClusterReady,
+						Type:   toolchainv1alpha1.ConditionReady,
 						Status: v1.ConditionTrue,
 					},
 				},
