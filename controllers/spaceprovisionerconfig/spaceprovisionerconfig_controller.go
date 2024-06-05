@@ -61,8 +61,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	readyCondition, reportedError := r.determineReadyState(ctx, spaceProvisionerConfig)
 
-	spaceProvisionerConfig.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(spaceProvisionerConfig.Status.Conditions,
+	var updated bool
+	spaceProvisionerConfig.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(spaceProvisionerConfig.Status.Conditions,
 		readyCondition)
+	if !updated {
+		return ctrl.Result{}, reportedError
+	}
 
 	logger.Info("updating SpaceProvisionerConfig", "readyCondition", readyCondition)
 	if err := r.Client.Status().Update(ctx, spaceProvisionerConfig); err != nil {
