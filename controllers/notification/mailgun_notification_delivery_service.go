@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
+	"html"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -114,7 +115,7 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 		message.SetReplyTo(s.ReplyToEmail)
 	}
 
-	message.SetHtml(body)
+	message.SetHtml(html.EscapeString(body))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
