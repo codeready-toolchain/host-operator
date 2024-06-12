@@ -30,6 +30,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20240612134355-e82b4e980639
+
 require github.com/google/uuid v1.6.0 // indirect
 
 require (
