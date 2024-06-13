@@ -574,6 +574,8 @@ func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetClust
 		Server:                   subSpaceTargetCluster.Config.APIEndpoint,
 		CertificateAuthorityData: subSpaceTargetCluster.Config.RestConfig.CAData,
 	}
+	clusters["default-cluster"].InsecureSkipTLSVerify = subSpaceTargetCluster.RestConfig.Insecure
+
 	contexts := make(map[string]*api.Context, 1)
 	contexts["default-context"] = &api.Context{
 		Cluster:   "default-cluster",
