@@ -138,7 +138,6 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20240530120602-c11598ccffb7 h1:o5JLcHCVS1BlZevw2mh1mH+iKwn9fLUrT1Ek8NFjvPY=
 github.com/codeready-toolchain/api v0.0.0-20240530120602-c11598ccffb7/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240610110817-b4e25fa2cf24/go.mod h1:cyHrUfvBYEtsf+FbqQYmR9y0AQi9QAVtM3SUWLA5bd4=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240613121043-7e6ef858cdff h1:bVWL+2eayFKUnEzdEAwltPs+pzbGlGDSmrM3oOV2Ams=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240613121043-7e6ef858cdff/go.mod h1:cyHrUfvBYEtsf+FbqQYmR9y0AQi9QAVtM3SUWLA5bd4=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -433,8 +432,6 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/mailru/easyjson v0.7.6 h1:8yTIVnZgCoiM1TgqoeTl+LfU5Jg6/xL3QhGQnimLYnA=
 github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/matousjobanek/toolchain-common v0.0.0-20240612134355-e82b4e980639 h1:grq/ng4cDvqXGocHl52Chhciyj0dm6pXzg12V9gaV2Q=
-github.com/matousjobanek/toolchain-common v0.0.0-20240612134355-e82b4e980639/go.mod h1:cyHrUfvBYEtsf+FbqQYmR9y0AQi9QAVtM3SUWLA5bd4=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
