@@ -777,10 +777,17 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 	}
 
 	newAssessmentAnnotation := r.shouldAnnotateCaptchaAssessment(userSignup, newState)
-	if newAssessmentAnnotation == recaptchapb.AnnotateAssessmentRequest_ANNOTATION_UNSPECIFIED {
+	newAnnotationName, isValidAssessmentAnnotation := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(newAssessmentAnnotation)]
+	oldAnnotationName := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]
+	if !isValidAssessmentAnnotation ||
+		newAssessmentAnnotation == recaptchapb.AnnotateAssessmentRequest_ANNOTATION_UNSPECIFIED ||
+		newAnnotationName == oldAnnotationName {
 		// no need to annotate the previous assessment
 		return
 	}
+
+	// set the annotated assessment value: FRAUDULENT or LEGITIMATE
+	userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = newAnnotationName
 
 	gctx := context.Background()
 	rclient, err := recaptcha.NewClient(gctx)
@@ -799,12 +806,6 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 	if err != nil {
 		logger.Error(err, "error annotating assessment")
 		return
-	}
-
-	newAnnotationName, isFound := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(newAssessmentAnnotation)]
-	if isFound {
-		// set the annotated assessment value: FRAUDULENT or LEGITIMATE
-		userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = newAnnotationName
 	}
 	logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
 }
