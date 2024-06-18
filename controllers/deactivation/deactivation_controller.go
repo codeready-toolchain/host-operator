@@ -138,14 +138,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
 	if deactivationTimeoutDays == 0 {
-		// If the usersignup was already set to deactivating then reset it to false
+		// If the usersignup was already set to deactivating then reset it to false,
+		// And if the deactivating state was updated, or there was an error, then return here
 		updated, err := r.resetDeactivatingState(ctx, usersignup)
-		if err != nil {
+		if err != nil || updated {
 			return reconcile.Result{}, err
-		}
-		// If the deactivating state was updated, then return here
-		if updated {
-			return reconcile.Result{}, nil
 		}
 
 		// Set the scheduled deactivation time to nil
@@ -176,12 +173,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		//   Usersignup would have spec.states[Deactivating] = true but there are now 62 days left before deactivation so the deactivating notification should be sent again
 		//   when it is 3 days left until deactivation
 		updated, err := r.resetDeactivatingState(ctx, usersignup)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 		// If the deactivating state was updated, then return here
-		if updated {
-			return reconcile.Result{}, nil
+		if err != nil || updated {
+			return reconcile.Result{}, err
 		}
 
 		// Reset the scheduled deactivation time if required
