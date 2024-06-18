@@ -789,25 +789,28 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 	// set the annotated assessment value: FRAUDULENT or LEGITIMATE
 	userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = newAnnotationName
 
-	gctx := context.Background()
-	rclient, err := recaptcha.NewClient(gctx)
-	if err != nil {
-		logger.Error(err, "error creating reCAPTCHA client, cannot annotate assessment")
-		return
-	}
-	defer rclient.Close()
+	go func() {
+		gctx := context.Background()
+		rclient, err := recaptcha.NewClient(gctx)
+		if err != nil {
+			logger.Error(err, "error creating reCAPTCHA client, cannot annotate assessment")
+			return
+		}
+		defer rclient.Close()
 
-	annotateRequest := &recaptchapb.AnnotateAssessmentRequest{
-		Name:       assessmentID,
-		Annotation: newAssessmentAnnotation,
-	}
+		annotateRequest := &recaptchapb.AnnotateAssessmentRequest{
+			Name:       assessmentID,
+			Annotation: newAssessmentAnnotation,
+		}
 
-	response, err := rclient.AnnotateAssessment(gctx, annotateRequest)
-	if err != nil {
-		logger.Error(err, "error annotating assessment")
-		return
-	}
-	logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
+		response, err := rclient.AnnotateAssessment(gctx, annotateRequest)
+		if err != nil {
+			logger.Error(err, "error annotating assessment")
+			return
+		}
+		logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
+	}()
+
 }
 
 // shouldAnnotateCaptchaAssessment determines whether the previous assessment should be annotated
