@@ -449,11 +449,9 @@ spec:
                               type: string
                             weight:
                               description: 'Rollout weight of the feature. An integer
-                                between 0-100. Any number lower than 0 will be treated
-                                as 0. Any number higher than 100 will be treated as
-                                100. If not set then 100 is used by default. 0 means
-                                the corresponding feature should not be enabled at
-                                all, which means that corresponding template objects
+                                between 0-100. If not set then 100 is used by default.
+                                0 means the corresponding feature should not be enabled
+                                at all, which means that corresponding template objects
                                 should not be applied at all. 100 means the feature
                                 should be always enabled (the template is always applied).
                                 The features are weighted independently of each other.
@@ -468,6 +466,8 @@ spec:
                                 it) And the ConfigMap will be created with probability
                                 of 0.9 (around 90 out of every 100 spaces would have
                                 it)'
+                              maximum: 100
+                              minimum: 0
                               type: integer
                           required:
                           - name
