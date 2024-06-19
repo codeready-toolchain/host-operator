@@ -15,10 +15,12 @@ parameters:
 - name: CPU_BUILD_LIMIT
   value: "480"
 - name: CPU_BUILD_REQUEST
-  value: "48"
+  value: "240"
 - name: MEMORY_BUILD_LIMIT
   value: "512Gi"
 - name: MEMORY_BUILD_REQUEST
-  value: "128Gi"
+  value: "256Gi"
 - name: COUNT_PVC
   value: "180"
+- name: REQUEST_STORAGE
+  value: "400Gi"
