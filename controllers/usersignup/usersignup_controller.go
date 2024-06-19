@@ -114,18 +114,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if userSignup.GetLabels() == nil {
 		userSignup.Labels = make(map[string]string)
 	}
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
 		}
-	}
-
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	banned, err := r.isUserBanned(ctx, userSignup)
@@ -178,7 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// and return
 	if banned {
 		// if the UserSignup doesn't have the state=banned label set, then update it
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -222,7 +222,7 @@ func (r *Reconciler) handleDeactivatedUserSignup(
 	}
 
 	// if the UserSignup doesn't have the state=deactivated label set, then update it
-	if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+	if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -315,7 +315,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		// If the user has been banned, then we need to delete the MUR
 		if banned {
 			// set the state label to banned
-			if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+			if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 				return true, err
 			}
 
@@ -332,7 +332,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
 			return true, err
 		}
 
@@ -413,7 +413,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
 		// if user was approved manually
@@ -434,7 +434,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 
 	if !approved {
 		// set the state label to pending
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
 		return r.updateStatus(ctx, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
@@ -450,7 +450,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		}
 	}
 	// set the state label to approved
-	if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+	if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
 		return err
 	}
 	userTier, err := r.getUserTier(ctx, config, userSignup)
@@ -522,6 +522,7 @@ func (r *Reconciler) getSocialEvent(
 
 func (r *Reconciler) setStateLabel(
 	ctx context.Context,
+	config toolchainconfig.ToolchainConfig,
 	userSignup *toolchainv1alpha1.UserSignup,
 	state string,
 ) error {
@@ -538,8 +539,10 @@ func (r *Reconciler) setStateLabel(
 		activations = r.updateActivationCounterAnnotation(logger, userSignup)
 	}
 
-	// annotate the original captcha assessment, if possible
-	r.annotateCaptchaAssessment(ctx, userSignup, state)
+	if config.RegistrationService().Verification().CaptchaEnabled() {
+		// annotate the original captcha assessment, if possible
+		r.annotateCaptchaAssessment(ctx, userSignup, state)
+	}
 
 	if err := r.Client.Update(ctx, userSignup); err != nil {
 		return r.wrapErrorWithStatusUpdate(ctx,
