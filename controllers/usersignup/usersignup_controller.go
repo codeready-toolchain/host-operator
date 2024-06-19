@@ -776,7 +776,7 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 		return
 	}
 
-	newAssessmentAnnotation := r.shouldAnnotateCaptchaAssessment(userSignup, newState)
+	newAssessmentAnnotation := r.getCaptchaAssessmentAnnotation(userSignup, newState)
 	newAnnotationName, isValidAssessmentAnnotation := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(newAssessmentAnnotation)]
 	oldAnnotationName := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]
 	if !isValidAssessmentAnnotation ||
@@ -813,10 +813,10 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 
 }
 
-// shouldAnnotateCaptchaAssessment determines whether the previous assessment should be annotated
+// getCaptchaAssessmentAnnotation returns the captcha assessment annotation type depending on the UserSignup's state
 // returns LEGITIMATE or FRAUDULENT if the assessment should be annotated
-// returns ANNOTATION_UNSPECIFIED otherwise
-func (r *Reconciler) shouldAnnotateCaptchaAssessment(userSignup *toolchainv1alpha1.UserSignup, newState string) recaptchapb.AnnotateAssessmentRequest_Annotation {
+// returns ANNOTATION_UNSPECIFIED otherwise which means there's not enough information to select an annotation
+func (r *Reconciler) getCaptchaAssessmentAnnotation(userSignup *toolchainv1alpha1.UserSignup, newState string) recaptchapb.AnnotateAssessmentRequest_Annotation {
 	oldAnnotatedAssessment := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]
 	fraudulentAnnotationName := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(recaptchapb.AnnotateAssessmentRequest_FRAUDULENT)]
 	// user was incorrectly banned if the previous assessment was annotated as fraudulent and the user is now being approved
