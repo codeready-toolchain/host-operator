@@ -52,9 +52,9 @@ objects:
     scopes:
     - Terminating
     hard:
-      limits.cpu: "120"
+      limits.cpu: ${CPU_BUILD_LIMIT}
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: "12"
+      requests.cpu: ${CPU_BUILD_REQUEST}
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -66,7 +66,7 @@ objects:
       limits.ephemeral-storage: 50Gi
       requests.storage: 200Gi
       requests.ephemeral-storage: 50Gi
-      count/persistentvolumeclaims: "90"
+      count/persistentvolumeclaims: "${COUNT_PVC}"
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
@@ -277,7 +277,13 @@ parameters:
   value: "32Gi"
 - name: MEMORY_REQUEST
   value: "32Gi"
+- name: CPU_BUILD_LIMIT
+  value: "120"
+- name: CPU_BUILD_REQUEST
+  value: "12"
 - name: MEMORY_BUILD_LIMIT
   value: "128Gi"
 - name: MEMORY_BUILD_REQUEST
   value: "64Gi"
+- name: COUNT_PVC
+  value: "90"

@@ -390,6 +390,7 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	// Now let's simulate the situation when the signup is already being deleted and reconcile it again.
 	nw := corev1.Now()
 	userSignup.DeletionTimestamp = &nw
+	userSignup.Finalizers = append(userSignup.Finalizers, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	res, err := r.Reconcile(context.TODO(), req)

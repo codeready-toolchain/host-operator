@@ -281,6 +281,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.ApprovedManually(),
+
 		commonsignup.BeingDeleted(),
 		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
@@ -3928,7 +3929,12 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	require.Len(t, config.Users().ForbiddenUsernamePrefixes(), 5)
 	names := []string{"-Bob", "-Dave", "Linda", ""}
 
-	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
+	testingPrefixes := config.Users().ForbiddenUsernamePrefixes()
+	// As 'kube' is already a forbidden prefix, so "kubesaw" is covered
+	// but testing it explicitly would prevent future changes from breaking this behavior.
+	testingPrefixes = append(testingPrefixes, "kubesaw")
+
+	for _, prefix := range testingPrefixes {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("east"))
