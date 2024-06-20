@@ -448,6 +448,7 @@ spec:
                               description: A unique name of the feature
                               type: string
                             weight:
+                              default: 100
                               description: 'Rollout weight of the feature. An integer
                                 between 0-100. If not set then 100 is used by default.
                                 0 means the corresponding feature should not be enabled
