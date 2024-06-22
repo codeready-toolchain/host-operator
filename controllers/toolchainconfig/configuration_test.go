@@ -430,6 +430,7 @@ func TestTiers(t *testing.T) {
 		assert.Equal(t, "deactivate30", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
+		assert.Empty(t, toolchainCfg.Tiers().FeatureToggles())
 	})
 	t.Run("invalid", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("rapid"))
@@ -438,15 +439,23 @@ func TestTiers(t *testing.T) {
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 	})
 	t.Run("non-default", func(t *testing.T) {
+		weight10 := uint(10)
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
 			DefaultUserTier("deactivate90").
 			DefaultSpaceTier("advanced").
-			DurationBeforeChangeTierRequestDeletion("48h"))
+			DurationBeforeChangeTierRequestDeletion("48h").
+			FeatureToggle("feature-1", nil). // With default weight
+			FeatureToggle("feature-2", &weight10))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "deactivate90", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
+		assert.Len(t, toolchainCfg.Tiers().FeatureToggles(), 2)
+		assert.Equal(t, "feature-1", toolchainCfg.Tiers().FeatureToggles()[0].Name())
+		assert.Equal(t, uint(100), toolchainCfg.Tiers().FeatureToggles()[0].Weight()) // default weight
+		assert.Equal(t, "feature-2", toolchainCfg.Tiers().FeatureToggles()[1].Name())
+		assert.Equal(t, weight10, toolchainCfg.Tiers().FeatureToggles()[1].Weight())
 	})
 }
 

@@ -152,7 +152,6 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 		// look-up and delete the NSTemplateSet on the current member cluster
 		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(ctx, space, space.Status.TargetCluster); err != nil {
 			return norequeue, r.setStatusRetargetFailed(ctx, space, err)
-
 		} else if isBeingDeleted {
 			logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
 			return norequeue, r.setStatusRetargeting(ctx, space)
@@ -387,8 +386,30 @@ func NewNSTemplateSet(namespace string, space *toolchainv1alpha1.Space, bindings
 		},
 	}
 	nsTmplSet.Spec = NewNSTemplateSetSpec(space, bindings, tmplTier)
+
+	// propagate feature annotations from the space
+	for k, v := range space.Annotations {
+		if strings.HasPrefix(k, FeatureAnnotationKeyPrefix) {
+			// It's a feature annotation. Propagate it.
+			if nsTmplSet.Annotations == nil {
+				nsTmplSet.Annotations = make(map[string]string)
+			}
+			nsTmplSet.Annotations[k] = v
+		}
+	}
 	return nsTmplSet
 }
+
+// TODO Move to common
+// FeatureToggleAnnotationKey contracts an annotation key for the feature name.
+// This key can be used in Space, NSTemplateSet, etc. CRs to indicate that the corresponding feature toggle should be enabled.
+// This is the format of such keys: toolchain.dev.openshift.com/feature/<featureName>
+func FeatureToggleAnnotationKey(featureName string) string {
+	return fmt.Sprintf("%s%s", FeatureAnnotationKeyPrefix, featureName)
+}
+
+// TODO Move to api
+const FeatureAnnotationKeyPrefix = toolchainv1alpha1.FeatureToggleNameAnnotationKey + "/"
 
 func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1alpha1.SpaceBinding, tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
 	s := toolchainv1alpha1.NSTemplateSetSpec{
