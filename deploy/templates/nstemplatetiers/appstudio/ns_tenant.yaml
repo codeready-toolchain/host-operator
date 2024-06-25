@@ -64,7 +64,7 @@ objects:
   spec:
     hard:
       limits.ephemeral-storage: 50Gi
-      requests.storage: 200Gi
+      requests.storage: ${REQUEST_STORAGE}
       requests.ephemeral-storage: 50Gi
       count/persistentvolumeclaims: "${COUNT_PVC}"
 - apiVersion: v1
@@ -280,10 +280,12 @@ parameters:
 - name: CPU_BUILD_LIMIT
   value: "120"
 - name: CPU_BUILD_REQUEST
-  value: "12"
+  value: "60"
 - name: MEMORY_BUILD_LIMIT
   value: "128Gi"
 - name: MEMORY_BUILD_REQUEST
   value: "64Gi"
 - name: COUNT_PVC
   value: "90"
+- name: REQUEST_STORAGE
+  value: "200Gi"
