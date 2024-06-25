@@ -154,7 +154,6 @@ objects:
       namespace: ${NAMESPACE}
     spec:
       host: ''
-      path: /api # we don't want to expose anything else (eg: Prometheus metrics)
       port:
         targetPort: "8080"
       to:
