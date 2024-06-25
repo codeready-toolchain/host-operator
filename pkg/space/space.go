@@ -50,7 +50,12 @@ func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.To
 		// We generate a random number between 0 and 100. If the number is equal to or lower than the weight
 		// then the feature wins.
 		if weight == 100 || (weight > 0 && rand.Intn(100) <= weight) {
-			winners = fmt.Sprintf("%s,%s", winners, t.Name())
+			// Winner!
+			if winners == "" {
+				winners = t.Name() // First winner so far
+			} else {
+				winners = fmt.Sprintf("%s,%s", winners, t.Name()) // Add to the comma separated list of existing winners
+			}
 		}
 	}
 	if winners != "" {
