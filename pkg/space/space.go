@@ -41,29 +41,24 @@ func NewSpaceWithFeatureToggles(userSignup *toolchainv1alpha1.UserSignup, target
 }
 
 // addFeatureToggles does "lottery" drawing for all feature toggles defined in the configuration according to their weights.
-// And it adds the corresponding feature annotations to the space for features that won and should be enabled for the space.
+// And it adds the corresponding feature annotation to the space for features that won and should be enabled for the space.
 func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.ToolchainConfig) {
 	toggles := config.Tiers().FeatureToggles()
-	if len(toggles) > 0 && space.Annotations == nil {
-		space.Annotations = make(map[string]string)
-	}
+	var winners string
 	for _, t := range toggles {
 		weight := int(t.Weight())
 		// We generate a random number between 0 and 100. If the number is equal to or lower than the weight
 		// then the feature wins.
 		if weight == 100 || (weight > 0 && rand.Intn(100) <= weight) {
-			space.Annotations[FeatureToggleAnnotationKey(t.Name())] = "enabled"
+			winners = fmt.Sprintf("%s,%s", winners, t.Name())
 		}
-		space.Annotations[FeatureToggleAnnotationKey(t.Name())] = "enabled"
 	}
-}
-
-// TODO Move to common
-// FeatureToggleAnnotationKey contracts an annotation key for the feature name.
-// This key can be used in Space, NSTemplateSet, etc. CRs to indicate that the corresponding feature toggle should be enabled.
-// This is the format of such keys: toolchain.dev.openshift.com/feature/<featureName>
-func FeatureToggleAnnotationKey(featureName string) string {
-	return fmt.Sprintf("%s/%s", toolchainv1alpha1.FeatureToggleNameAnnotationKey, featureName)
+	if winners != "" {
+		if space.Annotations == nil {
+			space.Annotations = make(map[string]string)
+		}
+		space.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = winners
+	}
 }
 
 // NewSubSpace creates a space CR for a SpaceRequest object.
