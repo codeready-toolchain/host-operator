@@ -136,8 +136,8 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20240530120602-c11598ccffb7 h1:o5JLcHCVS1BlZevw2mh1mH+iKwn9fLUrT1Ek8NFjvPY=
-github.com/codeready-toolchain/api v0.0.0-20240530120602-c11598ccffb7/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
+github.com/codeready-toolchain/api v0.0.0-20240620205422-a29b6c658d03 h1:uqApdceOkNQI1wy2gwA6pEUzhLlqqbbc+ChTvEshIW0=
+github.com/codeready-toolchain/api v0.0.0-20240620205422-a29b6c658d03/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -437,8 +437,8 @@ github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 h1:I0XW9+e1XWDxdcEniV4rQAIOPUGDq67JSCiRCgGCZLI=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
-github.com/metlos/toolchain-common v0.0.0-20240614122222-410698d9b43a h1:3uIIjZkoNWq4IhWkmT+K6P5QinuVwi6lzKOOxan9Cfk=
-github.com/metlos/toolchain-common v0.0.0-20240614122222-410698d9b43a/go.mod h1:cyHrUfvBYEtsf+FbqQYmR9y0AQi9QAVtM3SUWLA5bd4=
+github.com/metlos/toolchain-common v0.0.0-20240624170602-c48a6c20c2c2 h1:a689mH+V2olnmrIK38wDJbHs3l7Mpm2htKuwin64HJk=
+github.com/metlos/toolchain-common v0.0.0-20240624170602-c48a6c20c2c2/go.mod h1:ZwfGkrTArynbvIPOJwQQCwFVW7Dj0XOgi5XzkNG1ov8=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
 github.com/migueleliasweb/go-github-mock v0.0.18/go.mod h1:CcgXcbMoRnf3rRVHqGssuBquZDIcaplxL2W6G+xs7kM=
