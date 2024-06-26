@@ -226,9 +226,10 @@ func main() { // nolint:gocyclo
 	}
 
 	if err := (&toolchaincluster.Reconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RequeAfter: 10 * time.Second,
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		RequeAfter:  10 * time.Second,
+		CheckHealth: toolchaincluster.GetClusterHealthStatus,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
