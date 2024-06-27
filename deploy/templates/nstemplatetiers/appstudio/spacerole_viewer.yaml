@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-spacerole-contributor # name is used in e2e tests
+  name: appstudio-spacerole-viewer # name is used in e2e tests
 objects:
 
 # RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
@@ -10,14 +10,13 @@ objects:
   kind: Role
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-contributor-user-actions
+    name: appstudio-viewer-user-actions
   rules:
   - apiGroups:
     - appstudio.redhat.com
     resources:
     - applications
     - components
-    - imagerepositories
     - componentdetectionqueries
     verbs:
     - get
@@ -163,11 +162,11 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-contributor-${USERNAME}-actions-user
+    name: appstudio-viewer-${USERNAME}-actions-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: appstudio-contributor-user-actions
+    name: appstudio-viewer-user-actions
   subjects:
   - kind: User
     name: ${USERNAME}

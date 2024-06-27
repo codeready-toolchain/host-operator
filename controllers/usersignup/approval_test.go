@@ -83,6 +83,76 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
+	type TestFields struct {
+		UserSignupEmail        string
+		DomainConfiguartion    string
+		ExpectedApprovedStatus bool
+		ExpectedCluster        targetCluster
+		ErrorExpected          bool
+		ExpectedErrorMsg       string
+	}
+
+	domainsTests := map[string]TestFields{
+		"single cluster, auto-approved domains is empty": {
+			UserSignupEmail:        "tato@somedomain.org",
+			DomainConfiguartion:    "",
+			ExpectedApprovedStatus: true,
+			ExpectedCluster:        "member1",
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, email domain not in auto-approved domains": {
+			UserSignupEmail:        "tato@mydomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: false,
+			ExpectedCluster:        unknown,
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, email domain in auto-approved domains": {
+			UserSignupEmail:        "tato@somedomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: true,
+			ExpectedCluster:        "member1",
+			ErrorExpected:          false,
+			ExpectedErrorMsg:       "",
+		},
+		"single cluster, invalid email format": {
+			UserSignupEmail:        "tato@mydomain@somedomain.org",
+			DomainConfiguartion:    "somedomain.org,anotherdomain.edu",
+			ExpectedApprovedStatus: false,
+			ExpectedCluster:        unknown,
+			ErrorExpected:          true,
+			ExpectedErrorMsg:       "unable to determine automatic approval: invalid email address: tato@mydomain@somedomain.org",
+		},
+	}
+
+	for testName, testFields := range domainsTests {
+		t.Run(testName, func(t *testing.T) {
+			// given
+			signup := commonsignup.NewUserSignup(commonsignup.WithEmail(testFields.UserSignupEmail))
+			spc1 := hspc.NewEnabledValidTenantSPC("member1")
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+				testconfig.AutomaticApproval().
+					Enabled(true).Domains(testFields.DomainConfiguartion),
+			)
+			fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
+			InitializeCounters(t, toolchainStatus)
+
+			// when
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+
+			// then
+			if testFields.ErrorExpected {
+				require.EqualError(t, err, testFields.ExpectedErrorMsg)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, testFields.ExpectedApprovedStatus, approved)
+			assert.Equal(t, testFields.ExpectedCluster, clusterName)
+		})
+	}
+
 	t.Run("don't return preferred cluster name if without required cluster role", func(t *testing.T) {
 		// given
 		signup := commonsignup.NewUserSignup()

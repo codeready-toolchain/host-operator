@@ -16,13 +16,15 @@ import (
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -359,61 +361,105 @@ func TestCreateSpaceRequest(t *testing.T) {
 		})
 
 		t.Run("secret in SpaceRequest status not found, should be recreated", func(t *testing.T) {
-			// given
-			spaceRequest := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
-				spacerequesttest.WithTierName("appstudio-env"),
-				spacerequesttest.WithStatusNamespaceAccess(toolchainv1alpha1.NamespaceAccess{Name: "jane-env", SecretRef: "jane-xyz1"}),
-				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			subSpace := spacetest.NewSpace(commontest.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
-				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
-				spacetest.WithStatusTargetCluster("member-1"),
-				spacetest.WithCondition(spacetest.Ready()),
-				spacetest.WithSpecParentSpace("jane"),
-				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
-					Name: "jane-env",
-					Type: "default",
-				}}),
-				spacetest.WithTierName(sr.Spec.TierName))
-			member1Client := commontest.NewFakeClient(t, spaceRequest, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
-				Name:      toolchainv1alpha1.AdminServiceAccountName,
-				Namespace: "jane-env",
-			})
-			hostClient := commontest.NewFakeClient(t, appstudioEnvTier, subSpace, parentSpace)
-			ctrl := newReconciler(t, hostClient, member1)
-			// check that there are no secret prior to reconcile
-			secrets := &corev1.SecretList{}
-			err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
-				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
-				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
-			})
-			require.NoError(t, err)
-			require.Len(t, secrets.Items, 0)
+			var testCases = map[string]struct {
+				insecure bool
+				cert     string
+			}{
+				"insecure, no cert": {
+					insecure: true,
+				},
+				"secure, no cert": {},
+				"insecure, with cert": {
+					insecure: true,
+					cert:     "QVNEZjMzPT0=",
+				},
+				"secure, with cert": {
+					cert: "QVNEZjMzPT0=",
+				},
+			}
+			for testName, testData := range testCases {
+				t.Run(testName, func(t *testing.T) {
+					// given
+					spaceRequest := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
+						spacerequesttest.WithTierName("appstudio-env"),
+						spacerequesttest.WithStatusNamespaceAccess(toolchainv1alpha1.NamespaceAccess{Name: "jane-env", SecretRef: "jane-xyz1"}),
+						spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+					subSpace := spacetest.NewSpace(commontest.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr),
+						spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+						spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+						spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+						spacetest.WithStatusTargetCluster("member-1"),
+						spacetest.WithCondition(spacetest.Ready()),
+						spacetest.WithSpecParentSpace("jane"),
+						spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+							Name: "jane-env",
+							Type: "default",
+						}}),
+						spacetest.WithTierName(sr.Spec.TierName))
+					member1Client := commontest.NewFakeClient(t, spaceRequest, srNamespace)
+					member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+					member1.RestConfig = &rest.Config{}
+					member1.RestConfig.Insecure = testData.insecure
+					member1.RestConfig.CAData = []byte(testData.cert)
+					commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+						Name:      toolchainv1alpha1.AdminServiceAccountName,
+						Namespace: "jane-env",
+					})
+					hostClient := commontest.NewFakeClient(t, appstudioEnvTier, subSpace, parentSpace)
+					ctrl := newReconciler(t, hostClient, member1)
+					// check that there are no secret prior to reconcile
+					secrets := &corev1.SecretList{}
+					err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
+						toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+						toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
+					})
+					require.NoError(t, err)
+					require.Len(t, secrets.Items, 0)
 
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+					// when
+					_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
-			// then
-			require.NoError(t, err)
-			// spacerequest exists with expected cluster roles and finalizer
-			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, spaceRequest.GetName(), member1.Client).
-				HasSpecTargetClusterRoles(srClusterRoles).
-				HasConditions(spacetest.Ready()).
-				HasStatusTargetClusterURL(member1.APIEndpoint).
-				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "jane-xyz1"}}).
-				HasFinalizer()
-			// check that the secret was created
-			// and there's only 1 secret for the provisioned namespace
-			secrets = &corev1.SecretList{}
-			err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
-				toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
-				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
-			})
-			require.NoError(t, err)
-			require.Len(t, secrets.Items, 1)
+					// then
+					require.NoError(t, err)
+					// spacerequest exists with expected cluster roles and finalizer
+					spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, spaceRequest.GetName(), member1.Client).
+						HasSpecTargetClusterRoles(srClusterRoles).
+						HasConditions(spacetest.Ready()).
+						HasStatusTargetClusterURL(member1.APIEndpoint).
+						HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "jane-xyz1"}}).
+						HasFinalizer()
+					// check that the secret was created
+					// and there's only 1 secret for the provisioned namespace
+					secrets = &corev1.SecretList{}
+					err = member1Client.List(context.TODO(), secrets, runtimeclient.MatchingLabels{
+						toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+						toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
+					})
+					require.NoError(t, err)
+					require.Len(t, secrets.Items, 1)
+
+					secretContent := secrets.Items[0].StringData["kubeconfig"]
+					require.NotEmpty(t, secretContent)
+					kubeconfig, err := clientcmd.Load([]byte(secretContent))
+					require.NoError(t, err)
+					require.False(t, api.IsConfigEmpty(kubeconfig))
+
+					require.Len(t, kubeconfig.Clusters, 1)
+					require.Len(t, kubeconfig.Contexts, 1)
+					require.Len(t, kubeconfig.AuthInfos, 1)
+					assert.Equal(t, "default-context", kubeconfig.CurrentContext)
+
+					assert.Equal(t, "jane-env", kubeconfig.Contexts["default-context"].Namespace)
+					assert.Equal(t, "namespace-manager", kubeconfig.Contexts["default-context"].AuthInfo)
+					assert.Equal(t, "default-cluster", kubeconfig.Contexts["default-context"].Cluster)
+
+					assert.Equal(t, "https://api.member-1:6433", kubeconfig.Clusters["default-cluster"].Server)
+					assert.Equal(t, testData.cert, string(kubeconfig.Clusters["default-cluster"].CertificateAuthorityData))
+					assert.Equal(t, testData.insecure, kubeconfig.Clusters["default-cluster"].InsecureSkipTLSVerify)
+
+					assert.Equal(t, "token-secret-for-namespace-manager", kubeconfig.AuthInfos["namespace-manager"].Token)
+				})
+			}
 		})
 
 		t.Run("secret in SpaceRequest status and referenced secret already exist", func(t *testing.T) {
@@ -1442,7 +1488,7 @@ func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...
 		restClient, err := commontest.NewRESTClient("fake_secret", c.APIEndpoint)
 		restClient.Client.Transport = gock.DefaultTransport // make sure that the underlying client's request are intercepted by Gock
 		require.NoError(t, err)
-		clusters[c.Name] = cluster.Cluster{
+		member := cluster.Cluster{
 			Config: &commoncluster.Config{
 				APIEndpoint:       c.APIEndpoint,
 				OperatorNamespace: c.OperatorNamespace,
@@ -1457,6 +1503,10 @@ func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...
 			RESTClient: restClient,
 			Client:     c.Client,
 		}
+		if c.RestConfig != nil {
+			member.RestConfig = c.RestConfig
+		}
+		clusters[c.Name] = member
 	}
 	return &spacerequest.Reconciler{
 		Client:         hostCl,

@@ -2274,6 +2274,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				"1,external": 2,
 			})
 
+		// Confirm that the scheduled deactivation time has been set to nil
+		require.Nil(t, userSignup.Status.ScheduledDeactivationTimestamp)
+
 		// A deactivated notification should have been created
 		notifications := &toolchainv1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notifications)
