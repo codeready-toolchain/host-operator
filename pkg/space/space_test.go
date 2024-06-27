@@ -38,27 +38,20 @@ func TestNewSpaceWithFeatureToggles(t *testing.T) {
 	weight100 := uint(100)
 	weight0 := uint(0)
 	weight50 := uint(50)
-	configSpec := &toolchainv1alpha1.ToolchainConfigSpec{
-		Host: toolchainv1alpha1.HostConfig{
-			Tiers: toolchainv1alpha1.TiersConfig{
-				FeatureToggles: []toolchainv1alpha1.FeatureToggle{
-					{
-						Name:   "my-cool-feature",
-						Weight: &weight100,
-					},
-					{
-						Name:   "my-not-so-cool-feature",
-						Weight: &weight0,
-					},
-					{
-						Name:   "my-so-so-feature",
-						Weight: &weight50,
-					},
-				},
-			},
-		},
+	featureToggles := []toolchainconfig.FeatureToggle{
+		toolchainconfig.NewFeatureToggle(toolchainv1alpha1.FeatureToggle{
+			Name:   "my-cool-feature",
+			Weight: &weight100,
+		}),
+		toolchainconfig.NewFeatureToggle(toolchainv1alpha1.FeatureToggle{
+			Name:   "my-not-so-cool-feature",
+			Weight: &weight0,
+		}),
+		toolchainconfig.NewFeatureToggle(toolchainv1alpha1.FeatureToggle{
+			Name:   "my-so-so-feature",
+			Weight: &weight50,
+		}),
 	}
-	config := toolchainconfig.NewToolchainConfig(configSpec, nil)
 
 	// when
 	// create space 100 times and verify that the feature with weight 100 is always added
@@ -66,7 +59,7 @@ func TestNewSpaceWithFeatureToggles(t *testing.T) {
 	// and the feature with weight 50 is added at least once and not added at least once too
 	var myCoolFeatureCount, myNotSoCoolFeatureCount, mySoSoFeatureCount int
 	for i := 0; i < 100; i++ {
-		space := NewSpaceWithFeatureToggles(userSignup, test.MemberClusterName, "johny", "advanced", config)
+		space := NewSpaceWithFeatureToggles(userSignup, test.MemberClusterName, "johny", "advanced", featureToggles)
 
 		// then
 		expectedSpace := spacetest.NewSpace(test.HostOperatorNs, "johny",

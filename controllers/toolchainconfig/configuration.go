@@ -334,6 +334,12 @@ type FeatureToggle struct {
 	toggle toolchainv1alpha1.FeatureToggle
 }
 
+func NewFeatureToggle(t toolchainv1alpha1.FeatureToggle) FeatureToggle {
+	return FeatureToggle{
+		toggle: t,
+	}
+}
+
 func (t FeatureToggle) Name() string {
 	return t.toggle.Name
 }

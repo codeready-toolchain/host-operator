@@ -35,16 +35,15 @@ func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string
 
 // NewSpaceWithFeatureToggles is the same as NewSpace() but also does a feature toggle lottery drawing
 // and adds the corresponding feature annotations for features which "won" and should be enabled for the space.
-func NewSpaceWithFeatureToggles(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string, compliantUserName, tier string, config toolchainconfig.ToolchainConfig) *toolchainv1alpha1.Space {
+func NewSpaceWithFeatureToggles(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string, compliantUserName, tier string, toggles []toolchainconfig.FeatureToggle) *toolchainv1alpha1.Space {
 	s := NewSpace(userSignup, targetClusterName, compliantUserName, tier)
-	addFeatureToggles(s, config)
+	addFeatureToggles(s, toggles)
 	return s
 }
 
-// addFeatureToggles does "lottery" drawing for all feature toggles defined in the configuration according to their weights.
+// addFeatureToggles does "lottery" drawing for all given feature toggles according to their weights.
 // And it adds the corresponding feature annotation to the space for features that won and should be enabled for the space.
-func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.ToolchainConfig) {
-	toggles := config.Tiers().FeatureToggles()
+func addFeatureToggles(space *toolchainv1alpha1.Space, toggles []toolchainconfig.FeatureToggle) {
 	var winners []string
 	for _, t := range toggles {
 		weight := int(t.Weight())
