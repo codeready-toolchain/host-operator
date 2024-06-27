@@ -49,7 +49,7 @@ func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.To
 		weight := int(t.Weight())
 		// We generate a random number between 0 and 100. If the number is equal to or lower than the weight
 		// then the feature wins.
-		if weight == 100 || (weight > 0 && rand.Intn(100) <= weight) {
+		if weight == 100 || (weight > 0 && rand.Intn(100) <= weight) { // nolint:gosec We don't use recommended crypto/rand here because we don't need crypto grade random generator and math/rand with pseudo random numbers, which is much cheaper, is sufficient
 			// Winner!
 			if winners == "" {
 				winners = t.Name() // First winner so far
