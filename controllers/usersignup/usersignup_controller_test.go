@@ -279,7 +279,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 				// then
 				require.Equal(t, reconcile.Result{}, res)
 				switch testname {
-				case "without skip space creation annotation", "with skip space creation annotation set to false", "with social event", "with feature toggles":
+				case "without skip space creation annotation", "with skip space creation annotation set to false", "with social event":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
@@ -287,6 +287,20 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				case "with feature toggles":
+					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+						Exists().
+						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
+						HasSpec("foo", "foo", "admin")
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, "feature-on")
 				case "with skip space creation annotation set to true":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
