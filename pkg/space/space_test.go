@@ -2,6 +2,8 @@ package space
 
 import (
 	"fmt"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"strings"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -28,6 +30,70 @@ func TestNewSpace(t *testing.T) {
 		spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
 		spacetest.WithCreatorLabel(userSignup.Name))
 	assert.Equal(t, expectedSpace, space)
+}
+
+func TestNewSpaceWithFeatureToggles(t *testing.T) {
+	// given
+	userSignup := commonsignup.NewUserSignup()
+	weight100 := uint(100)
+	weight0 := uint(0)
+	weight50 := uint(50)
+	configSpec := &toolchainv1alpha1.ToolchainConfigSpec{
+		Host: toolchainv1alpha1.HostConfig{
+			Tiers: toolchainv1alpha1.TiersConfig{
+				FeatureToggles: []toolchainv1alpha1.FeatureToggle{
+					{
+						Name:   "my-cool-feature",
+						Weight: &weight100,
+					},
+					{
+						Name:   "my-not-so-cool-feature",
+						Weight: &weight0,
+					},
+					{
+						Name:   "my-so-so-feature",
+						Weight: &weight50,
+					},
+				},
+			},
+		},
+	}
+	config := toolchainconfig.NewToolchainConfig(configSpec, nil)
+
+	// when
+	// create space 100 times and verify that the feature with weight 100 is always added
+	// the feature with weight 0 never added
+	// and the feature with weight 50 is added at least once and not added at least once too
+	var myCoolFeatureCount, myNotSoCoolFeatureCount, mySoSoFeatureCount int
+	for i := 0; i < 100; i++ {
+		space := NewSpaceWithFeatureToggles(userSignup, test.MemberClusterName, "johny", "advanced", config)
+
+		// then
+		expectedSpace := spacetest.NewSpace(test.HostOperatorNs, "johny",
+			spacetest.WithTierName("advanced"),
+			spacetest.WithSpecTargetCluster("member-cluster"),
+			spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
+			spacetest.WithCreatorLabel(userSignup.Name))
+		assert.Equal(t, expectedSpace.Spec, space.Spec)
+		features := space.GetAnnotations()[toolchainv1alpha1.FeatureToggleNameAnnotationKey]
+		for _, feature := range strings.Split(features, ",") {
+			switch feature {
+			case "my-cool-feature":
+				myCoolFeatureCount++
+			case "my-not-so-cool-feature":
+				myNotSoCoolFeatureCount++
+			case "my-so-so-feature":
+				mySoSoFeatureCount++
+			default:
+				assert.Fail(t, "unknown feature", feature)
+			}
+		}
+	}
+
+	// then
+	assert.Equal(t, 100, myCoolFeatureCount)
+	assert.Equal(t, 0, myNotSoCoolFeatureCount)
+	assert.True(t, mySoSoFeatureCount > 0 && mySoSoFeatureCount < 100, "Feature with weight 50 should be present at least once but less than 100 times", mySoSoFeatureCount)
 }
 
 func TestNewSubSpace(t *testing.T) {

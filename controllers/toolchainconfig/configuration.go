@@ -58,6 +58,10 @@ func ForceLoadToolchainConfig(cl runtimeclient.Client) (ToolchainConfig, error) 
 	return newToolchainConfig(config, secrets), nil
 }
 
+func NewToolchainConfig(config *toolchainv1alpha1.ToolchainConfigSpec, secrets map[string]map[string]string) ToolchainConfig {
+	return ToolchainConfig{cfg: config, secrets: secrets}
+}
+
 func newToolchainConfig(config runtime.Object, secrets map[string]map[string]string) ToolchainConfig {
 	if config == nil {
 		// return default config if there's no config resource
