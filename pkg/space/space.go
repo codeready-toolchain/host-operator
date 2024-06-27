@@ -3,6 +3,7 @@ package space
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -44,7 +45,7 @@ func NewSpaceWithFeatureToggles(userSignup *toolchainv1alpha1.UserSignup, target
 // And it adds the corresponding feature annotation to the space for features that won and should be enabled for the space.
 func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.ToolchainConfig) {
 	toggles := config.Tiers().FeatureToggles()
-	var winners string
+	var winners []string
 	for _, t := range toggles {
 		weight := int(t.Weight())
 		// We generate a random number between 0 and 100. If the number is equal to or lower than the weight
@@ -53,18 +54,14 @@ func addFeatureToggles(space *toolchainv1alpha1.Space, config toolchainconfig.To
 		// and math/rand with pseudo random numbers, which is much cheaper, is sufficient, so we are disabling the linter
 		if weight == 100 || (weight > 0 && rand.Intn(100) <= weight) { // nolint:gosec
 			// Winner!
-			if winners == "" {
-				winners = t.Name() // First winner so far
-			} else {
-				winners = fmt.Sprintf("%s,%s", winners, t.Name()) // Add to the comma separated list of existing winners
-			}
+			winners = append(winners, t.Name())
 		}
 	}
-	if winners != "" {
+	if len(winners) > 0 {
 		if space.Annotations == nil {
 			space.Annotations = make(map[string]string)
 		}
-		space.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = winners
+		space.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = strings.Join(winners, ",")
 	}
 }
 
