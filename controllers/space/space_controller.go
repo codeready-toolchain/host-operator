@@ -333,9 +333,11 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 
 	// update the NSTemplateSet if needed (including in case of missing space roles)
 	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
-	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
+	featureToggleAnnotationUpdated := ensureFeatureToggleAnnotation(space, nsTmplSet) // also check if the feature annotation was updated
+	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) || featureToggleAnnotationUpdated {
 		logger.Info("NSTemplateSet is not up-to-date")
-		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
+		// postpone NSTemplateSet updates if needed
+		// but only for NSTemplateTier updates, not tier promotions or changes in spacebindings or feature toggle annotation
 		if space.Labels[hash.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// postpone if needed, so we don't overflow the cluster with too many concurrent updates
@@ -387,15 +389,31 @@ func NewNSTemplateSet(namespace string, space *toolchainv1alpha1.Space, bindings
 	}
 	nsTmplSet.Spec = NewNSTemplateSetSpec(space, bindings, tmplTier)
 
-	// propagate feature annotation from the space
-	winners, found := space.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey]
-	if found {
-		if nsTmplSet.Annotations == nil {
-			nsTmplSet.Annotations = make(map[string]string)
-		}
-		nsTmplSet.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = winners
-	}
+	// propagate the feature annotation from the space
+	ensureFeatureToggleAnnotation(space, nsTmplSet)
 	return nsTmplSet
+}
+
+// ensureFeatureToggleAnnotation propagates the feature toggle annotation from the parent Space to the child NSTemplateSet
+// if it's present in the space. If there is no annotation in the Space then the annotation is deleted from the NSTemplateSet too.
+// Returns true if there is any changes in the NSTemplateSet's annotation.
+func ensureFeatureToggleAnnotation(space *toolchainv1alpha1.Space, nsTemplateSet *toolchainv1alpha1.NSTemplateSet) bool {
+	winners, found := space.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey]
+	oldNSTemplateAnnotation, oldNSTemplateAnnotationFound := nsTemplateSet.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey]
+	if found {
+		// Propagate from Space to NSTemplateSet
+		if nsTemplateSet.Annotations == nil {
+			nsTemplateSet.Annotations = make(map[string]string)
+		}
+		nsTemplateSet.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = winners
+		return oldNSTemplateAnnotation != winners
+	}
+	if oldNSTemplateAnnotationFound {
+		// Delete the annotation from NSTemplateSet because it doesn't exist in the Space anymore
+		delete(nsTemplateSet.Annotations, toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+		return true
+	}
+	return false
 }
 
 func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1alpha1.SpaceBinding, tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {

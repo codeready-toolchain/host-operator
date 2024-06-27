@@ -1211,6 +1211,100 @@ func TestUpdateSpaceTier(t *testing.T) {
 		})
 	})
 
+	t.Run("update needed due to feature toggle annotation change in space", func(t *testing.T) {
+		type testRun struct {
+			name             string
+			oldSpaceFeatures string
+			newSpaceFeatures string
+		}
+
+		tests := []testRun{
+			{
+				name:             "feature enabled",
+				oldSpaceFeatures: "",
+				newSpaceFeatures: "feature-1,feature-2",
+			},
+			{
+				name:             "feature disabled",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "",
+			},
+			{
+				name:             "feature updated",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "feature-3",
+			},
+			{
+				name:             "no updates",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "feature-1, feature-2",
+			},
+			{
+				name:             "features still are not present",
+				oldSpaceFeatures: "",
+				newSpaceFeatures: "",
+			},
+		}
+		for _, testRun := range tests {
+			t.Run(testRun.name, func(t *testing.T) {
+				// given
+
+				// Create the initial Space and NSTemplateSet with features if needed which we will to attempt to update later
+				spaceOptions := []spacetest.Option{spacetest.WithSpecTargetCluster("member-1")}
+				if testRun.oldSpaceFeatures != "" {
+					spaceOptions = append(spaceOptions, spacetest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.oldSpaceFeatures))
+				}
+
+				s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spaceOptions...)
+				hostClient := test.NewFakeClient(t, s, base1nsTier)
+				member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+				ctrl := newReconciler(hostClient, member1)
+
+				_, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+				require.NoError(t, err)
+				s = spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+					Exists().Get()
+				nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
+					Exists().Get()
+				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+					{
+						Type:   toolchainv1alpha1.ConditionReady,
+						Status: corev1.ConditionTrue,
+						Reason: toolchainv1alpha1.NSTemplateSetProvisionedReason,
+					},
+				}
+				err = member1.Client.Update(context.TODO(), nsTmplSet)
+				require.NoError(t, err)
+
+				// when
+				// update the space annotation
+				if testRun.newSpaceFeatures != "" {
+					s.Annotations = make(map[string]string)
+					s.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = testRun.newSpaceFeatures
+				} else {
+					delete(s.Annotations, toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				}
+				err = hostClient.Update(context.TODO(), s)
+				require.NoError(t, err)
+
+				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
+				require.NoError(t, err)
+
+				// then
+				// check that NSTemplateSet is updated accordingly
+				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
+					Exists()
+				if testRun.newSpaceFeatures != "" {
+					nsTmplSetAssertion = nsTmplSetAssertion.
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.newSpaceFeatures)
+				} else {
+					nsTmplSetAssertion = nsTmplSetAssertion.
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				}
+			})
+		}
+	})
+
 	t.Run("update not needed when already up-to-date", func(t *testing.T) {
 		// given that Space is promoted to `base1ns` tier and corresponding NSTemplateSet is already up-to-date and ready
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
