@@ -406,19 +406,31 @@ func TestRegistrationService(t *testing.T) {
 		assert.Equal(t, "prod", toolchainCfg.RegistrationService().Environment())
 		assert.Equal(t, "https://registration.crt-placeholder.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
 		assert.Equal(t, int32(3), toolchainCfg.RegistrationService().Replicas())
+		assert.False(t, toolchainCfg.RegistrationService().Verification().CaptchaEnabled())
+		assert.Empty(t, toolchainCfg.RegistrationService().Verification().CaptchaServiceAccountFileContents())
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.RegistrationService().
 			Environment("e2e-tests").
 			RegistrationServiceURL("https://registration.crt.com").
 			Replicas(2).
-			Namespace("another-namespace"))
+			Namespace("another-namespace").
+			Verification().CaptchaEnabled(true).
+			Verification().Secret().Ref("verification-secrets").
+			RecaptchaServiceAccountFile("captcha.json"))
 
-		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+		verificationSecretValues := make(map[string]string)
+		verificationSecretValues["captcha.json"] = "example-content"
+		secrets := make(map[string]map[string]string)
+		secrets["verification-secrets"] = verificationSecretValues
+
+		toolchainCfg := newToolchainConfig(cfg, secrets)
 
 		assert.Equal(t, "e2e-tests", toolchainCfg.RegistrationService().Environment())
 		assert.Equal(t, "https://registration.crt.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
 		assert.Equal(t, int32(2), toolchainCfg.RegistrationService().Replicas())
+		assert.True(t, toolchainCfg.RegistrationService().Verification().CaptchaEnabled())
+		assert.Equal(t, "example-content", toolchainCfg.RegistrationService().Verification().CaptchaServiceAccountFileContents())
 	})
 }
 

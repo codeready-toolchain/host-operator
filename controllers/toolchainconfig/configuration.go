@@ -22,6 +22,12 @@ const (
 	NotificationContextRegistrationURLKey = "RegistrationURL"
 )
 
+// captcha specific configuration for annotating assessments
+const (
+	CaptchaFileName = "captcha.json"
+	CaptchaFilePath = "/tmp/" + CaptchaFileName
+)
+
 var logger = logf.Log.WithName("toolchainconfig")
 
 type ToolchainConfig struct {
@@ -116,7 +122,10 @@ func (c *ToolchainConfig) Notifications() NotificationsConfig {
 }
 
 func (c *ToolchainConfig) RegistrationService() RegistrationServiceConfig {
-	return RegistrationServiceConfig{c.cfg.Host.RegistrationService}
+	return RegistrationServiceConfig{
+		c:       c.cfg.Host.RegistrationService,
+		secrets: c.secrets,
+	}
 }
 
 func (c *ToolchainConfig) Tiers() TiersConfig {
@@ -260,7 +269,8 @@ func (n NotificationsConfig) MailgunReplyToEmail() string {
 }
 
 type RegistrationServiceConfig struct {
-	c toolchainv1alpha1.RegistrationServiceConfig
+	c       toolchainv1alpha1.RegistrationServiceConfig
+	secrets map[string]map[string]string
 }
 
 func (r RegistrationServiceConfig) Environment() string {
@@ -273,6 +283,10 @@ func (r RegistrationServiceConfig) Replicas() int32 {
 
 func (r RegistrationServiceConfig) Analytics() AnalyticsConfig {
 	return AnalyticsConfig{r.c.Analytics}
+}
+
+func (r RegistrationServiceConfig) Verification() VerificationConfig {
+	return VerificationConfig{c: r.c.Verification, secrets: r.secrets}
 }
 
 type AnalyticsConfig struct {
@@ -363,4 +377,24 @@ func (d UsersConfig) ForbiddenUsernameSuffixes() []string {
 		return c == ','
 	})
 	return v
+}
+
+type VerificationConfig struct {
+	c       toolchainv1alpha1.RegistrationServiceVerificationConfig
+	secrets map[string]map[string]string
+}
+
+func (r VerificationConfig) registrationServiceSecret(secretKey string) string {
+	secret := commonconfig.GetString(r.c.Secret.Ref, "")
+	return r.secrets[secret][secretKey]
+}
+
+func (r VerificationConfig) CaptchaEnabled() bool {
+	return commonconfig.GetBool(r.c.Captcha.Enabled, false)
+}
+
+func (r VerificationConfig) CaptchaServiceAccountFileContents() string {
+	key := commonconfig.GetString(r.c.Secret.RecaptchaServiceAccountFile, "")
+	content := r.registrationServiceSecret(key)
+	return string(content)
 }
