@@ -67,3 +67,15 @@ generate-assets: go-bindata
 	@echo "generating registration service template data..."
 	@$(GO_BINDATA) -pkg registrationservice -o ./pkg/templates/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 
+.PHONY: verify-dependencies
+## Runs commands to verify after the updated dependecies of toolchain-common/API(go mod replace), if the repo needs any changes to be made
+verify-dependencies: tidy generate vet build test lint-go-code
+
+.PHONY: tidy
+tidy: 
+	go mod tidy
+
+.PHONY: vet
+vet:
+	go vet ./...
+	
