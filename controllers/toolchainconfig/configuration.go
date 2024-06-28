@@ -137,7 +137,7 @@ func (c *ToolchainConfig) Users() UsersConfig {
 }
 
 func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
-	return PublicViewerConfig{c.cfg.PublicViewerConfig}
+	return PublicViewerConfig{c.cfg.Host.PublicViewerConfig}
 }
 
 type AutoApprovalConfig struct {
