@@ -1295,10 +1295,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
 					Exists()
 				if testRun.newSpaceFeatures != "" {
-					nsTmplSetAssertion = nsTmplSetAssertion.
+					nsTmplSetAssertion.
 						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.newSpaceFeatures)
 				} else {
-					nsTmplSetAssertion = nsTmplSetAssertion.
+					nsTmplSetAssertion.
 						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
 				}
 			})
