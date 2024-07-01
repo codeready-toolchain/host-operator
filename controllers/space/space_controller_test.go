@@ -1270,6 +1270,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 				member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 				ctrl := newReconciler(hostClient, member1)
 
+				// when
+				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
+				require.NoError(t, err)
+
 				// then
 				// check that NSTemplateSet is updated accordingly
 				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
