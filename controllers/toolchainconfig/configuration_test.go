@@ -525,3 +525,28 @@ func TestGitHubSecret(t *testing.T) {
 		assert.Equal(t, "abc123", toolchainCfg.GitHubSecret().AccessTokenKey())
 	})
 }
+
+func TestPublicViewer(t *testing.T) {
+	t.Run("not-set", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: false}
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: true}
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, true, toolchainCfg.PublicViewer().Enabled())
+	})
+}
