@@ -1248,47 +1248,27 @@ func TestUpdateSpaceTier(t *testing.T) {
 		for _, testRun := range tests {
 			t.Run(testRun.name, func(t *testing.T) {
 				// given
-
-				// Create the initial Space and NSTemplateSet with features if needed which we will to attempt to update later
 				spaceOptions := []spacetest.Option{spacetest.WithSpecTargetCluster("member-1")}
-				if testRun.oldSpaceFeatures != "" {
-					spaceOptions = append(spaceOptions, spacetest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.oldSpaceFeatures))
+				if testRun.newSpaceFeatures != "" {
+					spaceOptions = append(spaceOptions, spacetest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.newSpaceFeatures))
 				}
 
 				s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spaceOptions...)
+
+				nsTemplateSetOptions := []nstemplatetsettest.Option{nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier)}
+				if testRun.oldSpaceFeatures != "" {
+					nsTemplateSetOptions = append(nsTemplateSetOptions, nstemplatetsettest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.oldSpaceFeatures))
+				}
+				nsTemplateSet := nstemplatetsettest.NewNSTemplateSet("oddity", nsTemplateSetOptions...)
 				hostClient := test.NewFakeClient(t, s, base1nsTier)
-				member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+				member1Client := test.NewFakeClient(t, nsTemplateSet)
+				if testRun.oldSpaceFeatures == testRun.newSpaceFeatures {
+					member1Client.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+						return fmt.Errorf("shouldn't be called")
+					}
+				}
+				member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 				ctrl := newReconciler(hostClient, member1)
-
-				_, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-				require.NoError(t, err)
-				s = spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
-					Exists().Get()
-				nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
-					Exists().Get()
-				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-					{
-						Type:   toolchainv1alpha1.ConditionReady,
-						Status: corev1.ConditionTrue,
-						Reason: toolchainv1alpha1.NSTemplateSetProvisionedReason,
-					},
-				}
-				err = member1.Client.Update(context.TODO(), nsTmplSet)
-				require.NoError(t, err)
-
-				// when
-				// update the space annotation
-				if testRun.newSpaceFeatures != "" {
-					s.Annotations = make(map[string]string)
-					s.Annotations[toolchainv1alpha1.FeatureToggleNameAnnotationKey] = testRun.newSpaceFeatures
-				} else {
-					delete(s.Annotations, toolchainv1alpha1.FeatureToggleNameAnnotationKey)
-				}
-				err = hostClient.Update(context.TODO(), s)
-				require.NoError(t, err)
-
-				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
-				require.NoError(t, err)
 
 				// then
 				// check that NSTemplateSet is updated accordingly
