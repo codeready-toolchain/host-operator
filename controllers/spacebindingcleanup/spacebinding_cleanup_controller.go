@@ -89,23 +89,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
 	}
 
-	// check MUR existence.
-	// this check is skipped if the PublicViewer feature is enabled
-	// and the SpaceBinding is related to the PublicViewer.
-	if !r.isPublicViewerEnabled(ctx) || spaceBinding.Spec.MasterUserRecord != toolchainv1alpha1.KubesawAuthenticatedUsername {
-		murName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.MasterUserRecord}
-		mur := &toolchainv1alpha1.MasterUserRecord{}
-		if err := r.Client.Get(ctx, murName, mur); err != nil {
-			if errors.IsNotFound(err) {
-				logger.Info("the MUR was not found", "MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
-				requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
-				return ctrl.Result{
-					RequeueAfter: requeueAfter,
-				}, err
-			}
-			// error while reading MUR
-			return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound MUR")
+	// if publicViewer is enabled and the SpaceBinding is related to the PublicViewer,
+	// do not check for MUR existence
+	if r.isPublicViewerEnabled(ctx) && spaceBinding.Spec.MasterUserRecord == toolchainv1alpha1.KubesawAuthenticatedUsername {
+		return ctrl.Result{}, nil
+	}
+
+	// ensure that MUR exists: if it does not exist, then delete the SpaceBinding
+	murName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.MasterUserRecord}
+	mur := &toolchainv1alpha1.MasterUserRecord{}
+	if err := r.Client.Get(ctx, murName, mur); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("the MUR was not found", "MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
+			requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
+			return ctrl.Result{
+				RequeueAfter: requeueAfter,
+			}, err
 		}
+		// error while reading MUR
+		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound MUR")
 	}
 	return ctrl.Result{}, nil
 }
