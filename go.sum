@@ -139,8 +139,6 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20240627084210-f4a765461e75 h1:LOrOMTw3bplM+VwzSxi3j9GNseujhcebO/LGr8b95GE=
 github.com/codeready-toolchain/api v0.0.0-20240627084210-f4a765461e75/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240628050807-7f226f55a34a h1:hXS9egkRRCyvUE//MJf+LDhH3mt1DDaWNFwTenex2dA=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240628050807-7f226f55a34a/go.mod h1:ZwfGkrTArynbvIPOJwQQCwFVW7Dj0XOgi5XzkNG1ov8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -194,8 +192,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/set v0.2.1/go.mod h1:+RKtMCH+favT2+3YecHGxcc0b4KyVWA1QWWJUs4E0CI=
-github.com/fbm3307/toolchain-common v0.0.0-20240626054411-0d94d353157c h1:o1Dxvns4TcEPOLxAeJnx/+VoAoAD3bKr5XXH4EplmW4=
-github.com/fbm3307/toolchain-common v0.0.0-20240626054411-0d94d353157c/go.mod h1:ZwfGkrTArynbvIPOJwQQCwFVW7Dj0XOgi5XzkNG1ov8=
+github.com/fbm3307/toolchain-common v0.0.0-20240702113651-1b5b160ab47a h1:Zb3XG11094zApuL2YQHnBcMqW3uk+09CxaJUy0OPe+E=
+github.com/fbm3307/toolchain-common v0.0.0-20240702113651-1b5b160ab47a/go.mod h1:ZwfGkrTArynbvIPOJwQQCwFVW7Dj0XOgi5XzkNG1ov8=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
