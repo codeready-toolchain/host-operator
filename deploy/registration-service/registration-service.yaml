@@ -101,7 +101,7 @@ objects:
                 - containerPort: 8082 # proxy metrics
                   name: metrics
                 - containerPort: 8083 # registration service metrics
-                  name: registration-service-metrics
+                  name: regsvc-metrics
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -188,17 +188,17 @@ objects:
   - kind: Service
     apiVersion: v1
     metadata:
-      name: registration-service-metrics
+      name: regsvc-metrics
       namespace: ${NAMESPACE}
       labels:
         provider: codeready-toolchain
         run: registration-service
     spec:
       ports:
-        - name: registration-service-metrics
+        - name: regsvc-metrics
           protocol: TCP
           port: 80
-          targetPort: registration-service-metrics
+          targetPort: regsvc-metrics
       selector:
         run: registration-service
       type: ClusterIP
