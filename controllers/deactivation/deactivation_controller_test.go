@@ -75,43 +75,89 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			expectedTime := (time.Duration((expectedDeactivationTimeoutDeactivate30Tier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
-			actualTime := res.RequeueAfter
-			diff := expectedTime - actualTime
-			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
-			// confirm that the scheduled deactivation time is set
-			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+			// First throw an error when the deactivating status is set
+			cl.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.UserSignup:
+					return errors.New("mock error")
+				default:
+					return cl.Client.Status().Update(ctx, obj)
+				}
+			}
 
-			// confirm that the scheduled deactivation time is ~30 days
-			expected := time.Now().Add(30 * time.Hour * 24)
-			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+			_, err := r.Reconcile(context.TODO(), req)
+			require.Error(t, err)
+			require.Equal(t, "mock error", err.Error())
 
-			// accept if we're within 1 hour of the expected deactivation time
-			require.Less(t, comparison, time.Hour)
+			cl.MockUpdate = nil
 
-			// Reload the usersignup
-			reloaded := &toolchainv1alpha1.UserSignup{}
-			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
-			require.NoError(t, err)
+			t.Run("reconcile again to ensure the usersignup has been updated", func(t *testing.T) {
+				// when
+				_, err = r.Reconcile(context.TODO(), req)
 
-			scheduledDeactivationTime := reloaded.Status.ScheduledDeactivationTimestamp
+				// then
+				require.NoError(t, err)
 
-			// Reconcile again
-			r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
-			res, err = r.Reconcile(context.TODO(), req)
-			require.NoError(t, err)
+				// Reload the usersignup
+				reloaded := &toolchainv1alpha1.UserSignup{}
+				err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+				require.NoError(t, err)
 
-			// Ensure that the scheduled deactivation time has not been changed
-			reloaded = &toolchainv1alpha1.UserSignup{}
-			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
-			require.NoError(t, err)
-			require.Equal(t, scheduledDeactivationTime, reloaded.Status.ScheduledDeactivationTimestamp)
+				// Confirm the deactivating state has been unset in the UserSignup
+				require.False(t, states.Deactivating(reloaded))
+
+				t.Run("reconcile a third time to confirm the scheduled deactivation time is correctly set", func(t *testing.T) {
+					// given
+					r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
+
+					// when
+					// Reconcile again
+					res, err := r.Reconcile(context.TODO(), req)
+					require.NoError(t, err)
+
+					// then
+					expectedTime := (time.Duration((expectedDeactivationTimeoutDeactivate30Tier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
+					actualTime := res.RequeueAfter
+					diff := expectedTime - actualTime
+					require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+					assertThatUserSignupStateIsDeactivated(t, cl, username, false)
+
+					// confirm that the scheduled deactivation time is set
+					require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+					require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+
+					// confirm that the scheduled deactivation time is ~30 days
+					expected := time.Now().Add(30 * time.Hour * 24)
+					comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+					// accept if we're within 1 hour of the expected deactivation time
+					require.Less(t, comparison, time.Hour)
+
+					t.Run("reconcile one last time to ensure the scheduled deactivation time is not modified again", func(t *testing.T) {
+						// given
+						// Reload the usersignup again
+						reloaded = &toolchainv1alpha1.UserSignup{}
+						err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+						require.NoError(t, err)
+
+						scheduledDeactivationTime := reloaded.Status.ScheduledDeactivationTimestamp
+
+						// when
+						// Reconcile again
+						r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
+						res, err = r.Reconcile(context.TODO(), req)
+						require.NoError(t, err)
+
+						// then
+						// Ensure that the scheduled deactivation time has not been changed
+						reloaded = &toolchainv1alpha1.UserSignup{}
+						err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+						require.NoError(t, err)
+						require.Equal(t, scheduledDeactivationTime, reloaded.Status.ScheduledDeactivationTimestamp)
+					})
+				})
+			})
 		})
 
 		t.Run("usersignup should not be deactivated but client update fails", func(t *testing.T) {
@@ -501,25 +547,45 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier90, mur, userSignupFoobar, config)
 
 			// when
-			res, err := r.Reconcile(context.TODO(), req)
+			_, err := r.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
-			// The RequeueAfter should be ~about 59 days...(28 days from the new deactivatingNotificationTimeout = 90-3-28) let's accept if it's within 1 hour of that
-			require.WithinDuration(t, time.Now().Add(time.Duration(59*24)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
 
-			// Reload the userSignup
-			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
-			require.False(t, states.Deactivating(userSignupFoobar))
-			require.False(t, states.Deactivated(userSignupFoobar))
+			t.Run("reload and check the RequeueAfter is as expected", func(t *testing.T) {
+				// given
+				// Reload the usersignup
+				reloaded := &toolchainv1alpha1.UserSignup{}
+				err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, reloaded)
+				require.NoError(t, err)
 
-			// The scheduled deactivation time should have also been updated, and should now expire in ~62 days
-			expected := time.Now().Add(62 * time.Hour * 24)
-			comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+				// Confirm the deactivating state has been unset in the UserSignup
+				require.False(t, states.Deactivating(reloaded))
 
-			// accept if we're within 1 hour of the expected deactivation time
-			require.Less(t, comparison, time.Hour)
+				// Prepare to reconcile again, with the updated UserSignup
+				r, req, cl = prepareReconcile(t, mur.Name, userTier90, mur, reloaded, config)
 
+				// when
+				// Reconcile again
+				res, err := r.Reconcile(context.TODO(), req)
+				require.NoError(t, err)
+
+				// then
+				// The RequeueAfter should be ~about 59 days...(28 days from the new deactivatingNotificationTimeout = 90-3-28) let's accept if it's within 1 hour of that
+				require.WithinDuration(t, time.Now().Add(time.Duration(59*24)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
+
+				// Reload the userSignup
+				require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+				require.False(t, states.Deactivating(userSignupFoobar))
+				require.False(t, states.Deactivated(userSignupFoobar))
+
+				// The scheduled deactivation time should have also been updated, and should now expire in ~62 days
+				expected := time.Now().Add(62 * time.Hour * 24)
+				comparison := expected.Sub(userSignupFoobar.Status.ScheduledDeactivationTimestamp.Time)
+
+				// accept if we're within 1 hour of the expected deactivation time
+				require.Less(t, comparison, time.Hour)
+			})
 		})
 
 		t.Run("when provisioning state is set but user is moved to a tier without deactivation", func(t *testing.T) {
@@ -553,8 +619,16 @@ func TestReconcile(t *testing.T) {
 			require.False(t, states.Deactivating(userSignupFoobar))
 			require.False(t, states.Deactivated(userSignupFoobar))
 
+			// Reconcile again
+			r, req, cl = prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+			res, err = r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+
 			// The scheduled deactivation time should now be set to nil
 			require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
+			require.False(t, res.Requeue)
 		})
 
 		t.Run("when provisioning state is set but user is moved to a tier without deactivation but client update fails", func(t *testing.T) {
@@ -576,6 +650,17 @@ func TestReconcile(t *testing.T) {
 
 			r, req, fakeClient := prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
 
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			// Reload the userSignup
+			require.NoError(t, fakeClient.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, states.Deactivating(userSignupFoobar))
+
+			// Reconcile again
+			r, req, fakeClient = prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+
 			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
@@ -585,10 +670,7 @@ func TestReconcile(t *testing.T) {
 				}
 			}
 
-			// when
-			_, err := r.Reconcile(context.TODO(), req)
-
-			// then
+			_, err = r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
 
 			// Reload the userSignup
