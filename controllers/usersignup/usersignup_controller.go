@@ -879,6 +879,10 @@ func (r *Reconciler) deleteMasterUserRecord(
 
 	err = r.Client.Delete(ctx, mur)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("MasterUserRecord was already deleted", "MUR", mur.Name)
+			return nil
+		}
 		return r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToDeleteMUR, err,
 			"error deleting MasterUserRecord")
 	}
