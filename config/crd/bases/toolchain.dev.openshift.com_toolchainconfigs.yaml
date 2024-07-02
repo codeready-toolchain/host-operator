@@ -152,6 +152,20 @@ spec:
                           template set name is used.
                         type: string
                     type: object
+                  publicViewerConfig:
+                    description: 'Contains the PublicViewer configuration. IMPORTANT:
+                      To provide a consistent User-Experience, each user the space
+                      has been directly shared with should have at least the same
+                      permissions the kubesaw-authenticated user has.'
+                    properties:
+                      enabled:
+                        default: false
+                        description: Defines whether the PublicViewer support should
+                          be enabled or not
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
