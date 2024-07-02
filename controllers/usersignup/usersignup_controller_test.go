@@ -206,6 +206,11 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true")),
+		"with feature toggles": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("member1"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
+			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
@@ -213,7 +218,15 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-			r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, mur, baseNSTemplateTier, base2NSTemplateTier, deactivate30Tier, deactivate80Tier, event)
+
+			config := &toolchainv1alpha1.ToolchainConfig{}
+			switch testname {
+			case "with feature toggles":
+				weight100 := uint(100)
+				weight0 := uint(0)
+				config = commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().FeatureToggle("feature-on", &weight100).FeatureToggle("feature-off", &weight0))
+			}
+			r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, config, userSignup, mur, baseNSTemplateTier, base2NSTemplateTier, deactivate30Tier, deactivate80Tier, event)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -230,7 +243,17 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
-					HasTier("base")
+					HasTier("base").
+					DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+			case "with feature toggles":
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+					Exists().
+					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+					HasSpecTargetCluster("member1").
+					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
+					HasTier("base").
+					HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, "feature-on")
 				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with social event":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
@@ -238,7 +261,8 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
-					HasTier("base2")
+					HasTier("base2").
+					DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
 				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with skip space creation annotation set to true":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
@@ -263,6 +287,20 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				case "with feature toggles":
+					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+						Exists().
+						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
+						HasSpec("foo", "foo", "admin")
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, "feature-on")
 				case "with skip space creation annotation set to true":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
@@ -3872,6 +3910,129 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
+}
+
+func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
+	assessmentAnnotationFraudulent := "FRAUDULENT"
+	assessmentAnnotationLegitimate := "LEGITIMATE"
+	for tcName, tc := range map[string]struct {
+		captchEnabled                                          bool
+		userSignupStateLabelKey                                string
+		userSignupCaptchaAssessmentIDAnnotationKey             string
+		userSignupCaptchaAnnotatedAssessmentAnnotationKey      string
+		isBanned                                               bool
+		expectedUserSignupCaptchaAnnotatedAssessmentAnnotation string
+	}{
+		"captcha disabled and signup without UserSignupCaptchaAssessmentIDAnnotationKey": {
+			captchEnabled:                                          false, // captcha disabled
+			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "",
+		},
+		"captcha disabled and signup with UserSignupCaptchaAssessmentIDAnnotationKey": {
+			captchEnabled:                                          false,
+			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // expect assessment annotation to not be set because captcha is disabled
+		},
+		"signup without UserSignupCaptchaAssessmentIDAnnotationKey set": {
+			captchEnabled:                                          true, // captcha enabled
+			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // expect assessment annotation to not be set because there was no assessment ID
+		},
+		"signup with UserSignupCaptchaAssessmentIDAnnotationKey set and user is approved": {
+			captchEnabled:           true,
+			isBanned:                false,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // assessment ID exists but user is approved, nothing to annotate
+		},
+		"signup with UserSignupCaptchaAssessmentIDAnnotationKey set and user is not approved": {
+			captchEnabled:           true,
+			isBanned:                false,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueNotReady,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // assessment ID exists but user is approved, nothing to annotate
+		},
+		"signup without UserSignupCaptchaAssessmentIDAnnotationKey set and user is now banned": {
+			captchEnabled:           true,
+			isBanned:                true,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "", // no assessment ID
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // user is banned but there was no assessment ID
+		},
+		"signup with UserSignupCaptchaAssessmentIDAnnotationKey set and user is now banned": {
+			captchEnabled:           true,
+			isBanned:                true,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: assessmentAnnotationFraudulent, // assessment ID is provided and user is banned
+		},
+		"signup was already banned and assessment annotated": {
+			captchEnabled:           true,
+			isBanned:                true,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueBanned,
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      assessmentAnnotationFraudulent, // user was already annotated
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: assessmentAnnotationFraudulent,
+		},
+		"signup with UserSignupCaptchaAssessmentIDAnnotationKey set and user was banned but is now approved": {
+			captchEnabled:           true,
+			isBanned:                false,                                             // user is now approved
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueBanned, // previous state was banned
+			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
+			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      assessmentAnnotationFraudulent, // user was previously banned
+			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: assessmentAnnotationLegitimate,
+		},
+	} {
+		t.Run(tcName, func(t *testing.T) {
+			// given
+			userSignup := commonsignup.NewUserSignup(
+				commonsignup.ApprovedManually(),
+				commonsignup.WithTargetCluster("east"))
+			userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = tc.userSignupStateLabelKey
+			if tc.userSignupCaptchaAssessmentIDAnnotationKey != "" {
+				userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAssessmentIDAnnotationKey] = tc.userSignupCaptchaAssessmentIDAnnotationKey
+			}
+			if tc.userSignupCaptchaAnnotatedAssessmentAnnotationKey != "" {
+				userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = tc.userSignupCaptchaAnnotatedAssessmentAnnotationKey
+			}
+
+			initObjs := []runtime.Object{userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.RegistrationService().Verification().CaptchaEnabled(tc.captchEnabled)), baseNSTemplateTier, deactivate30Tier}
+			if tc.isBanned {
+				bannedUser := &toolchainv1alpha1.BannedUser{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+						},
+					},
+					Spec: toolchainv1alpha1.BannedUserSpec{
+						Email: "foo@redhat.com",
+					},
+				}
+				initObjs = append(initObjs, bannedUser)
+			}
+			r, req, _ := prepareReconcile(t, userSignup.Name, initObjs...)
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+			err = r.Client.Get(context.TODO(), key, userSignup)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedUserSignupCaptchaAnnotatedAssessmentAnnotation, userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]) // annotated assessment should now be set
+		})
+	}
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {

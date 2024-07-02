@@ -3,6 +3,7 @@ package usersignup
 import (
 	"context"
 	"fmt"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -22,6 +23,11 @@ import (
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+
+	"strconv"
+
+	recaptcha "cloud.google.com/go/recaptchaenterprise/v2/apiv1"
+	recaptchapb "cloud.google.com/go/recaptchaenterprise/v2/apiv1/recaptchaenterprisepb"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strconv"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -109,18 +114,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if userSignup.GetLabels() == nil {
 		userSignup.Labels = make(map[string]string)
 	}
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
 		}
-	}
-
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	banned, err := r.isUserBanned(ctx, userSignup)
@@ -173,7 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// and return
 	if banned {
 		// if the UserSignup doesn't have the state=banned label set, then update it
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -217,7 +222,7 @@ func (r *Reconciler) handleDeactivatedUserSignup(
 	}
 
 	// if the UserSignup doesn't have the state=deactivated label set, then update it
-	if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+	if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -310,7 +315,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		// If the user has been banned, then we need to delete the MUR
 		if banned {
 			// set the state label to banned
-			if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+			if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 				return true, err
 			}
 
@@ -327,7 +332,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
 			return true, err
 		}
 
@@ -354,7 +359,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		logger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
+			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier, config)
 			if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
 			}
@@ -408,7 +413,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
 		// if user was approved manually
@@ -429,7 +434,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 
 	if !approved {
 		// set the state label to pending
-		if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
 		return r.updateStatus(ctx, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
@@ -445,7 +450,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		}
 	}
 	// set the state label to approved
-	if err := r.setStateLabel(ctx, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+	if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
 		return err
 	}
 	userTier, err := r.getUserTier(ctx, config, userSignup)
@@ -517,6 +522,7 @@ func (r *Reconciler) getSocialEvent(
 
 func (r *Reconciler) setStateLabel(
 	ctx context.Context,
+	config toolchainconfig.ToolchainConfig,
 	userSignup *toolchainv1alpha1.UserSignup,
 	state string,
 ) error {
@@ -532,6 +538,12 @@ func (r *Reconciler) setStateLabel(
 	if state == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 		activations = r.updateActivationCounterAnnotation(logger, userSignup)
 	}
+
+	if config.RegistrationService().Verification().CaptchaEnabled() {
+		// annotate the original captcha assessment, if possible
+		r.annotateCaptchaAssessment(ctx, userSignup, state)
+	}
+
 	if err := r.Client.Update(ctx, userSignup); err != nil {
 		return r.wrapErrorWithStatusUpdate(ctx,
 			userSignup, r.setStatusFailedToUpdateStateLabel, err,
@@ -677,6 +689,7 @@ func (r *Reconciler) ensureSpace(
 	userSignup *toolchainv1alpha1.UserSignup,
 	mur *toolchainv1alpha1.MasterUserRecord,
 	spaceTier *toolchainv1alpha1.NSTemplateTier,
+	config toolchainconfig.ToolchainConfig,
 ) (*toolchainv1alpha1.Space, bool, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name, "NSTemplateTier", spaceTier.Name)
@@ -703,7 +716,7 @@ func (r *Reconciler) ensureSpace(
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
+	space = spaceutil.NewSpaceWithFeatureToggles(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name, config.Tiers().FeatureToggles())
 
 	err = r.Client.Create(ctx, space)
 	if err != nil {
@@ -754,6 +767,75 @@ func (r *Reconciler) ensureSpaceBinding(
 
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
+}
+
+// annotateCaptchaAssessment attempts to annotate the original assessment (if any) to provide feedback so that future scores can be improved
+// the attempt to annotate the previous assessment is a best-effort, we do not want to reconcile again if the request fails because captcha is a separate service
+// and should not have any impact to the UserSignup flows if there are issues with this request
+func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, newState string) {
+	logger := log.FromContext(ctx)
+	assessmentID, assessmentIDFound := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAssessmentIDAnnotationKey]
+	if !assessmentIDFound {
+		// there's no assessment ID to annotate
+		return
+	}
+
+	newAssessmentAnnotation := r.getCaptchaAssessmentAnnotation(userSignup, newState)
+	newAnnotationName, isValidAssessmentAnnotation := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(newAssessmentAnnotation)]
+	oldAnnotationName := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]
+	if !isValidAssessmentAnnotation ||
+		newAssessmentAnnotation == recaptchapb.AnnotateAssessmentRequest_ANNOTATION_UNSPECIFIED ||
+		newAnnotationName == oldAnnotationName {
+		// no need to annotate the previous assessment
+		return
+	}
+
+	// set the annotated assessment value: FRAUDULENT or LEGITIMATE
+	userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = newAnnotationName
+
+	go func() {
+		gctx := context.Background()
+		rclient, err := recaptcha.NewClient(gctx)
+		if err != nil {
+			logger.Error(err, "error creating reCAPTCHA client, cannot annotate assessment")
+			return
+		}
+		defer rclient.Close()
+
+		annotateRequest := &recaptchapb.AnnotateAssessmentRequest{
+			Name:       assessmentID,
+			Annotation: newAssessmentAnnotation,
+		}
+
+		response, err := rclient.AnnotateAssessment(gctx, annotateRequest)
+		if err != nil {
+			logger.Error(err, "error annotating assessment")
+			return
+		}
+		logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
+	}()
+
+}
+
+// getCaptchaAssessmentAnnotation returns the captcha assessment annotation type depending on the UserSignup's state
+// returns LEGITIMATE or FRAUDULENT if the assessment should be annotated
+// returns ANNOTATION_UNSPECIFIED otherwise which means there's not enough information to select an annotation
+func (r *Reconciler) getCaptchaAssessmentAnnotation(userSignup *toolchainv1alpha1.UserSignup, newState string) recaptchapb.AnnotateAssessmentRequest_Annotation {
+	oldAnnotatedAssessment := userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey]
+	fraudulentAnnotationName := recaptchapb.AnnotateAssessmentRequest_Annotation_name[int32(recaptchapb.AnnotateAssessmentRequest_FRAUDULENT)]
+	// user was incorrectly banned if the previous assessment was annotated as fraudulent and the user is now being approved
+	wasUserIncorrectlyBanned := oldAnnotatedAssessment == fraudulentAnnotationName && newState == toolchainv1alpha1.UserSignupStateLabelValueApproved
+
+	// determine whether the previous assessment needs to be annotated
+	newAnnotation := recaptchapb.AnnotateAssessmentRequest_ANNOTATION_UNSPECIFIED
+	if newState == toolchainv1alpha1.UserSignupStateLabelValueBanned {
+		// user is banned so send an annotation response to provide feedback that this user was fraudulent
+		newAnnotation = recaptchapb.AnnotateAssessmentRequest_FRAUDULENT
+	} else if wasUserIncorrectlyBanned {
+		// user was mistakenly banned and is now approved so send an annotation response to provide feedback that this user was legitimate
+		newAnnotation = recaptchapb.AnnotateAssessmentRequest_LEGITIMATE
+	}
+	return newAnnotation
 }
 
 // updateActivationCounterAnnotation increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup

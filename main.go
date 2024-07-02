@@ -174,6 +174,17 @@ func main() { // nolint:gocyclo
 	}
 	crtConfig.Print()
 
+	if crtConfig.RegistrationService().Verification().CaptchaEnabled() {
+		if err := createCaptchaFileFromSecret(crtConfig.RegistrationService()); err != nil {
+			panic(fmt.Sprintf("failed to create captcha file: %s", err.Error()))
+		}
+
+		// set application credentials env var required for recaptcha client
+		if err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", toolchainconfig.CaptchaFilePath); err != nil {
+			panic(fmt.Sprintf("cannot set captcha credentials: %s", err.Error()))
+		}
+	}
+
 	// initialize the Segment client
 	segmentClient, err := segment.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
 	if err != nil {
@@ -505,4 +516,12 @@ func (kw klogWriter) Write(p []byte) (n int, err error) {
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
 	}
 	return len(p), nil
+}
+
+func createCaptchaFileFromSecret(cfg toolchainconfig.RegistrationServiceConfig) error {
+	contents := cfg.Verification().CaptchaServiceAccountFileContents()
+	if err := os.WriteFile(toolchainconfig.CaptchaFilePath, []byte(contents), 0600); err != nil {
+		return errors.Wrap(err, "error writing captcha file")
+	}
+	return nil
 }
