@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -52,10 +53,12 @@ import (
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
 )
@@ -367,6 +370,16 @@ func main() { // nolint:gocyclo
 		Scheme:         mgr.GetScheme(),
 		Namespace:      namespace,
 		MemberClusters: clusterScopedMemberClusters,
+		GetPublicViewerConfig: func(ctx context.Context, cl client.Client) spacebindingcleanup.PublicViewerConfig {
+			cfg, err := toolchainconfig.GetToolchainConfig(cl)
+			if err != nil {
+				log.FromContext(ctx).
+					Error(err, "error retrieving PublicViewerConfig, using default")
+				return toolchainconfig.PublicViewerConfig{}
+			}
+
+			return cfg.PublicViewer()
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
 		os.Exit(1)
