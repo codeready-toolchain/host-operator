@@ -26,29 +26,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type publicViewerConfigMock struct{ enabled bool }
-
-func (m publicViewerConfigMock) Enabled() bool {
-	return m.enabled
+func TestDeleteSpaceBindingWithPublicViewerDisabled(t *testing.T) {
+	testDeleteSpaceBinding(t, false)
 }
 
-func newPublicViewerConfigProvider(enabled bool) PublicViewerConfigProvider {
-	return func(context.Context, client.Client) PublicViewerConfig {
-		return publicViewerConfigMock{enabled: enabled}
-	}
+func TestDeleteSpaceBindingWithPublicViewerEnabled(t *testing.T) {
+	testDeleteSpaceBinding(t, true)
 }
 
-var (
-	publicViewerConfigEnabledMockProvider  PublicViewerConfigProvider = newPublicViewerConfigProvider(true)
-	publicViewerConfigDisabledMockProvider PublicViewerConfigProvider = newPublicViewerConfigProvider(false)
-)
-
-func TestDeleteSpaceBinding(t *testing.T) {
+func testDeleteSpaceBinding(t *testing.T, publicViewerEnabled bool) {
 	// given
 	sbLaraRedhatAdmin := sb.NewSpaceBinding("lara", "redhat", "admin", "signupA")
 	sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view", "signupB")
@@ -60,10 +50,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 	laraMur := masteruserrecord.NewMasterUserRecord(t, "lara")
 	joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.PublicViewerConfig(publicViewerEnabled))
 
-	t.Run("publicViewer config is enabled", func(t *testing.T) {
+	if publicViewerEnabled {
 		t.Run("kubesaw-authenticated SpaceBinding is removed when redhat space is missing", func(t *testing.T) {
-			fakeClient := test.NewFakeClient(t, sbPublicViewerRedhatView)
+			fakeClient := test.NewFakeClient(t, sbPublicViewerRedhatView, toolchainconfig)
 			reconciler := prepareReconciler(t, fakeClient)
 
 			// when
@@ -76,9 +67,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		})
 
 		t.Run("kubesaw-authenticated SpaceBinding is NOT removed when MUR is missing", func(t *testing.T) {
-			fakeClient := test.NewFakeClient(t, redhatSpace, sbPublicViewerRedhatView)
+			fakeClient := test.NewFakeClient(t, redhatSpace, sbPublicViewerRedhatView, toolchainconfig)
 			reconciler := prepareReconciler(t, fakeClient)
-			reconciler.GetPublicViewerConfig = publicViewerConfigEnabledMockProvider
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), requestFor(sbPublicViewerRedhatView))
@@ -88,11 +78,10 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			require.NoError(t, err)
 			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).Exists()
 		})
-	})
+	}
 
 	t.Run("lara-redhat SpaceBinding removed when redhat space is missing", func(t *testing.T) {
-
-		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace)
+		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
@@ -108,7 +97,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 	t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
 
-		fakeClient := test.NewFakeClient(t, sbJoeRedhatView, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace)
+		fakeClient := test.NewFakeClient(t, sbJoeRedhatView, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
@@ -126,7 +115,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		sbLaraRedhatAdmin := sbLaraRedhatAdmin.DeepCopy()
 		now := metav1.Now()
 		sbLaraRedhatAdmin.DeletionTimestamp = &now
-		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace)
+		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
@@ -142,7 +131,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 	t.Run("no SpaceBinding removed when MUR and Space are present", func(t *testing.T) {
 
-		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, redhatSpace)
+		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, redhatSpace, toolchainconfig)
 		reconciler := prepareReconciler(t, fakeClient)
 
 		// when
@@ -159,7 +148,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	t.Run("fails while getting the bound resource", func(t *testing.T) {
 
 		for _, boundResourceName := range []string{"lara", "redhat"} {
-			fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace, laraMur)
+			fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace, laraMur, toolchainconfig)
 			reconciler := prepareReconciler(t, fakeClient)
 			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == boundResourceName {
@@ -179,7 +168,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 	t.Run("fails while deleting the SpaceBinding", func(t *testing.T) {
 
-		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace)
+		fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace, toolchainconfig)
 		reconciler := prepareReconciler(t, fakeClient)
 		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			return fmt.Errorf("some error")
@@ -194,9 +183,20 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	})
 }
 
-func TestDeleteSpaceBindingRequest(t *testing.T) {
+func TestDeleteSpaceBindingRequestWithPublicViewerEnabled(t *testing.T) {
+	testDeleteSpaceBindingRequest(t, true)
+}
+
+func TestDeleteSpaceBindingRequestWithPublicViewerDisabled(t *testing.T) {
+	testDeleteSpaceBindingRequest(t, false)
+}
+
+func testDeleteSpaceBindingRequest(t *testing.T, publicViewerEnabled bool) {
 	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t,
-		testconfig.SpaceConfig().SpaceBindingRequestEnabled(true))
+		testconfig.SpaceConfig().SpaceBindingRequestEnabled(true),
+		testconfig.PublicViewerConfig(publicViewerEnabled),
+	)
+
 	sbr := sbrtestcommon.NewSpaceBindingRequest("lara", "lara-tenant",
 		sbrtestcommon.WithMUR("lara"),
 		sbrtestcommon.WithSpaceRole("admin"))
@@ -292,11 +292,10 @@ func prepareReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters
 	}
 
 	reconciler := &Reconciler{
-		Namespace:             test.HostOperatorNs,
-		Scheme:                s,
-		Client:                hostCl,
-		MemberClusters:        clusters,
-		GetPublicViewerConfig: publicViewerConfigDisabledMockProvider,
+		Namespace:      test.HostOperatorNs,
+		Scheme:         s,
+		Client:         hostCl,
+		MemberClusters: clusters,
 	}
 	return reconciler
 }

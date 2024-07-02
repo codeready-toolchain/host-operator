@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -26,12 +25,6 @@ import (
 
 const norequeue = 0 * time.Second
 const requeueDelay = 10 * time.Second
-
-type PublicViewerConfig interface {
-	Enabled() bool
-}
-
-type PublicViewerConfigProvider func(context.Context, client.Client) PublicViewerConfig
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -50,10 +43,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconciler reconciles a SpaceBinding object
 type Reconciler struct {
 	runtimeclient.Client
-	Scheme                *runtime.Scheme
-	Namespace             string
-	MemberClusters        map[string]cluster.Cluster
-	GetPublicViewerConfig PublicViewerConfigProvider
+	Scheme         *runtime.Scheme
+	Namespace      string
+	MemberClusters map[string]cluster.Cluster
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch;create;update;patch;delete
@@ -119,7 +111,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) isPublicViewerEnabled(ctx context.Context) bool {
-	return r.GetPublicViewerConfig(ctx, r.Client).Enabled()
+	cfg, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		log.FromContext(ctx).
+			Error(err, "error retrieving PublicViewerConfig, using default")
+		return toolchainconfig.PublicViewerConfig{}.Enabled()
+	}
+
+	return cfg.PublicViewer().Enabled()
 }
 
 func (r *Reconciler) deleteSpaceBinding(ctx context.Context, spaceBinding *toolchainv1alpha1.SpaceBinding) (time.Duration, error) {
