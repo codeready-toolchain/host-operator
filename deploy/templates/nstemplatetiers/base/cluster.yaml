@@ -91,6 +91,7 @@ objects:
     quota:
       hard:
         count/services: "30"
+        services.loadbalancers: '0'
     selector:
       annotations: null
       labels:
