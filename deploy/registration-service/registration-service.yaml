@@ -188,7 +188,7 @@ objects:
   - kind: Service
     apiVersion: v1
     metadata:
-      name: regsvc-metrics
+      name: registration-service-metrics
       namespace: ${NAMESPACE}
       labels:
         provider: codeready-toolchain
