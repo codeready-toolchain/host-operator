@@ -128,3 +128,5 @@ require (
 )
 
 go 1.20
+
+replace github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20240703104250-40b2c66a959f
