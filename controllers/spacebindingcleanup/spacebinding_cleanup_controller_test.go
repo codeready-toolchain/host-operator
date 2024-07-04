@@ -50,14 +50,14 @@ func TestDeleteSpaceBindingForKubeSawAuthenticated(t *testing.T) {
 		},
 	}
 
+	redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
+	sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// given
 			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, tc.toolchainConfigOption)
 
-			redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
-			sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
-
+			// given
 			fakeClient := test.NewFakeClient(t, redhatSpace, sbPublicViewerRedhatView, toolchainconfig)
 			reconciler := prepareReconciler(t, fakeClient)
 
