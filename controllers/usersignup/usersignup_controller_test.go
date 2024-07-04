@@ -42,8 +42,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -3363,48 +3365,36 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	t.Run("usersignup deactivated but mur delete failed", func(t *testing.T) {
 		// given
-		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
-			Spec: toolchainv1alpha1.UserSignupSpec{
-				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
-					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-						Sub:   "UserID123",
-						Email: "alice.mayweather.doe@redhat.com",
-					},
-					PreferredUsername: "alice.mayweather.doe@redhat.com",
+		userSignup := commonsignup.NewUserSignup(commonsignup.Deactivated())
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: corev1.ConditionTrue,
 				},
-				States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
-			},
-			Status: toolchainv1alpha1.UserSignupStatus{
-				Conditions: []toolchainv1alpha1.Condition{
-					{
-						Type:   toolchainv1alpha1.UserSignupComplete,
-						Status: corev1.ConditionTrue,
-					},
-					{
-						Type:   toolchainv1alpha1.UserSignupApproved,
-						Status: corev1.ConditionTrue,
-						Reason: "ApprovedAutomatically",
-					},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
 				},
-				CompliantUsername: "alice-mayweather",
 			},
+			CompliantUsername: "john-doe",
 		}
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-		mur := murtest.NewMasterUserRecord(t, "alice-mayweather", murtest.MetaNamespace(test.HostOperatorNs))
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		space := spacetest.NewSpace(test.HostOperatorNs, "alice-mayweather",
+		space := spacetest.NewSpace(test.HostOperatorNs, "john-doe",
 			spacetest.WithCreatorLabel(userSignup.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 
-		spacebinding := spacebindingtest.NewSpaceBinding("alice-mayweather", "alice-mayweather", "admin", userSignup.Name)
+		spacebinding := spacebindingtest.NewSpaceBinding("john-doe", "john-doe", "admin", userSignup.Name)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
@@ -3480,6 +3470,55 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				spacebindingtest.AssertThatSpaceBindings(t, r.Client).HaveCount(1)
 			})
 		})
+	})
+
+	t.Run("usersignup deactivated but mur already deleted", func(t *testing.T) {
+		// given
+		userSignup := commonsignup.NewUserSignup(commonsignup.Deactivated())
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "john-doe",
+		}
+
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
+			switch obj.(type) {
+			case *toolchainv1alpha1.MasterUserRecord:
+				return k8serr.NewNotFound(schema.GroupResource{}, "john-doe")
+			default:
+				return fakeClient.Client.Delete(ctx, obj)
+			}
+		}
+
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
 	})
 }
 
