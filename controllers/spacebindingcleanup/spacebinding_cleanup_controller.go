@@ -102,7 +102,7 @@ func (r *Reconciler) ensureMURExists(ctx context.Context, spaceBinding *toolchai
 	// do not check for MUR existence
 	cfg, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
-		return norequeue, err
+		return norequeue, errs.Wrapf(err, "unable to get toolchainconfig")
 	}
 	if cfg.PublicViewer().Enabled() && spaceBinding.Spec.MasterUserRecord == toolchainv1alpha1.KubesawAuthenticatedUsername {
 		return norequeue, nil
