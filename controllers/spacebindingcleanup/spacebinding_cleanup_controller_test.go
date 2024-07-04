@@ -38,12 +38,13 @@ func TestDeleteSpaceBindingForKubeSawAuthenticated(t *testing.T) {
 		spaceBindingAssert    func(assertion *spacebinding.Assertion)
 	}{
 		{
-			name:                  "with public-viewer disabled",
+			name:                  "with public-viewer disabled kubesaw-authenticated SpaceBinding is removed when MUR is missing",
 			toolchainConfigOption: testconfig.PublicViewerConfig(false),
 			spaceBindingAssert:    func(assertion *sb.Assertion) { assertion.DoesNotExist() },
 		},
 		{
-			name:                  "with public-viewer enabled",
+
+			name:                  "with public-viewer enabled kubesaw-authenticated SpaceBinding is NOT removed when MUR is missing",
 			toolchainConfigOption: testconfig.PublicViewerConfig(true),
 			spaceBindingAssert:    func(assertion *sb.Assertion) { assertion.Exists() },
 		},
@@ -57,18 +58,16 @@ func TestDeleteSpaceBindingForKubeSawAuthenticated(t *testing.T) {
 			redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
 			sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
 
-			t.Run("kubesaw-authenticated SpaceBinding is NOT removed when MUR is missing", func(t *testing.T) {
-				fakeClient := test.NewFakeClient(t, redhatSpace, sbPublicViewerRedhatView, toolchainconfig)
-				reconciler := prepareReconciler(t, fakeClient)
+			fakeClient := test.NewFakeClient(t, redhatSpace, sbPublicViewerRedhatView, toolchainconfig)
+			reconciler := prepareReconciler(t, fakeClient)
 
-				// when
-				res, err := reconciler.Reconcile(context.TODO(), requestFor(sbPublicViewerRedhatView))
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), requestFor(sbPublicViewerRedhatView))
 
-				// then
-				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
-				require.NoError(t, err)
-				tc.spaceBindingAssert(sb.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient))
-			})
+			// then
+			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
+			require.NoError(t, err)
+			tc.spaceBindingAssert(sb.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient))
 		})
 	}
 }
