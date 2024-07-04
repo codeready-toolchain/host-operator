@@ -91,7 +91,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// given
-			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, tc.toolchainConfigOption)
 
 			sbLaraRedhatAdmin := sb.NewSpaceBinding("lara", "redhat", "admin", "signupA")
 			sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view", "signupB")
@@ -104,6 +103,20 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")
 
 			sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, tc.toolchainConfigOption)
+
+			t.Run("error retrieving the ToolchainConfig", func(t *testing.T) {
+				fakeClient := test.NewFakeClient(t, sbPublicViewerRedhatView, redhatSpace)
+				reconciler := prepareReconciler(t, fakeClient)
+				require.NoError(t, os.Unsetenv("WATCH_NAMESPACE"))
+
+				// when
+				res, err := reconciler.Reconcile(context.TODO(), requestFor(sbPublicViewerRedhatView))
+
+				// then
+				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
+				require.Error(t, err)
+			})
 
 			t.Run("kubesaw-authenticated SpaceBinding is removed when redhat space is missing", func(t *testing.T) {
 				fakeClient := test.NewFakeClient(t, sbPublicViewerRedhatView, toolchainconfig)
