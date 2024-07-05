@@ -1369,7 +1369,8 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				"jane-tenant",
 				spacerequesttest.WithTierName("appstudio-env"),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
-				spacerequesttest.WithDeletionTimestamp()) // spaceRequest was deleted
+				spacerequesttest.WithDeletionTimestamp(), // spaceRequest was deleted
+				spacerequesttest.WithFinalizer())
 			member1Client := commontest.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := commontest.NewFakeClient(t, appstudioEnvTier, parentSpace)
@@ -1382,7 +1383,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			// space request is gone
 			require.NoError(t, err)
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
-				HasNoFinalizers()
+				DoesNotExist()
 		})
 	})
 

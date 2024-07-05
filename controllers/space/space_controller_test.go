@@ -933,7 +933,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 				nstemplatetsettest.Updating(),
 			}
-			err := member1.Client.Update(context.TODO(), nsTmplSet)
+			err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
 
 			// when
@@ -960,7 +960,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
-				err := member1.Client.Update(context.TODO(), nsTmplSet)
+				err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
 
 				// when

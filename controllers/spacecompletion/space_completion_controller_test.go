@@ -98,7 +98,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "without-fields",
 				spacetest.WithTierName(""),
-				spacetest.WithDeletionTimestamp())
+				spacetest.WithDeletionTimestamp(),
+				spacetest.WithFinalizer())
 			r, req, cl := prepareReconcile(t, space, spc)
 
 			// when

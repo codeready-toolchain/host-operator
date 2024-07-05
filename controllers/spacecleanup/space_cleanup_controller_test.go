@@ -131,6 +131,7 @@ func TestCleanupSpace(t *testing.T) {
 		parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithDeletionTimestamp(),
+			spacetest.WithFinalizer(),
 		)
 		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace(test.HostOperatorNs, "with-parentSpace",

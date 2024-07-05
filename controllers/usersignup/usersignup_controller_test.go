@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"testing"
 	"time"
@@ -284,6 +285,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		commonsignup.BeingDeleted(),
 		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+	controllerutil.AddFinalizer(userSignup, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
