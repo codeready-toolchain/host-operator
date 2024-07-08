@@ -413,9 +413,7 @@ spec:
                                 the operator runs in the remote cluster
                               type: string
                           required:
-                          - apiEndpoint
                           - conditions
-                          - operatorNamespace
                           type: object
                         memberOperator:
                           description: MemberOperator is the status of a toolchain

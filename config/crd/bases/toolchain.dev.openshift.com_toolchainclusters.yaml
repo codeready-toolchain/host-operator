@@ -127,9 +127,7 @@ spec:
                   runs in the remote cluster
                 type: string
             required:
-            - apiEndpoint
             - conditions
-            - operatorNamespace
             type: object
         required:
         - spec
