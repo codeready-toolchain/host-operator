@@ -126,10 +126,9 @@ func TestReconcile(t *testing.T) {
 				actualTime := res.RequeueAfter
 				diff := expectedTime - actualTime
 				require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-				assertThatUserSignupStateIsDeactivated(t, cl, username, false)
+				userSignupFoobar := assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
 				// confirm that the scheduled deactivation time is set
-				require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 				require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 				// confirm that the scheduled deactivation time is ~30 days
@@ -553,11 +552,14 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 
 			// Reload the usersignup
-			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar)
-			require.NoError(t, err)
+			//			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar)
+			//			require.NoError(t, err)
 
 			// Confirm the deactivating state has been unset in the UserSignup
-			require.False(t, states.Deactivating(userSignupFoobar))
+			//			require.False(t, states.Deactivating(userSignupFoobar))
+
+			// Confirm the deactivating state has been unset in the UserSignup
+			assertThatUserSignupStateIsDeactivated(t, cl, userSignupFoobar.Name, false)
 
 			// Setting the deactivating state will trigger another reconcile - reconcile one more time to ensure
 			// that RequeueAfter is now correctly set
@@ -618,7 +620,10 @@ func TestReconcile(t *testing.T) {
 			require.NotNil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 			t.Run("ensure scheduled deactivation time is set to nil after reconciling again", func(t *testing.T) {
+				// when
 				res, err = r.Reconcile(context.TODO(), req)
+
+				// then
 				require.NoError(t, err)
 
 				require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -859,9 +864,10 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 	return us
 }
 
-func assertThatUserSignupStateIsDeactivated(t *testing.T, cl *commontest.FakeClient, name string, expected bool) {
+func assertThatUserSignupStateIsDeactivated(t *testing.T, cl *commontest.FakeClient, name string, expected bool) *toolchainv1alpha1.UserSignup {
 	userSignup := &toolchainv1alpha1.UserSignup{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
 	require.NoError(t, err)
 	require.Equal(t, expected, states.Deactivated(userSignup))
+	return userSignup
 }
