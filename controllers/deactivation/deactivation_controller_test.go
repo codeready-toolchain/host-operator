@@ -65,7 +65,7 @@ func TestReconcile(t *testing.T) {
 	states.SetDeactivating(userSignupFoobar, true)
 
 	t.Run("controller should not deactivate user", func(t *testing.T) {
-		t.Run("confirm reconcile returns an error when usersignup status update fails", func(t *testing.T) {
+		t.Run("confirm reconcile returns an error when usersignup state update fails", func(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name),
@@ -74,7 +74,7 @@ func TestReconcile(t *testing.T) {
 
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
-			// Throw an error when the deactivating status is set
+			// Throw an error when the deactivating state is set
 			cl.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
@@ -109,12 +109,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 
-			// Reload the usersignup
-			err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar)
-			require.NoError(t, err)
-
-			// Confirm the deactivating state has been unset in the UserSignup
-			require.False(t, states.Deactivating(userSignupFoobar))
+			userSignupFoobar = assertThatUserSignupStateIsDeactivated(t, cl, userSignupFoobar.Name, false)
 
 			t.Run("reconcile again to confirm the scheduled deactivation time is correctly set", func(t *testing.T) {
 				// when
