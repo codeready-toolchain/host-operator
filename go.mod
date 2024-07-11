@@ -1,6 +1,6 @@
 module github.com/codeready-toolchain/host-operator
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/fbm3307/toolchain-common v0.0.0-20240708105947-4161cd43570e
+replace github.com/codeready-toolchain/toolchain-common => github.com/fbm3307/toolchain-common v0.0.0-20240711160323-7b00b3208eb1
 
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
