@@ -131,8 +131,8 @@ func TestUserCleanup(t *testing.T) {
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 		// and verify the metrics
-		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
-		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
+		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) //  incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
