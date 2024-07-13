@@ -231,6 +231,8 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	return hash.EncodeString(userEmail) == userEmailHash
 }
 
+// deleteSignupUnverifiedRetentionPeriod deletes specified Usersignup and increments metrics if applicable.
+// metrics incremented - UserSignupDeletedWithInitiatingVerificationTotal and UserSignupDeletedWithoutInitiatingVerificationTotal
 func (r *Reconciler) deleteSignupUnverifiedRetentionPeriod(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) error {
 	// before deleting the resource, we want to "remember" if the user triggered a phone verification or not,
 	// based on the presence of the `toolchain.dev.openshift.com/verification-code` annotation
