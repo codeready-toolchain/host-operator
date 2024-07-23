@@ -50,7 +50,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}},
 			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
-			builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
 			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToParentAndSubSpaces(r.Client)))
 	// watch NSTemplateSets in all the member clusters
