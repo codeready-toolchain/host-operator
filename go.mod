@@ -1,11 +1,9 @@
 module github.com/codeready-toolchain/host-operator
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20240726063305-474ff3c9f3fd
-
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
 	github.com/codeready-toolchain/api v0.0.0-20240717145630-bb67a632867a
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20240716065433-8604fe46b96a
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20240726141011-74c70030e33f
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.4.1
