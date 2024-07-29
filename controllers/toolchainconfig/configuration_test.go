@@ -406,19 +406,31 @@ func TestRegistrationService(t *testing.T) {
 		assert.Equal(t, "prod", toolchainCfg.RegistrationService().Environment())
 		assert.Equal(t, "https://registration.crt-placeholder.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
 		assert.Equal(t, int32(3), toolchainCfg.RegistrationService().Replicas())
+		assert.False(t, toolchainCfg.RegistrationService().Verification().CaptchaEnabled())
+		assert.Empty(t, toolchainCfg.RegistrationService().Verification().CaptchaServiceAccountFileContents())
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.RegistrationService().
 			Environment("e2e-tests").
 			RegistrationServiceURL("https://registration.crt.com").
 			Replicas(2).
-			Namespace("another-namespace"))
+			Namespace("another-namespace").
+			Verification().CaptchaEnabled(true).
+			Verification().Secret().Ref("verification-secrets").
+			RecaptchaServiceAccountFile("captcha.json"))
 
-		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+		verificationSecretValues := make(map[string]string)
+		verificationSecretValues["captcha.json"] = "example-content"
+		secrets := make(map[string]map[string]string)
+		secrets["verification-secrets"] = verificationSecretValues
+
+		toolchainCfg := newToolchainConfig(cfg, secrets)
 
 		assert.Equal(t, "e2e-tests", toolchainCfg.RegistrationService().Environment())
 		assert.Equal(t, "https://registration.crt.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
 		assert.Equal(t, int32(2), toolchainCfg.RegistrationService().Replicas())
+		assert.True(t, toolchainCfg.RegistrationService().Verification().CaptchaEnabled())
+		assert.Equal(t, "example-content", toolchainCfg.RegistrationService().Verification().CaptchaServiceAccountFileContents())
 	})
 }
 
@@ -430,6 +442,7 @@ func TestTiers(t *testing.T) {
 		assert.Equal(t, "deactivate30", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
+		assert.Empty(t, toolchainCfg.Tiers().FeatureToggles())
 	})
 	t.Run("invalid", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("rapid"))
@@ -438,15 +451,23 @@ func TestTiers(t *testing.T) {
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 	})
 	t.Run("non-default", func(t *testing.T) {
+		weight10 := uint(10)
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
 			DefaultUserTier("deactivate90").
 			DefaultSpaceTier("advanced").
-			DurationBeforeChangeTierRequestDeletion("48h"))
+			DurationBeforeChangeTierRequestDeletion("48h").
+			FeatureToggle("feature-1", nil). // With default weight
+			FeatureToggle("feature-2", &weight10))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "deactivate90", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
+		assert.Len(t, toolchainCfg.Tiers().FeatureToggles(), 2)
+		assert.Equal(t, "feature-1", toolchainCfg.Tiers().FeatureToggles()[0].Name())
+		assert.Equal(t, uint(100), toolchainCfg.Tiers().FeatureToggles()[0].Weight()) // default weight
+		assert.Equal(t, "feature-2", toolchainCfg.Tiers().FeatureToggles()[1].Name())
+		assert.Equal(t, weight10, toolchainCfg.Tiers().FeatureToggles()[1].Weight())
 	})
 }
 
@@ -511,5 +532,30 @@ func TestGitHubSecret(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, secrets)
 
 		assert.Equal(t, "abc123", toolchainCfg.GitHubSecret().AccessTokenKey())
+	})
+}
+
+func TestPublicViewer(t *testing.T) {
+	t.Run("not-set", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: false}
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: true}
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, true, toolchainCfg.PublicViewer().Enabled())
 	})
 }

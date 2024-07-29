@@ -96,10 +96,12 @@ objects:
             - name: registration-service
               image: ${IMAGE}
               ports:
-                - containerPort: 8080
-                - containerPort: 8081
-                - containerPort: 8082
+                - containerPort: 8080 # registration service
+                - containerPort: 8081 # proxy 
+                - containerPort: 8082 # proxy metrics
                   name: metrics
+                - containerPort: 8083 # registration service metrics
+                  name: regsvc-metrics
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -140,24 +142,8 @@ objects:
                 requests:
                   cpu: "50m"
                   memory: "100M"
-  - kind: Service
-    apiVersion: v1
-    metadata:
-      name: registration-service
-      namespace: ${NAMESPACE}
-      labels:
-        provider: codeready-toolchain
-        run: registration-service
-    spec:
-      ports:
-        - name: "8080"
-          protocol: TCP
-          port: 80
-          targetPort: 8080
-      selector:
-        run: registration-service
-      type: ClusterIP
-      sessionAffinity: null
+  
+  # route for the registration service
   - kind: Route
     apiVersion: v1
     metadata:
@@ -177,6 +163,70 @@ objects:
       tls:
         termination: edge
       wildcardPolicy: None
+
+  # service associated with the registration service route
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: registration-service
+      namespace: ${NAMESPACE}
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+    spec:
+      ports:
+        - name: "8080"
+          protocol: TCP
+          port: 80
+          targetPort: 8080
+      selector:
+        run: registration-service
+      type: ClusterIP
+      sessionAffinity: null
+
+  # internal service for the registration service, used by Prometheus to scrape the metrics
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: registration-service-metrics
+      namespace: ${NAMESPACE}
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+    spec:
+      ports:
+        - name: regsvc-metrics
+          protocol: TCP
+          port: 80
+          targetPort: regsvc-metrics
+      selector:
+        run: registration-service
+      type: ClusterIP
+      sessionAffinity: null
+  
+  # route for the proxy
+  - kind: Route
+    apiVersion: v1
+    metadata:
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+      annotations:
+        haproxy.router.openshift.io/timeout: 24h
+      name: api
+      namespace: ${NAMESPACE}
+    spec:
+      port:
+        targetPort: "8081"
+      to:
+        kind: Service
+        name: api
+        weight: 100
+      tls:
+        termination: edge
+      wildcardPolicy: None
+ 
+  # service associated with the proxy route
   - kind: Service
     apiVersion: v1
     metadata:
@@ -195,27 +245,8 @@ objects:
         run: registration-service
       type: ClusterIP
       sessionAffinity: null
-  - kind: Route
-    apiVersion: v1
-    metadata:
-      labels:
-        provider: codeready-toolchain
-        run: registration-service
-      annotations:
-        haproxy.router.openshift.io/timeout: 24h
-      name: api
-      namespace: ${NAMESPACE}
-    spec:
-      host: ''
-      port:
-        targetPort: "8081"
-      to:
-        kind: Service
-        name: api
-        weight: 100
-      tls:
-        termination: edge
-      wildcardPolicy: None
+  
+  # internal service for the proxy, used by Prometheus to scrape the metrics
   - kind: Service
     apiVersion: v1
     metadata:

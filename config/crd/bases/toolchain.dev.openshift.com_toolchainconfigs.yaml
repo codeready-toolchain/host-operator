@@ -152,6 +152,20 @@ spec:
                           template set name is used.
                         type: string
                     type: object
+                  publicViewerConfig:
+                    description: 'Contains the PublicViewer configuration. IMPORTANT:
+                      To provide a consistent User-Experience, each user the space
+                      has been directly shared with should have at least the same
+                      permissions the kubesaw-authenticated user has.'
+                    properties:
+                      enabled:
+                        default: false
+                        description: Defines whether the PublicViewer support should
+                          be enabled or not
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
@@ -428,6 +442,55 @@ spec:
                         description: DurationBeforeChangeTierRequestDeletion specifies
                           the duration before a ChangeTierRequest resource is deleted
                         type: string
+                      featureToggles:
+                        description: FeatureToggles specifies the list of feature
+                          toggles/flags
+                        items:
+                          description: 'FeatureToggle defines a feature toggle/flag.
+                            Each feature is supposed to have a unique name. Features
+                            are represented by kube object manifests in space and
+                            user templates. Such manifests must have an annotation
+                            which refers to the corresponding feature name. For example
+                            a manifest for a RoleBinding object in a space tier template
+                            with the following annotation: "toolchain.dev.openshift.com/feature:
+                            os-lightspeed" would refer to a feature with "os-lightspeed"
+                            name. When that template is applied for a new space then
+                            that RoleBinding object would be applied conditionally,
+                            according to its weight.'
+                          properties:
+                            name:
+                              description: A unique name of the feature
+                              type: string
+                            weight:
+                              default: 100
+                              description: 'Rollout weight of the feature. An integer
+                                between 0-100. If not set then 100 is used by default.
+                                0 means the corresponding feature should not be enabled
+                                at all, which means that corresponding template objects
+                                should not be applied at all. 100 means the feature
+                                should be always enabled (the template is always applied).
+                                The features are weighted independently of each other.
+                                For example if there are two features: - feature1,
+                                weight=5 - feature2, weight=90 And tiers (one or many)
+                                contain the following object manifests: - RoleBinding
+                                with "toolchain.dev.openshift.com/feature: feature1"
+                                annotation - ConfigMap with "toolchain.dev.openshift.com/feature:
+                                feature2" annotation Then the RoleBinding will be
+                                created for the corresponding tiers with probability
+                                of 0.05 (around 5 out of every 100 spaces would have
+                                it) And the ConfigMap will be created with probability
+                                of 0.9 (around 90 out of every 100 spaces would have
+                                it)'
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       templateUpdateRequestMaxPoolSize:
                         description: TemplateUpdateRequestMaxPoolSize specifies the
                           maximum number of concurrent TemplateUpdateRequests when
@@ -616,7 +679,9 @@ spec:
                         properties:
                           deploy:
                             description: Defines the flag that determines whether
-                              to deploy the Webhook
+                              to deploy the Webhook. If the deploy flag is set to
+                              False and the Webhook was deployed previously it will
+                              be deleted by the memberoperatorconfig controller.
                             type: boolean
                           secret:
                             description: Defines all secrets related to webhook configuration
@@ -768,7 +833,9 @@ spec:
                           properties:
                             deploy:
                               description: Defines the flag that determines whether
-                                to deploy the Webhook
+                                to deploy the Webhook. If the deploy flag is set to
+                                False and the Webhook was deployed previously it will
+                                be deleted by the memberoperatorconfig controller.
                               type: boolean
                             secret:
                               description: Defines all secrets related to webhook

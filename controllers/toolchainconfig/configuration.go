@@ -22,6 +22,12 @@ const (
 	NotificationContextRegistrationURLKey = "RegistrationURL"
 )
 
+// captcha specific configuration for annotating assessments
+const (
+	CaptchaFileName = "captcha.json"
+	CaptchaFilePath = "/tmp/" + CaptchaFileName
+)
+
 var logger = logf.Log.WithName("toolchainconfig")
 
 type ToolchainConfig struct {
@@ -112,7 +118,10 @@ func (c *ToolchainConfig) Notifications() NotificationsConfig {
 }
 
 func (c *ToolchainConfig) RegistrationService() RegistrationServiceConfig {
-	return RegistrationServiceConfig{c.cfg.Host.RegistrationService}
+	return RegistrationServiceConfig{
+		c:       c.cfg.Host.RegistrationService,
+		secrets: c.secrets,
+	}
 }
 
 func (c *ToolchainConfig) Tiers() TiersConfig {
@@ -125,6 +134,10 @@ func (c *ToolchainConfig) ToolchainStatus() ToolchainStatusConfig {
 
 func (c *ToolchainConfig) Users() UsersConfig {
 	return UsersConfig{c.cfg.Host.Users}
+}
+
+func (c *ToolchainConfig) PublicViewer() PublicViewerConfig {
+	return PublicViewerConfig{c.cfg.Host.PublicViewerConfig}
 }
 
 type AutoApprovalConfig struct {
@@ -256,7 +269,8 @@ func (n NotificationsConfig) MailgunReplyToEmail() string {
 }
 
 type RegistrationServiceConfig struct {
-	c toolchainv1alpha1.RegistrationServiceConfig
+	c       toolchainv1alpha1.RegistrationServiceConfig
+	secrets map[string]map[string]string
 }
 
 func (r RegistrationServiceConfig) Environment() string {
@@ -269,6 +283,10 @@ func (r RegistrationServiceConfig) Replicas() int32 {
 
 func (r RegistrationServiceConfig) Analytics() AnalyticsConfig {
 	return AnalyticsConfig{r.c.Analytics}
+}
+
+func (r RegistrationServiceConfig) Verification() VerificationConfig {
+	return VerificationConfig{c: r.c.Verification, secrets: r.secrets}
 }
 
 type AnalyticsConfig struct {
@@ -302,6 +320,32 @@ func (d TiersConfig) DurationBeforeChangeTierRequestDeletion() time.Duration {
 		duration = 24 * time.Hour
 	}
 	return duration
+}
+
+func (d TiersConfig) FeatureToggles() []FeatureToggle {
+	toggles := make([]FeatureToggle, 0, len(d.tiers.FeatureToggles))
+	for _, t := range d.tiers.FeatureToggles {
+		toggles = append(toggles, FeatureToggle{t})
+	}
+	return toggles
+}
+
+type FeatureToggle struct {
+	toggle toolchainv1alpha1.FeatureToggle
+}
+
+func NewFeatureToggle(t toolchainv1alpha1.FeatureToggle) FeatureToggle {
+	return FeatureToggle{
+		toggle: t,
+	}
+}
+
+func (t FeatureToggle) Name() string {
+	return t.toggle.Name
+}
+
+func (t FeatureToggle) Weight() uint {
+	return commonconfig.GetUint(t.toggle.Weight, 100)
 }
 
 type ToolchainStatusConfig struct {
@@ -339,4 +383,32 @@ func (d UsersConfig) ForbiddenUsernameSuffixes() []string {
 		return c == ','
 	})
 	return v
+}
+
+type VerificationConfig struct {
+	c       toolchainv1alpha1.RegistrationServiceVerificationConfig
+	secrets map[string]map[string]string
+}
+
+func (r VerificationConfig) registrationServiceSecret(secretKey string) string {
+	secret := commonconfig.GetString(r.c.Secret.Ref, "")
+	return r.secrets[secret][secretKey]
+}
+
+func (r VerificationConfig) CaptchaEnabled() bool {
+	return commonconfig.GetBool(r.c.Captcha.Enabled, false)
+}
+
+func (r VerificationConfig) CaptchaServiceAccountFileContents() string {
+	key := commonconfig.GetString(r.c.Secret.RecaptchaServiceAccountFile, "")
+	content := r.registrationServiceSecret(key)
+	return string(content)
+}
+
+type PublicViewerConfig struct {
+	publicViewerConfig *toolchainv1alpha1.PublicViewerConfiguration
+}
+
+func (c PublicViewerConfig) Enabled() bool {
+	return c.publicViewerConfig != nil && c.publicViewerConfig.Enabled
 }
