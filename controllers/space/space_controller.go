@@ -47,7 +47,7 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
-		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}},
 			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
