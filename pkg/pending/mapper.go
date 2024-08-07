@@ -38,7 +38,7 @@ func NewPendingObjectsMapper(client runtimeclient.Client, objectType runtimeclie
 }
 
 func (b ObjectsMapper) BuildMapToOldestPending(ctx context.Context) handler.MapFunc {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+	return func(context context.Context, obj runtimeclient.Object) []reconcile.Request {
 		return b.MapToOldestPending(ctx, obj)
 	}
 }

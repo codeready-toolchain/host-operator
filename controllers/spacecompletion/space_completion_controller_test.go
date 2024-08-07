@@ -18,7 +18,6 @@ import (
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,7 +98,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "without-fields",
 				spacetest.WithTierName(""),
-				spacetest.WithDeletionTimestamp())
+				spacetest.WithDeletionTimestamp(),
+				spacetest.WithFinalizer())
 			r, req, cl := prepareReconcile(t, space, spc)
 
 			// when
@@ -223,7 +223,7 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 	t.Cleanup(counter.Reset)
 	InitializeCounters(t, toolchainStatus)
 
-	objs := []runtime.Object{toolchainStatus, space}
+	objs := []runtimeclient.Object{toolchainStatus, space}
 	if member1SpaceProvisionerConfig != nil {
 		objs = append(objs, member1SpaceProvisionerConfig)
 	}

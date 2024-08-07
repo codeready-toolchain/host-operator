@@ -1,6 +1,7 @@
 package spacebindingrequest_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
@@ -25,7 +26,7 @@ func TestMapSpaceBindingToSpaceBindingRequestByLabel(t *testing.T) {
 
 	t.Run("should return no spacebinding associated with a spacebindingrequest", func(t *testing.T) {
 		// when
-		requests := spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()(sbnosbr)
+		requests := spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()(context.TODO(), sbnosbr)
 
 		// then
 		require.Len(t, requests, 0)
@@ -33,7 +34,7 @@ func TestMapSpaceBindingToSpaceBindingRequestByLabel(t *testing.T) {
 
 	t.Run("should return spacebinding associated with spacebindingrequest", func(t *testing.T) {
 		// when
-		requests := spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()(sb)
+		requests := spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()(context.TODO(), sb)
 
 		// then
 		require.Len(t, requests, 1)

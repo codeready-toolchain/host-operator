@@ -97,7 +97,7 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		cl := test.NewFakeClient(t, spc0, spc1, spc2)
 
 		// when
-		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(&toolchainv1alpha1.ToolchainCluster{
+		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
 				Namespace: test.HostOperatorNs,
@@ -123,7 +123,7 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		}
 
 		// when
-		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(&toolchainv1alpha1.ToolchainCluster{
+		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
 				Namespace: test.HostOperatorNs,
