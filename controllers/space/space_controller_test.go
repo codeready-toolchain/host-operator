@@ -42,228 +42,259 @@ func TestCreateSpace(t *testing.T) {
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 	t.Run("success", func(t *testing.T) {
-		// given
-		s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithSpecTargetCluster("member-1"))
-		hostClient := test.NewFakeClient(t, s, base1nsTier)
-		member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-		InitializeCounters(t,
-			NewToolchainStatus())
-		ctrl := newReconciler(hostClient, member1, member2)
+		type testRun struct {
+			name           string
+			featureToggles string
+		}
 
-		// when
-		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
-			Exists().
-			HasStatusTargetCluster("member-1").
-			HasConditions(spacetest.Provisioning()).
-			HasStateLabel("cluster-assigned").
-			HasFinalizer()
-		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-			Exists().
-			HasTierName(base1nsTier.Name).
-			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new").
-			HasNamespaceTemplateRefs("base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new").
-			Get()
-		AssertThatCountersAndMetrics(t).
-			HaveSpacesForCluster("member-1", 1).
-			HaveSpacesForCluster("member-2", 0) // check that increment for member-1 was called
-
-		t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
-			// given another round of requeue without while NSTemplateSet is *not ready*
-			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-				nstemplatetsettest.Provisioning(),
-			}
-			err := member1.Client.Update(context.TODO(), nsTmplSet)
-			require.NoError(t, err)
-			ctrl := newReconciler(hostClient, member1, member2)
-
-			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-			// then
-			require.NoError(t, err)
-			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
-				Exists().
-				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.Provisioning()).
-				HasStateLabel("cluster-assigned").
-				HasFinalizer()
-			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-				Exists().
-				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new").
-				HasNamespaceTemplateRefs("base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new").
-				Get()
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1).
-				HaveSpacesForCluster("member-2", 0) // nothing has changed since previous increment
-
-			t.Run("when NSTemplateSet is ready update the provisioned namespace list", func(t *testing.T) {
-				// given another round of requeue without with NSTemplateSet now *ready*
-				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-					nstemplatetsettest.Provisioned(),
+		tests := []testRun{
+			{
+				name: "without feature toggles",
+			},
+			{
+				name:           "with feature toggles",
+				featureToggles: "feature-1,feature-2",
+			},
+		}
+		for _, testRun := range tests {
+			t.Run(testRun.name, func(t *testing.T) {
+				spaceOptions := []spacetest.Option{spacetest.WithSpecTargetCluster("member-1")}
+				if testRun.featureToggles != "" {
+					spaceOptions = append(spaceOptions, spacetest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.featureToggles))
 				}
-				nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.SpaceNamespace{
-					{
-						Name: "john-dev",
-						Type: "default",
-					},
-					{
-						Name: "john-stage",
-					},
-				}
-				err := member1.Client.Update(context.TODO(), nsTmplSet)
-				require.NoError(t, err)
+
+				// given
+				s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spaceOptions...)
+				hostClient := test.NewFakeClient(t, s, base1nsTier)
+				member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+				member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+				InitializeCounters(t,
+					NewToolchainStatus())
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue and status with new provisioned namespaces was updated
+				assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
-					HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
-					HasConditions(spacetest.Ready()). // space is still provisioning
+					HasConditions(spacetest.Provisioning()).
 					HasStateLabel("cluster-assigned").
 					HasFinalizer()
+				var nsTmplSet *toolchainv1alpha1.NSTemplateSet
+				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+					Exists().
+					HasTierName(base1nsTier.Name).
+					HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new").
+					HasNamespaceTemplateRefs("base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new")
+				if testRun.featureToggles != "" {
+					nsTmplSetAssertion = nsTmplSetAssertion.
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.featureToggles)
+				} else {
+					nsTmplSetAssertion = nsTmplSetAssertion.
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				}
+				nsTmplSet = nsTmplSetAssertion.Get()
 				AssertThatCountersAndMetrics(t).
 					HaveSpacesForCluster("member-1", 1).
-					HaveSpacesForCluster("member-2", 0) // space counter unchanged
+					HaveSpacesForCluster("member-2", 0) // check that increment for member-1 was called
 
-				t.Run("done when provisioned namespace list is up to date", func(t *testing.T) {
-					// given another round of requeue with updated list of provisioned namespaces in status
+				t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
+					// given another round of requeue without while NSTemplateSet is *not ready*
+					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+						nstemplatetsettest.Provisioning(),
+					}
+					err := member1.Client.Update(context.TODO(), nsTmplSet)
+					require.NoError(t, err)
+					ctrl := newReconciler(hostClient, member1, member2)
+
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 					// then
 					require.NoError(t, err)
-					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					assert.False(t, res.Requeue)
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
-						HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
-						HasConditions(spacetest.Ready()). // space is now ready
+						HasConditions(spacetest.Provisioning()).
 						HasStateLabel("cluster-assigned").
 						HasFinalizer()
+					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+						Exists().
+						HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new").
+						HasNamespaceTemplateRefs("base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new").
+						Get()
 					AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 1).
-						HaveSpacesForCluster("member-2", 0) // space counter unchanged
+						HaveSpacesForCluster("member-2", 0) // nothing has changed since previous increment
+
+					t.Run("when NSTemplateSet is ready update the provisioned namespace list", func(t *testing.T) {
+						// given another round of requeue without with NSTemplateSet now *ready*
+						nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+							nstemplatetsettest.Provisioned(),
+						}
+						nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.SpaceNamespace{
+							{
+								Name: "john-dev",
+								Type: "default",
+							},
+							{
+								Name: "john-stage",
+							},
+						}
+						err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
+						require.NoError(t, err)
+						ctrl := newReconciler(hostClient, member1, member2)
+
+						// when
+						_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
+
+						// then
+						require.NoError(t, err)
+						assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue and status with new provisioned namespaces was updated
+						spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+							Exists().
+							HasStatusTargetCluster("member-1").
+							HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
+							HasConditions(spacetest.Ready()). // space is still provisioning
+							HasStateLabel("cluster-assigned").
+							HasFinalizer()
+						AssertThatCountersAndMetrics(t).
+							HaveSpacesForCluster("member-1", 1).
+							HaveSpacesForCluster("member-2", 0) // space counter unchanged
+
+						t.Run("done when provisioned namespace list is up to date", func(t *testing.T) {
+							// given another round of requeue with updated list of provisioned namespaces in status
+							// when
+							res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+							// then
+							require.NoError(t, err)
+							assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+							spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+								Exists().
+								HasStatusTargetCluster("member-1").
+								HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
+								HasConditions(spacetest.Ready()). // space is now ready
+								HasStateLabel("cluster-assigned").
+								HasFinalizer()
+							AssertThatCountersAndMetrics(t).
+								HaveSpacesForCluster("member-1", 1).
+								HaveSpacesForCluster("member-2", 0) // space counter unchanged
+						})
+
+					})
 				})
 
+				t.Run("unspecified target member cluster", func(t *testing.T) {
+					// given
+					s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
+					hostClient := test.NewFakeClient(t, s)
+					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+					ctrl := newReconciler(hostClient, member1, member2)
+					InitializeCounters(t,
+						NewToolchainStatus())
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err) // the lack of target member cluster is valid, hence no error is returned
+					assert.False(t, res.Requeue)
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+						HasNoStatusTargetCluster().
+						HasStateLabel("pending").
+						HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
+					AssertThatCountersAndMetrics(t).
+						HaveSpacesForCluster("member-1", 0).
+						HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
+				})
+
+				t.Run("unspecified tierName", func(t *testing.T) {
+					// given
+					s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithTierName(""))
+					hostClient := test.NewFakeClient(t, s)
+					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+					ctrl := newReconciler(hostClient, member1, member2)
+					InitializeCounters(t,
+						NewToolchainStatus())
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err) // the lack of tierName is valid, hence no error is returned
+					assert.False(t, res.Requeue)
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+						HasNoStatusTargetCluster().
+						HasStateLabel("pending").
+						HasConditions(spacetest.ProvisioningPending("unspecified tier name")) // the Space will remain in `ProvisioningPending` until a tierName is set.
+					AssertThatCountersAndMetrics(t).
+						HaveSpacesForCluster("member-1", 0).
+						HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
+				})
+				t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
+					// given
+					subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
+						spacetest.WithTierName(base1nsTier.Name),
+						spacetest.WithSpecTargetCluster("member-1"),
+						spacetest.WithStatusTargetCluster("member-1"),
+						spacetest.WithSpecParentSpace("parentSpace"))
+
+					nsTmplSet := nstemplatetsettest.NewNSTemplateSet("subSpace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
+					memberClient := test.NewFakeClient(t, nsTmplSet)
+					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
+					ctrl := newReconciler(hostClient, member)
+
+					// when
+					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+					// then
+					require.NoError(t, err)
+					spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(spacetest.Ready()).
+						HasStateLabel("cluster-assigned").
+						HasLabelWithValue(toolchainv1alpha1.ParentSpaceLabelKey, "parentSpace"). // check that the parent-space label was set according to spec.ParentSpace field value
+						HasFinalizer()
+				})
+
+				t.Run("without parentSpace spec field", func(t *testing.T) {
+					// given
+					subSpace := spacetest.NewSpace(test.HostOperatorNs, "myspace",
+						spacetest.WithTierName(base1nsTier.Name),
+						spacetest.WithSpecTargetCluster("member-1"),
+						spacetest.WithStatusTargetCluster("member-1"))
+
+					nsTmplSet := nstemplatetsettest.NewNSTemplateSet("myspace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
+					memberClient := test.NewFakeClient(t, nsTmplSet)
+					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
+					ctrl := newReconciler(hostClient, member)
+
+					// when
+					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+					// then
+					require.NoError(t, err)
+					spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(spacetest.Ready()).
+						HasStateLabel("cluster-assigned").
+						DoesNotHaveLabel(toolchainv1alpha1.ParentSpaceLabelKey). // check that the parent-space label is not present
+						HasFinalizer()
+				})
 			})
-		})
-
-		t.Run("unspecified target member cluster", func(t *testing.T) {
-			// given
-			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
-			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCounters(t,
-				NewToolchainStatus())
-
-			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-			// then
-			require.NoError(t, err) // the lack of target member cluster is valid, hence no error is returned
-			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
-				HasNoStatusTargetCluster().
-				HasStateLabel("pending").
-				HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0).
-				HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
-		})
-
-		t.Run("unspecified tierName", func(t *testing.T) {
-			// given
-			s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithTierName(""))
-			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCounters(t,
-				NewToolchainStatus())
-
-			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-			// then
-			require.NoError(t, err) // the lack of tierName is valid, hence no error is returned
-			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
-				HasNoStatusTargetCluster().
-				HasStateLabel("pending").
-				HasConditions(spacetest.ProvisioningPending("unspecified tier name")) // the Space will remain in `ProvisioningPending` until a tierName is set.
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0).
-				HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
-		})
-		t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
-			// given
-			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
-				spacetest.WithTierName(base1nsTier.Name),
-				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithStatusTargetCluster("member-1"),
-				spacetest.WithSpecParentSpace("parentSpace"))
-
-			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("subSpace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
-			memberClient := test.NewFakeClient(t, nsTmplSet)
-			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
-			ctrl := newReconciler(hostClient, member)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
-
-			// then
-			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
-				Exists().
-				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.Ready()).
-				HasStateLabel("cluster-assigned").
-				HasLabelWithValue(toolchainv1alpha1.ParentSpaceLabelKey, "parentSpace"). // check that the parent-space label was set according to spec.ParentSpace field value
-				HasFinalizer()
-		})
-
-		t.Run("without parentSpace spec field", func(t *testing.T) {
-			// given
-			subSpace := spacetest.NewSpace(test.HostOperatorNs, "myspace",
-				spacetest.WithTierName(base1nsTier.Name),
-				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithStatusTargetCluster("member-1"))
-
-			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("myspace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
-			memberClient := test.NewFakeClient(t, nsTmplSet)
-			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
-			ctrl := newReconciler(hostClient, member)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
-
-			// then
-			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
-				Exists().
-				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.Ready()).
-				HasStateLabel("cluster-assigned").
-				DoesNotHaveLabel(toolchainv1alpha1.ParentSpaceLabelKey). // check that the parent-space label is not present
-				HasFinalizer()
-		})
+		}
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -1178,6 +1209,84 @@ func TestUpdateSpaceTier(t *testing.T) {
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
+	})
+
+	t.Run("update needed due to feature toggle annotation change in space", func(t *testing.T) {
+		type testRun struct {
+			name             string
+			oldSpaceFeatures string
+			newSpaceFeatures string
+		}
+
+		tests := []testRun{
+			{
+				name:             "feature enabled",
+				oldSpaceFeatures: "",
+				newSpaceFeatures: "feature-1,feature-2",
+			},
+			{
+				name:             "feature disabled",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "",
+			},
+			{
+				name:             "feature updated",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "feature-3",
+			},
+			{
+				name:             "no updates",
+				oldSpaceFeatures: "feature-1,feature-2",
+				newSpaceFeatures: "feature-1, feature-2",
+			},
+			{
+				name:             "features still are not present",
+				oldSpaceFeatures: "",
+				newSpaceFeatures: "",
+			},
+		}
+		for _, testRun := range tests {
+			t.Run(testRun.name, func(t *testing.T) {
+				// given
+				spaceOptions := []spacetest.Option{spacetest.WithSpecTargetCluster("member-1")}
+				if testRun.newSpaceFeatures != "" {
+					spaceOptions = append(spaceOptions, spacetest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.newSpaceFeatures))
+				}
+
+				s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spaceOptions...)
+
+				nsTemplateSetOptions := []nstemplatetsettest.Option{nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier)}
+				if testRun.oldSpaceFeatures != "" {
+					nsTemplateSetOptions = append(nsTemplateSetOptions, nstemplatetsettest.WithAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.oldSpaceFeatures))
+				}
+				nsTemplateSet := nstemplatetsettest.NewNSTemplateSet("oddity", nsTemplateSetOptions...)
+				hostClient := test.NewFakeClient(t, s, base1nsTier)
+				member1Client := test.NewFakeClient(t, nsTemplateSet)
+				if testRun.oldSpaceFeatures == testRun.newSpaceFeatures {
+					member1Client.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+						return fmt.Errorf("shouldn't be called")
+					}
+				}
+				member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+				ctrl := newReconciler(hostClient, member1)
+
+				// when
+				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
+				require.NoError(t, err)
+
+				// then
+				// check that NSTemplateSet is updated accordingly
+				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, s.Name, member1.Client).
+					Exists()
+				if testRun.newSpaceFeatures != "" {
+					nsTmplSetAssertion.
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.newSpaceFeatures)
+				} else {
+					nsTmplSetAssertion.
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				}
+			})
+		}
 	})
 
 	t.Run("update not needed when already up-to-date", func(t *testing.T) {

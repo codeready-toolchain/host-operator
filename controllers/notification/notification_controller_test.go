@@ -384,8 +384,6 @@ func newController(t *testing.T, deliveryService DeliveryService,
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	// Add notification to initObjs - so that can be added as subResource
-	initObjs = append(initObjs, &toolchainv1alpha1.Notification{})
 	cl := test.NewFakeClient(t, initObjs...)
 
 	controller := &Reconciler{

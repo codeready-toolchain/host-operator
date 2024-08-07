@@ -356,7 +356,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 		logger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier)
+			space, created, err := r.ensureSpace(ctx, userSignup, mur, spaceTier, config)
 			if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToCreateSpace, err, "error creating Space")
 			}
@@ -686,6 +686,7 @@ func (r *Reconciler) ensureSpace(
 	userSignup *toolchainv1alpha1.UserSignup,
 	mur *toolchainv1alpha1.MasterUserRecord,
 	spaceTier *toolchainv1alpha1.NSTemplateTier,
+	config toolchainconfig.ToolchainConfig,
 ) (*toolchainv1alpha1.Space, bool, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name, "NSTemplateTier", spaceTier.Name)
@@ -712,7 +713,7 @@ func (r *Reconciler) ensureSpace(
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
+	space = spaceutil.NewSpaceWithFeatureToggles(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name, config.Tiers().FeatureToggles())
 
 	err = r.Client.Create(ctx, space)
 	if err != nil {
@@ -875,6 +876,10 @@ func (r *Reconciler) deleteMasterUserRecord(
 
 	err = r.Client.Delete(ctx, mur)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("MasterUserRecord was already deleted", "MUR", mur.Name)
+			return nil
+		}
 		return r.wrapErrorWithStatusUpdate(ctx, userSignup, r.setStatusFailedToDeleteMUR, err,
 			"error deleting MasterUserRecord")
 	}

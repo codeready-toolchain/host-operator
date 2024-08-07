@@ -152,6 +152,20 @@ spec:
                           template set name is used.
                         type: string
                     type: object
+                  publicViewerConfig:
+                    description: 'Contains the PublicViewer configuration. IMPORTANT:
+                      To provide a consistent User-Experience, each user the space
+                      has been directly shared with should have at least the same
+                      permissions the kubesaw-authenticated user has.'
+                    properties:
+                      enabled:
+                        default: false
+                        description: Defines whether the PublicViewer support should
+                          be enabled or not
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
@@ -544,6 +558,10 @@ spec:
                       autoscaler:
                         description: Keeps parameters concerned with the autoscaler
                         properties:
+                          bufferCPU:
+                            description: Represents how much CPU should be required
+                              by the autoscaler buffer
+                            type: string
                           bufferMemory:
                             description: Represents how much memory should be required
                               by the autoscaler buffer
@@ -643,23 +661,6 @@ spec:
                             description: Defines the timeout for each health check
                             type: string
                         type: object
-                      webConsolePlugin:
-                        description: WebConsolePlugin is used to configure the Web
-                          Console Plugin parameters
-                        properties:
-                          deploy:
-                            description: Deploy determines whether the plugin will
-                              be deployed or not
-                            type: boolean
-                          pendoHost:
-                            description: PendoHost allows a host URL to be configured
-                              instead of communicating directly with the Pendo domain
-                            type: string
-                          pendoKey:
-                            description: PendoKey is the key value used to interact
-                              with the Pendo API
-                            type: string
-                        type: object
                       webhook:
                         description: Keeps parameters concerned with the webhook
                         properties:
@@ -698,6 +699,10 @@ spec:
                         autoscaler:
                           description: Keeps parameters concerned with the autoscaler
                           properties:
+                            bufferCPU:
+                              description: Represents how much CPU should be required
+                                by the autoscaler buffer
+                              type: string
                             bufferMemory:
                               description: Represents how much memory should be required
                                 by the autoscaler buffer
@@ -795,23 +800,6 @@ spec:
                               type: string
                             healthCheckTimeout:
                               description: Defines the timeout for each health check
-                              type: string
-                          type: object
-                        webConsolePlugin:
-                          description: WebConsolePlugin is used to configure the Web
-                            Console Plugin parameters
-                          properties:
-                            deploy:
-                              description: Deploy determines whether the plugin will
-                                be deployed or not
-                              type: boolean
-                            pendoHost:
-                              description: PendoHost allows a host URL to be configured
-                                instead of communicating directly with the Pendo domain
-                              type: string
-                            pendoKey:
-                              description: PendoKey is the key value used to interact
-                                with the Pendo API
                               type: string
                           type: object
                         webhook:

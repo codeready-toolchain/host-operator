@@ -43,7 +43,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -206,6 +208,11 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true")),
+		"with feature toggles": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("member1"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
+			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
@@ -213,7 +220,15 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-			r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, mur, baseNSTemplateTier, base2NSTemplateTier, deactivate30Tier, deactivate80Tier, event)
+
+			config := &toolchainv1alpha1.ToolchainConfig{}
+			switch testname {
+			case "with feature toggles":
+				weight100 := uint(100)
+				weight0 := uint(0)
+				config = commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().FeatureToggle("feature-on", &weight100).FeatureToggle("feature-off", &weight0))
+			}
+			r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, config, userSignup, mur, baseNSTemplateTier, base2NSTemplateTier, deactivate30Tier, deactivate80Tier, event)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -230,7 +245,17 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
-					HasTier("base")
+					HasTier("base").
+					DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+			case "with feature toggles":
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+					Exists().
+					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+					HasSpecTargetCluster("member1").
+					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
+					HasTier("base").
+					HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, "feature-on")
 				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with social event":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
@@ -238,7 +263,8 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
-					HasTier("base2")
+					HasTier("base2").
+					DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
 				AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
 			case "with skip space creation annotation set to true":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
@@ -263,6 +289,20 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
+				case "with feature toggles":
+					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+						Exists().
+						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
+						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
+						HasSpec("foo", "foo", "admin")
+					AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasHomeSpace("foo")
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+						Exists().
+						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, "feature-on")
 				case "with skip space creation annotation set to true":
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
@@ -3326,48 +3366,36 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	t.Run("usersignup deactivated but mur delete failed", func(t *testing.T) {
 		// given
-		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
-			Spec: toolchainv1alpha1.UserSignupSpec{
-				IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
-					PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
-						Sub:   "UserID123",
-						Email: "alice.mayweather.doe@redhat.com",
-					},
-					PreferredUsername: "alice.mayweather.doe@redhat.com",
+		userSignup := commonsignup.NewUserSignup(commonsignup.Deactivated())
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: corev1.ConditionTrue,
 				},
-				States: []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
-			},
-			Status: toolchainv1alpha1.UserSignupStatus{
-				Conditions: []toolchainv1alpha1.Condition{
-					{
-						Type:   toolchainv1alpha1.UserSignupComplete,
-						Status: corev1.ConditionTrue,
-					},
-					{
-						Type:   toolchainv1alpha1.UserSignupApproved,
-						Status: corev1.ConditionTrue,
-						Reason: "ApprovedAutomatically",
-					},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
 				},
-				CompliantUsername: "alice-mayweather",
 			},
+			CompliantUsername: "john-doe",
 		}
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-		mur := murtest.NewMasterUserRecord(t, "alice-mayweather", murtest.MetaNamespace(test.HostOperatorNs))
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		space := spacetest.NewSpace(test.HostOperatorNs, "alice-mayweather",
+		space := spacetest.NewSpace(test.HostOperatorNs, "john-doe",
 			spacetest.WithCreatorLabel(userSignup.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 
-		spacebinding := spacebindingtest.NewSpaceBinding("alice-mayweather", "alice-mayweather", "admin", userSignup.Name)
+		spacebinding := spacebindingtest.NewSpaceBinding("john-doe", "john-doe", "admin", userSignup.Name)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
@@ -3443,6 +3471,55 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				spacebindingtest.AssertThatSpaceBindings(t, r.Client).HaveCount(1)
 			})
 		})
+	})
+
+	t.Run("usersignup deactivated but mur already deleted", func(t *testing.T) {
+		// given
+		userSignup := commonsignup.NewUserSignup(commonsignup.Deactivated())
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "john-doe",
+		}
+
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
+			switch obj.(type) {
+			case *toolchainv1alpha1.MasterUserRecord:
+				return k8serr.NewNotFound(schema.GroupResource{}, "john-doe")
+			default:
+				return fakeClient.Client.Delete(ctx, obj)
+			}
+		}
+
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
 	})
 }
 

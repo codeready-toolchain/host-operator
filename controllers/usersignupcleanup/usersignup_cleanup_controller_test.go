@@ -102,6 +102,9 @@ func TestUserCleanup(t *testing.T) {
 		statusErr := &apierrors.StatusError{}
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+		// and verify the metrics
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
 	})
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
@@ -126,6 +129,9 @@ func TestUserCleanup(t *testing.T) {
 		statusErr := &apierrors.StatusError{}
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+		// and verify the metrics
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
+		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) //  incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
