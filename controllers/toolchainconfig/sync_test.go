@@ -82,7 +82,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 1)
-			assert.Equal(t, syncErrors["member2"], "client error")
+			assert.Equal(t, "client error", syncErrors["member2"])
 		})
 
 		t.Run("sync to multiple members failed", func(t *testing.T) {
@@ -108,8 +108,8 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 2)
-			assert.Equal(t, syncErrors["member1"], "client error")
-			assert.Equal(t, syncErrors["member2"], "client2 error")
+			assert.Equal(t, "client error", syncErrors["member1"])
+			assert.Equal(t, "client2 error", syncErrors["member2"])
 		})
 
 		t.Run("specific memberoperatorconfig exists but member cluster not found", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 1)
-			assert.Equal(t, syncErrors["member2"], "specific member configuration exists but no matching toolchaincluster was found")
+			assert.Equal(t, "specific member configuration exists but no matching toolchaincluster was found", syncErrors["member2"])
 		})
 	})
 }

@@ -253,7 +253,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spcInCluster))
 
 		// then
-		assert.Error(t, reconcileErr)
+		require.Error(t, reconcileErr)
 		AssertThat(t, spcInCluster, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 		assert.Len(t, spcInCluster.Status.Conditions, 1)
 		assert.Equal(t, "failed to get the referenced ToolchainCluster: "+getErr.Error(), spcInCluster.Status.Conditions[0].Message)
@@ -285,7 +285,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		res, reconcileErr := r.Reconcile(context.TODO(), req)
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		assert.False(t, res.Requeue)
 		assert.Empty(t, spc.Status.Conditions)
 	})

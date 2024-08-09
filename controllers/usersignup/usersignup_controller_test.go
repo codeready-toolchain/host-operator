@@ -663,7 +663,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	assert.EqualError(t, err, "unable to update state label at UserSignup resource: some error")
+	require.EqualError(t, err, "unable to update state label at UserSignup resource: some error")
 
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -2507,7 +2507,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		notificationList := &toolchainv1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notificationList)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(notificationList.Items))
+		require.Empty(t, notificationList.Items)
 	})
 }
 
@@ -3673,7 +3673,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
+			require.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
 			require.Equal(t, reconcile.Result{}, res)
 
 			// Lookup the user signup again
@@ -3853,7 +3853,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
+	require.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -3911,7 +3911,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
+	require.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,

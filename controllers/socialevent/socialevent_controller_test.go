@@ -153,7 +153,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
+			require.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
 				HasConditions(toolchainv1alpha1.Condition{
