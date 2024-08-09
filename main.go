@@ -460,7 +460,7 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 			// for some resources like SpaceRequest/SpaceBindingRequest we need the cache to be clustered scoped
 			// because those resources are in user namespaces and not member operator namespace.
 			if namespacedCache {
-				options.Cache.Namespaces = []string{memberConfig.OperatorNamespace}
+				options.Namespace = memberConfig.OperatorNamespace
 			}
 		})
 		if err != nil {
