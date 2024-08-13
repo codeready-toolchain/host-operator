@@ -16,7 +16,7 @@ func TestInitCounter(t *testing.T) {
 	m.Inc()
 
 	// then
-	assert.InDelta(t, float64(1), promtestutil.ToFloat64(m), 0)
+	assert.InDelta(t, float64(1), promtestutil.ToFloat64(m), 0.01)
 }
 
 func TestInitGauge(t *testing.T) {
@@ -27,7 +27,7 @@ func TestInitGauge(t *testing.T) {
 	m.Set(22)
 
 	// then
-	assert.InDelta(t, float64(22), promtestutil.ToFloat64(m), 0)
+	assert.InDelta(t, float64(22), promtestutil.ToFloat64(m), 0.01)
 }
 
 func TestInitGaugeVec(t *testing.T) {
@@ -39,8 +39,8 @@ func TestInitGaugeVec(t *testing.T) {
 	m.WithLabelValues("member-2").Set(2)
 
 	// then
-	assert.InDelta(t, float64(1), promtestutil.ToFloat64(m.WithLabelValues("member-1")), 0)
-	assert.InDelta(t, float64(2), promtestutil.ToFloat64(m.WithLabelValues("member-2")), 0)
+	assert.InDelta(t, float64(1), promtestutil.ToFloat64(m.WithLabelValues("member-1")), 0.01)
+	assert.InDelta(t, float64(2), promtestutil.ToFloat64(m.WithLabelValues("member-2")), 0.01)
 }
 
 func TestRegisterCustomMetrics(t *testing.T) {
@@ -71,6 +71,6 @@ func TestResetMetrics(t *testing.T) {
 	Reset()
 
 	// then
-	assert.InDelta(t, float64(0), promtestutil.ToFloat64(UserSignupUniqueTotal), 0)
-	assert.InDelta(t, float64(0), promtestutil.ToFloat64(SpaceGaugeVec.WithLabelValues("member-1")), 0)
+	assert.InDelta(t, float64(0), promtestutil.ToFloat64(UserSignupUniqueTotal), 0.01)
+	assert.InDelta(t, float64(0), promtestutil.ToFloat64(SpaceGaugeVec.WithLabelValues("member-1")), 0.01)
 }

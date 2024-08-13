@@ -17,7 +17,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
-	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
+	metricstest "github.com/codeready-toolchain/host-operator/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -104,8 +104,8 @@ func TestUserCleanup(t *testing.T) {
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 		// and verify the metrics
-		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0)    // unchanged
-		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0) // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // unchanged
 	})
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
@@ -131,8 +131,8 @@ func TestUserCleanup(t *testing.T) {
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 		// and verify the metrics
-		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0)    // unchanged
-		assert.InDelta(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0) //  incremented
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
@@ -156,8 +156,8 @@ func TestUserCleanup(t *testing.T) {
 		require.True(t, apierrors.IsNotFound(err))
 		require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
 		// and verify the metrics
-		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0.01)    // unchanged
-		assert.InDelta(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0.01) // incremented
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
@@ -182,8 +182,8 @@ func TestUserCleanup(t *testing.T) {
 		require.True(t, apierrors.IsNotFound(err))
 		require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
 		// and verify the metrics
-		assert.InDelta(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0)    // incremented
-		assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0) // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // incremented
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // unchanged
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
@@ -409,8 +409,8 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	require.NoError(t, err)
 
 	// And verify that the metrics stay unchanged after they were reset to "0" when we prepared the reconcile above.
-	assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal), 0)
-	assert.InDelta(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal), 0)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
