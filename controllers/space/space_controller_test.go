@@ -922,7 +922,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasStatusTargetCluster("member-1").
 				HasConditions()
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1). // counter is decremented according to the value in status
+				HaveSpacesForCluster("member-1", 1). // counter not is decremented because of the failed status updated
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 	})
@@ -1989,7 +1989,7 @@ func TestRetargetSpace(t *testing.T) {
 				HasNoConditions().
 				HasStatusTargetCluster("member-1") // NOT updated
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1). // counter is decremented according to the value in status
+				HaveSpacesForCluster("member-1", 1). // counter not is decremented because of the failed status updated
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 
