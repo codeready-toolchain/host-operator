@@ -148,13 +148,17 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 
 	// deprovision from space.Status.TargetCluster if needed
 	if space.Status.TargetCluster != "" && space.Spec.TargetCluster != space.Status.TargetCluster {
+		if err := r.setStatusRetargeting(ctx, space); err != nil {
+			logger.Error(err, "error updating status")
+			return norequeue, err
+		}
 		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster, "to_cluster", space.Spec.TargetCluster)
 		// look-up and delete the NSTemplateSet on the current member cluster
 		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(ctx, space, space.Status.TargetCluster); err != nil {
 			return norequeue, r.setStatusRetargetFailed(ctx, space, err)
 		} else if isBeingDeleted {
 			logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
-			return norequeue, r.setStatusRetargeting(ctx, space)
+			return norequeue, nil
 		} else {
 			logger.Info("resetting 'space.Status.TargetCluster' field")
 			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
@@ -474,6 +478,10 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, space *toolchainv1
 	logger := log.FromContext(ctx)
 
 	logger.Info("terminating Space")
+	if err := r.setStatusTerminating(ctx, space); err != nil {
+		logger.Error(err, "error updating status")
+		return err
+	}
 	if isBeingDeleted, err := r.deleteNSTemplateSet(ctx, space); err != nil {
 		// space was already provisioned to a cluster
 		// let's not proceed with deletion
@@ -483,11 +491,7 @@ func (r *Reconciler) ensureSpaceDeletion(ctx context.Context, space *toolchainv1
 		}
 		logger.Error(err, "error while deleting NSTemplateSet - ignored since the target cluster in the Status is empty")
 	} else if isBeingDeleted {
-		if err := r.setStatusTerminating(ctx, space); err != nil {
-			logger.Error(err, "error updating status")
-			return err
-		}
-		return nil
+		return nil // wait until the NSTemplateSet is deleted
 	}
 	// Remove finalizer from Space
 	util.RemoveFinalizer(space, toolchainv1alpha1.FinalizerName)

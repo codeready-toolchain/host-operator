@@ -890,6 +890,41 @@ func TestDeleteSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // space counter is not decremented when there NSTemplateSet deletion is stuck
 		})
+
+		t.Run("unable to update status, it should not change the counter", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
+				spacetest.WithDeletionTimestamp(),
+				spacetest.WithFinalizer(),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"))
+
+			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			hostClient.MockStatusUpdate = mockUpdateSpaceStatusFail(hostClient.Client)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+			InitializeCounters(t,
+				NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "mock error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+				Exists().
+				HasFinalizer().
+				HasSpecTargetCluster("member-1").
+				HasStatusTargetCluster("member-1").
+				HasConditions()
+			AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 1). // counter is decremented according to the value in status
+				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
+		})
 	})
 }
 
@@ -1925,7 +1960,7 @@ func TestRetargetSpace(t *testing.T) {
 				HaveSpacesForCluster("member-2", 0) // space counter is unchanged when there is an error while deleting NSTemplateSet
 		})
 
-		t.Run("unable to update status", func(t *testing.T) {
+		t.Run("unable to update status, it should not change the counter", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
@@ -1954,7 +1989,7 @@ func TestRetargetSpace(t *testing.T) {
 				HasNoConditions().
 				HasStatusTargetCluster("member-1") // NOT updated
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0). // counter is decremented according to the value in status
+				HaveSpacesForCluster("member-1", 1). // counter is decremented according to the value in status
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 
