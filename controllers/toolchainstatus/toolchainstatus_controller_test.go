@@ -1220,8 +1220,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 						require.NotNil(t, notification)
-						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period for host-cluster")
-						require.Equal(t, notification.Spec.Recipient, email)
+						require.Equal(t, "ToolchainStatus has been in an unready status for an extended period for host-cluster", notification.Spec.Subject)
+						require.Equal(t, email, notification.Spec.Recipient)
 
 						t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
 							hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,

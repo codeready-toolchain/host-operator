@@ -53,12 +53,12 @@ func TestReconcile(t *testing.T) {
 
 			// check member1 config
 			_, err = getMemberConfig(member1)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.True(t, errors.IsNotFound(err))
 
 			// check member2 config
 			_, err = getMemberConfig(member2)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.True(t, errors.IsNotFound(err))
 		})
 
@@ -91,12 +91,12 @@ func TestReconcile(t *testing.T) {
 
 			// check member1 config
 			member1Cfg, err := getMemberConfig(member1)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
 
 			// check member2 config
 			member2Cfg, err := getMemberConfig(member2)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "5s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
 
 			t.Run("cache updated with new version", func(t *testing.T) {
@@ -126,12 +126,12 @@ func TestReconcile(t *testing.T) {
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
 
 				// check member2 config is updated
 				member2Cfg, err := getMemberConfig(member2)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
 			})
 
@@ -157,12 +157,12 @@ func TestReconcile(t *testing.T) {
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
 
 				// check member2 config is unchanged
 				member2Cfg, err := getMemberConfig(member2)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
 			})
 		})
