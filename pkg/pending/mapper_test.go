@@ -37,7 +37,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		// then
 		require.Len(t, requests, 1)
 		assert.Equal(t, requests[0].Name, pendingSignup.Name)
-		assert.Equal(t, requests[0].Namespace, test.HostOperatorNs)
+		assert.Equal(t, test.HostOperatorNs, requests[0].Namespace)
 	})
 
 	t.Run("for Spaces", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		// then
 		require.Len(t, requests, 1)
 		assert.Equal(t, requests[0].Name, pendingSpace.Name)
-		assert.Equal(t, requests[0].Namespace, test.HostOperatorNs)
+		assert.Equal(t, test.HostOperatorNs, requests[0].Namespace)
 	})
 }
 

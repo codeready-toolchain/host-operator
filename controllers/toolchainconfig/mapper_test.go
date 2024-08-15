@@ -39,6 +39,6 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 		req := MapSecretToToolchainConfig()(pod)
 
 		// then
-		require.Len(t, req, 0)
+		require.Empty(t, req)
 	})
 }
