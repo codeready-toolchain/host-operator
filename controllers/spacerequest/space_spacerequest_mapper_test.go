@@ -1,6 +1,7 @@
 package spacerequest_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
@@ -24,7 +25,7 @@ func TestMapToSpaceRequestByLabel(t *testing.T) {
 
 	t.Run("should return no space associated with a spacerequest", func(t *testing.T) {
 		// when
-		requests := spacerequest.MapSubSpaceToSpaceRequest()(spacenosr)
+		requests := spacerequest.MapSubSpaceToSpaceRequest()(context.TODO(), spacenosr)
 
 		// then
 		require.Empty(t, requests)
@@ -32,7 +33,7 @@ func TestMapToSpaceRequestByLabel(t *testing.T) {
 
 	t.Run("should return space associated with spacerequest", func(t *testing.T) {
 		// when
-		requests := spacerequest.MapSubSpaceToSpaceRequest()(subSpace)
+		requests := spacerequest.MapSubSpaceToSpaceRequest()(context.TODO(), subSpace)
 
 		// then
 		require.Len(t, requests, 1)

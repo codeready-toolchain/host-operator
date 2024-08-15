@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const norequeue = 0 * time.Second
@@ -31,10 +30,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	onlyForDeletion := builder.WithPredicates(OnlyDeleteAndGenericPredicate{})
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceBinding{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}},
+		Watches(&toolchainv1alpha1.Space{},
 			handler.EnqueueRequestsFromMapFunc(MapToSpaceBindingByBoundObjectName(r.Client, toolchainv1alpha1.SpaceBindingSpaceLabelKey)),
 			onlyForDeletion).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}},
+		Watches(&toolchainv1alpha1.MasterUserRecord{},
 			handler.EnqueueRequestsFromMapFunc(MapToSpaceBindingByBoundObjectName(r.Client, toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey)),
 			onlyForDeletion).
 		Complete(r)

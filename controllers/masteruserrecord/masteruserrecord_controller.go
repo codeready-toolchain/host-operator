@@ -40,14 +40,14 @@ const (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}}, handler.EnqueueRequestsFromMapFunc(
+		Watches(&toolchainv1alpha1.SpaceBinding{}, handler.EnqueueRequestsFromMapFunc(
 			controllers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey))).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}}, handler.EnqueueRequestsFromMapFunc(
+		Watches(&toolchainv1alpha1.Space{}, handler.EnqueueRequestsFromMapFunc(
 			MapSpaceToMasterUserRecord(r.Client)), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	// watch UserAccounts in all the member clusters
 	for _, memberCluster := range memberClusters {
-		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.UserAccount{}, memberCluster.Cache),
+		b = b.WatchesRawSource(source.Kind(memberCluster.Cache, &toolchainv1alpha1.UserAccount{}),
 			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
 		)
 	}

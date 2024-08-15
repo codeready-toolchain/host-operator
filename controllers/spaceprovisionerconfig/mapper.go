@@ -2,7 +2,6 @@ package spaceprovisionerconfig
 
 import (
 	"context"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -10,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func MapToolchainClusterToSpaceProvisionerConfigs(ctx context.Context, cl runtimeclient.Client) func(runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapToolchainClusterToSpaceProvisionerConfigs(ctx context.Context, cl runtimeclient.Client) func(context.Context, runtimeclient.Object) []reconcile.Request {
+	return func(context context.Context, obj runtimeclient.Object) []reconcile.Request {
 		ret, err := findReferencingProvisionerConfigs(ctx, cl, runtimeclient.ObjectKeyFromObject(obj))
 		if err != nil {
 			log.FromContext(ctx).Error(err, "failed to list SpaceProvisionerConfig objects while determining what objects to reconcile",

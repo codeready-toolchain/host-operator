@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Reconciler reconciles a Space object
@@ -37,7 +36,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
+			&toolchainv1alpha1.ToolchainStatus{},
 			handler.EnqueueRequestsFromMapFunc(pending.NewSpaceMapper(mgr.GetClient()).BuildMapToOldestPending(ctx))).
 		Complete(r)
 }

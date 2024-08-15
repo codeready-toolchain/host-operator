@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func MapBannedUserToUserSignup(cl runtimeclient.Client) func(object runtimeclient.Object) []reconcile.Request {
+func MapBannedUserToUserSignup(cl runtimeclient.Client) func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
 	var logger = ctrl.Log.WithName("BannedUserToUserSignupMapper")
-	return func(obj runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		if bu, ok := obj.(*toolchainv1alpha1.BannedUser); ok {
 			// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
 			if emailHashLbl, exists := bu.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {

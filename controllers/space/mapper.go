@@ -20,8 +20,8 @@ var mapperLog = ctrl.Log.WithName("MapSpaceBindingToParentAndSubSpaces")
 // - from the SpaceBinding labels we get the name of the Space object (a.k.a parentSpace)
 // - with the name of the Space (parentSpace) we search for eventual subSpaces
 // - in order to reflect the changes on SpaceBinding we trigger a `reconcile.Request` for the Space (parentSpace) and all it's subSpaces (if any)
-func MapSpaceBindingToParentAndSubSpaces(cl runtimeclient.Client) func(object runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapSpaceBindingToParentAndSubSpaces(cl runtimeclient.Client) func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 
 		// initialize request slice to be returned

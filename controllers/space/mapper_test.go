@@ -38,7 +38,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should return one Space when has no sub-spaces", func(t *testing.T) {
 		// when
-		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceNoSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(context.TODO(), sbSpaceNoSubspaces)
 
 		// then
 		require.Len(t, requests, 1)
@@ -47,7 +47,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should return 5 Spaces when there is a sub-subSpace", func(t *testing.T) {
 		// when
-		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceWithSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(context.TODO(), sbSpaceWithSubspaces)
 
 		// then
 		require.Len(t, requests, 5)
@@ -60,7 +60,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should not return any Space request when there is no for the given SpaceBinding", func(t *testing.T) {
 		// when
-		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbOrphan)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(context.TODO(), sbOrphan)
 
 		// then
 		require.Empty(t, requests)
@@ -74,7 +74,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 		}
 
 		// when
-		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceNoSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(context.TODO(), sbSpaceNoSubspaces)
 
 		// then
 		require.Empty(t, requests)

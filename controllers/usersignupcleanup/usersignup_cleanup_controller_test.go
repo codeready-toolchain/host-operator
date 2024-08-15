@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	corev1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -397,6 +396,7 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	// Now let's simulate the situation when the signup is already being deleted and reconcile it again.
 	nw := corev1.Now()
 	userSignup.DeletionTimestamp = &nw
+	userSignup.Finalizers = append(userSignup.Finalizers, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	res, err := r.Reconcile(context.TODO(), req)
@@ -428,7 +428,7 @@ func days(days int) time.Duration {
 	return time.Hour * time.Duration(days*24)
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) { // nolint: unparam
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) { // nolint: unparam
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 

@@ -16,7 +16,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,7 +73,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("when is already being deleted", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace(test.HostOperatorNs, "being-deleted", spacetest.WithDeletionTimestamp())
+		space := spacetest.NewSpace(test.HostOperatorNs, "being-deleted", spacetest.WithDeletionTimestamp(), spacetest.WithFinalizer())
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -132,6 +131,7 @@ func TestCleanupSpace(t *testing.T) {
 		parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithDeletionTimestamp(),
+			spacetest.WithFinalizer(),
 		)
 		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace(test.HostOperatorNs, "with-parentSpace",
@@ -227,7 +227,7 @@ func TestCleanupSpace(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, initObjs ...runtime.Object) (*spacecleanup.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, initObjs ...runtimeclient.Object) (*spacecleanup.Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
