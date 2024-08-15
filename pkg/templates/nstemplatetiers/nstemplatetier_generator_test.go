@@ -33,17 +33,10 @@ var expectedProdTiers = []string{
 	"baselarge",
 	"baseextendedidling",
 	"test",
-	"appstudio",
-	"appstudiolarge",
-	"appstudio-env",
 }
 
 func nsTypes(tier string) []string {
 	switch tier {
-	case "appstudio", "appstudiolarge":
-		return []string{"tenant"}
-	case "appstudio-env":
-		return []string{"env"}
 	case "base1ns", "base1nsnoidling", "base1ns6didler", "test":
 		return []string{"dev"}
 	default:
@@ -51,13 +44,8 @@ func nsTypes(tier string) []string {
 	}
 }
 
-func roles(tier string) []string {
-	switch tier {
-	case "appstudio", "appstudio-env", "appstudiolarge":
-		return []string{"admin", "maintainer", "contributor", "viewer"}
-	default:
-		return []string{"admin"}
-	}
+func roles(_ string) []string {
+	return []string{"admin"}
 }
 
 func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
