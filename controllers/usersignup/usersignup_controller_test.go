@@ -34,6 +34,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	metricstest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	testsocialevent "github.com/codeready-toolchain/toolchain-common/pkg/test/socialevent"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
@@ -141,8 +142,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			default:
 				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTier(*deactivate30Tier)
 			}
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 			segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
 			AssertThatCountersAndMetrics(t).
@@ -368,7 +369,7 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 	// set verification required to true in spec only, status will be added during reconcile
 	states.SetVerificationRequired(userSignup, true)
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal) // nothing yet since not reconciled yet
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal) // nothing yet since not reconciled yet
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -392,7 +393,7 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 	})
 
 	// Verify the metric
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should be 1 since verification required status was set
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should be 1 since verification required status was set
 
 	t.Run("second reconcile - metrics counter still equals 1", func(t *testing.T) {
 		// when
@@ -402,7 +403,7 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the metric
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should still be 1 since verification required status was already set
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should still be 1 since verification required status was already set
 	})
 }
 
@@ -432,11 +433,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -538,11 +539,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 				})
 		})
 	})
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 }
 
@@ -574,8 +575,8 @@ func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -623,8 +624,8 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -664,7 +665,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	assert.EqualError(t, err, "unable to update state label at UserSignup resource: some error")
+	require.EqualError(t, err, "unable to update state label at UserSignup resource: some error")
 
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -683,8 +684,8 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 0, // unchanged
 		})
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
@@ -714,8 +715,8 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -762,11 +763,11 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
@@ -915,8 +916,8 @@ func TestUserSignupFailedMissingTier(t *testing.T) {
 					Reason: "UserIsActive",
 				})
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -983,8 +984,8 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 		})
 
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -1046,8 +1047,8 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		})
 
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -1084,8 +1085,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -1154,8 +1155,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
@@ -1219,8 +1220,8 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
@@ -1293,8 +1294,8 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1356,8 +1357,8 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	// There should be no MasterUserRecords
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
@@ -1418,8 +1419,8 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
@@ -1493,8 +1494,8 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1555,8 +1556,8 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1676,8 +1677,8 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	}
@@ -1724,8 +1725,8 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
@@ -1770,8 +1771,8 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // zero since starting state was approved
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)   // zero since starting state was approved
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // zero since starting state was approved
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)   // zero since starting state was approved
 	assert.Empty(t, userSignup.Status.Conditions)
 }
 
@@ -1816,8 +1817,8 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	assert.Empty(t, userSignup.Status.Conditions)
 }
 
@@ -1866,8 +1867,8 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
@@ -1939,8 +1940,8 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		}, instance)
 		require.NoError(t, err)
 		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 		test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
@@ -2010,8 +2011,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.Client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	usMur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, usMur.Name)
 
@@ -2026,8 +2027,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 		usMur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
 		segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, usMur.Name)
 
@@ -2166,8 +2167,8 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 			"1,internal": 1,
 		})
 
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).Get()
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 }
@@ -2228,9 +2229,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		// The state label should still be set to approved until the controller reconciles the deactivation
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // 0 because usersignup has not reconciled the deactivation
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)    // 0 because usersignup was originally deactivated
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)      // 0 because state was initially set to approved
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // 0 because usersignup has not reconciled the deactivation
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)    // 0 because usersignup was originally deactivated
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)      // 0 because state was initially set to approved
 
 		// Confirm the status is now set to Deactivating
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2286,9 +2287,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal) // one because the deactivation was reconciled
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal) // one because the deactivation was reconciled
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status has been set to Deactivated
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2500,15 +2501,15 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				"1,external": 2,
 			})
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
 		notificationList := &toolchainv1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notificationList)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(notificationList.Items))
+		require.Empty(t, notificationList.Items)
 	})
 }
 
@@ -2614,9 +2615,9 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		// verify that the annotation was incremented
 		assert.Equal(t, "3", userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 		mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
 		segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 
@@ -2703,9 +2704,9 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 		// State is still deactivated because the status update failed
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivation notification should not be created because this is the reactivation case
 		ntest.AssertNoNotificationsExist(t, r.Client)
@@ -2828,9 +2829,9 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]) // State should still be approved at this stage
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 			// Confirm the status is still set to Deactivating
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2906,9 +2907,9 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 					Reason: "UserNotInPreDeactivation",
 				})
 			// metrics should be the same after the 2nd reconcile
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 			// The Space and SpaceBinding should still exist because cleanup would be handled by the space cleanup controller
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, r.Client).Exists()
@@ -3103,10 +3104,10 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 	// Confirm the status is set to Banned
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3154,10 +3155,10 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	// Confirm the status is set to VerificationRequired
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3251,10 +3252,10 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 	// Confirm the status is set to Banning
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3295,10 +3296,10 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 
 		assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		// metrics should be the same after the 2nd reconcile
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status is now set to Banned
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3427,9 +3428,9 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 			// Confirm the status is set to UnableToDeleteMUR
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3462,9 +3463,9 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				ntest.AssertNoNotificationsExist(t, r.Client)
 				assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]) // UserSignup should still be approved
 				// the metrics should be the same, deactivation should only be counted once
-				AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-				AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-				AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 				// The Space and SpaceBinding should still exist because cleanup would be handled by the space cleanup controller
 				spacetest.AssertThatSpaces(t, r.Client).HaveCount(1)
@@ -3588,9 +3589,9 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 	// Status unchanged since it could not be updated
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3674,16 +3675,16 @@ func TestDeathBy100Signups(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
+			require.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
 			require.Equal(t, reconcile.Result{}, res)
 
 			// Lookup the user signup again
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3854,7 +3855,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
+	require.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -3889,9 +3890,9 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,external": 1,
 		})
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
 
 func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
@@ -3912,7 +3913,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
+	require.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3924,9 +3925,9 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -4360,13 +4361,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 2, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4380,13 +4381,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4400,13 +4401,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "pending", "approved")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "approved")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 2, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4420,13 +4421,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "approved", "deactivated")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "approved", "deactivated")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 2, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4440,13 +4441,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "pending", "deactivated")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "deactivated")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4460,13 +4461,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "deactivated", "banned")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "deactivated", "banned")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 2, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	})
@@ -4482,13 +4483,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", "")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4502,13 +4503,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4522,13 +4523,13 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", "x")
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "x")
 			// then
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	})

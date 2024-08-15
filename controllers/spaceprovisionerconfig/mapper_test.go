@@ -105,10 +105,10 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		})
 
 		// then
-		require.Equal(t, reqs, []reconcile.Request{
+		require.Equal(t, []reconcile.Request{
 			requestFromObject(spc0),
 			requestFromObject(spc2),
-		})
+		}, reqs)
 	})
 
 	t.Run("interprets errors as empty result", func(t *testing.T) {

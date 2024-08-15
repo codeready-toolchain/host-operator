@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +47,7 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 
 func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.SpacesPerClusterCounts[clusterName])
-	AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
+	metricscommon.AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
 	return a
 }
 
@@ -54,7 +55,7 @@ func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1
 	actual := a.counts.UserSignupsPerActivationAndDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for key, count := range expected {
-		AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
+		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
 	}
 	return a
 }
@@ -63,7 +64,7 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 	actual := a.counts.MasterUserRecordPerDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual, "invalid counter values")
 	for domain, count := range expected {
-		AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
+		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
 	}
 	return a
 }

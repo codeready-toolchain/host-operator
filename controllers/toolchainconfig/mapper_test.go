@@ -40,6 +40,6 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 		req := MapSecretToToolchainConfig()(context.TODO(), pod)
 
 		// then
-		require.Len(t, req, 0)
+		require.Empty(t, req)
 	})
 }
