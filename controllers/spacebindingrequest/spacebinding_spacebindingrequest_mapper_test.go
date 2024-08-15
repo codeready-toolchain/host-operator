@@ -29,7 +29,7 @@ func TestMapSpaceBindingToSpaceBindingRequestByLabel(t *testing.T) {
 		requests := spacebindingrequest.MapSpaceBindingToSpaceBindingRequest()(context.TODO(), sbnosbr)
 
 		// then
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("should return spacebinding associated with spacebindingrequest", func(t *testing.T) {

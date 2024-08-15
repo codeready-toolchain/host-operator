@@ -3,6 +3,7 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestGetToolchainConfig(t *testing.T) {
 		toolchainCfg, err := GetToolchainConfig(cl)
 
 		// then
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "prod", toolchainCfg.Environment())
 		assert.Empty(t, toolchainCfg.Notifications().MailgunAPIKey())
 	})
@@ -46,7 +47,7 @@ func TestGetToolchainConfig(t *testing.T) {
 		toolchainCfg, err := GetToolchainConfig(cl)
 
 		// then
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "e2e-tests", toolchainCfg.Environment())
 		assert.Equal(t, "abc123", toolchainCfg.Notifications().MailgunAPIKey())
 		assert.Equal(t, "sandbox", toolchainCfg.Notifications().TemplateSetName())
@@ -55,22 +56,22 @@ func TestGetToolchainConfig(t *testing.T) {
 			// given
 			obj := testconfig.ModifyToolchainConfigObj(t, cl, testconfig.Environment("unit-tests"), testconfig.Notifications().TemplateSetName("appstudio"))
 			err := cl.Update(context.TODO(), obj)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			secret.Data["mailgunAPIKey"] = []byte("def456")
 			err = cl.Update(context.TODO(), secret)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			actual := &toolchainv1alpha1.ToolchainConfig{}
 			err = cl.Get(context.TODO(), types.NamespacedName{Name: "config", Namespace: test.HostOperatorNs}, actual)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "unit-tests", *actual.Spec.Host.Environment)
 
 			// when
 			toolchainCfg, err = GetToolchainConfig(cl)
 
 			// then
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "e2e-tests", toolchainCfg.Environment()) // returns cached value
 			assert.Equal(t, "abc123", toolchainCfg.Notifications().MailgunAPIKey())
 			assert.Equal(t, "sandbox", toolchainCfg.Notifications().TemplateSetName())
@@ -90,7 +91,7 @@ func TestGetToolchainConfig(t *testing.T) {
 		toolchainCfg, err := GetToolchainConfig(cl)
 
 		// then
-		assert.EqualError(t, err, "get failed")
+		require.EqualError(t, err, "get failed")
 		assert.Equal(t, "prod", toolchainCfg.Environment())
 		assert.Empty(t, toolchainCfg.Notifications().MailgunAPIKey())
 	})
@@ -136,7 +137,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 		toolchainCfg, err := ForceLoadToolchainConfig(cl)
 
 		// then
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "prod", toolchainCfg.Environment())
 		assert.Empty(t, toolchainCfg.Notifications().MailgunAPIKey())
 	})
@@ -154,7 +155,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 		toolchainCfg, err := ForceLoadToolchainConfig(cl)
 
 		// then
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "e2e-tests", toolchainCfg.Environment())
 		assert.Equal(t, "abc123", toolchainCfg.Notifications().MailgunAPIKey())
 
@@ -162,22 +163,22 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 			// given
 			obj := testconfig.ModifyToolchainConfigObj(t, cl, testconfig.Environment("unit-tests"))
 			err := cl.Update(context.TODO(), obj)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			secret.Data["mailgunAPIKey"] = []byte("def456")
 			err = cl.Update(context.TODO(), secret)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			actual := &toolchainv1alpha1.ToolchainConfig{}
 			err = cl.Get(context.TODO(), types.NamespacedName{Name: "config", Namespace: test.HostOperatorNs}, actual)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "unit-tests", *actual.Spec.Host.Environment)
 
 			// when
 			toolchainCfg, err = ForceLoadToolchainConfig(cl)
 
 			// then
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "unit-tests", toolchainCfg.Environment())               // returns actual value
 			assert.Equal(t, "def456", toolchainCfg.Notifications().MailgunAPIKey()) // returns actual value
 		})
@@ -196,7 +197,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 		toolchainCfg, err := ForceLoadToolchainConfig(cl)
 
 		// then
-		assert.EqualError(t, err, "get failed")
+		require.EqualError(t, err, "get failed")
 		assert.Equal(t, "prod", toolchainCfg.Environment())
 		assert.Empty(t, toolchainCfg.Notifications().MailgunAPIKey())
 	})
@@ -281,7 +282,7 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
-		assert.Equal(t, len(toolchainCfg.AutomaticApproval().Domains()), 0)
+		assert.Empty(t, toolchainCfg.AutomaticApproval().Domains())
 	})
 }
 
@@ -540,7 +541,7 @@ func TestPublicViewer(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+		assert.False(t, toolchainCfg.PublicViewer().Enabled())
 	})
 
 	t.Run("disabled", func(t *testing.T) {
@@ -548,7 +549,7 @@ func TestPublicViewer(t *testing.T) {
 		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: false}
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.Equal(t, false, toolchainCfg.PublicViewer().Enabled())
+		assert.False(t, toolchainCfg.PublicViewer().Enabled())
 	})
 
 	t.Run("enabled", func(t *testing.T) {
@@ -556,6 +557,6 @@ func TestPublicViewer(t *testing.T) {
 		cfg.Spec.Host.PublicViewerConfig = &toolchainv1alpha1.PublicViewerConfiguration{Enabled: true}
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.Equal(t, true, toolchainCfg.PublicViewer().Enabled())
+		assert.True(t, toolchainCfg.PublicViewer().Enabled())
 	})
 }

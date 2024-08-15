@@ -414,7 +414,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 						toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env",
 					})
 					require.NoError(t, err)
-					require.Len(t, secrets.Items, 0)
+					require.Empty(t, secrets.Items)
 
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))

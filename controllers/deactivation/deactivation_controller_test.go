@@ -14,7 +14,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	. "github.com/codeready-toolchain/host-operator/test"
 	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -23,6 +22,7 @@ import (
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	metricstest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -517,7 +517,7 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeue should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, true)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
+			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 		})
 	})
 
