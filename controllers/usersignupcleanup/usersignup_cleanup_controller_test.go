@@ -17,7 +17,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
-	metricstest "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
