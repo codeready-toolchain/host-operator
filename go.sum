@@ -139,8 +139,8 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20240802163003-cce070815e69 h1:e6up2k4O7QdG6hu0iOwNGap60b932N0JXlweDmmvCAQ=
 github.com/codeready-toolchain/api v0.0.0-20240802163003-cce070815e69/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240802180627-14c41a99df18 h1:ZSXXcz3BmYvYmw1BexF4xvRjlr/3W5IOKxvc1NwLjKg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240802180627-14c41a99df18/go.mod h1:ulg9vY3W6Lsrn84/qVneCIrTvMkBC1mzmQqGfYDv7lQ=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20240815144550-a209f6c3549d h1:t9f5qyyKkKQZMvz8L1hl00amfXo23fOcuuhmYIzsKmA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20240815144550-a209f6c3549d/go.mod h1:ulg9vY3W6Lsrn84/qVneCIrTvMkBC1mzmQqGfYDv7lQ=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=

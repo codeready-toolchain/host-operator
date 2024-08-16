@@ -27,7 +27,7 @@ func TestMapToSpaceRequestByLabel(t *testing.T) {
 		requests := spacerequest.MapSubSpaceToSpaceRequest()(spacenosr)
 
 		// then
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("should return space associated with spacerequest", func(t *testing.T) {
