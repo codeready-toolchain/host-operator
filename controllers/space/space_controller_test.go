@@ -1989,7 +1989,7 @@ func TestRetargetSpace(t *testing.T) {
 				HasNoConditions().
 				HasStatusTargetCluster("member-1") // NOT updated
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1). // counter not is decremented because of the failed status updated
+				HaveSpacesForCluster("member-1", 1). // counter is not decremented because of the failed status update
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 
