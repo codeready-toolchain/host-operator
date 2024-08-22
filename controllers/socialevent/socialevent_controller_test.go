@@ -3,6 +3,7 @@ package socialevent_test
 import (
 	"context"
 	"fmt"
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -10,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	socialeventtest "github.com/codeready-toolchain/host-operator/test/socialevent"
-	"github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
@@ -31,7 +31,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	baseSpaceTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	baseUserTier := usertier.NewUserTier("deactivate30", 30)
+	baseUserTier := commontier.NewUserTier(commontier.WithName("deactivate30"), commontier.WithDeactivationTimeoutDays(30))
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
