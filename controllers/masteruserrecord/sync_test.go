@@ -196,7 +196,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
-	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30")) // Let's use the default tier "deactivate30" but with the deactivation day timeout set to 0. Just to check that the notifaction context set to "(unlimited)".
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")),
 		murtest.WithOwnerLabel(userSignup.Name))
