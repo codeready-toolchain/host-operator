@@ -44,7 +44,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotEmpty(t, template["userprovisioned"])
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["userprovisioned"].Subject)
 			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
-			assert.Equal(t, template["userprovisioned"].Name, UserProvisionedTemplateName)
+			assert.Equal(t, UserProvisionedTemplateName, template["userprovisioned"].Name)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
