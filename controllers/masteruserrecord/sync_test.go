@@ -196,7 +196,6 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
-
 	userTier := commontier.NewUserTier(commontier.WithName("nodeactivation"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.TierName("nodeactivation"),
