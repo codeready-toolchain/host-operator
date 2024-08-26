@@ -24,7 +24,6 @@ import (
 	segmenttest "github.com/codeready-toolchain/host-operator/test/segment"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
-	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -37,6 +36,7 @@ import (
 	testsocialevent "github.com/codeready-toolchain/toolchain-common/pkg/test/socialevent"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/gofrs/uuid"
@@ -58,8 +58,8 @@ import (
 var (
 	baseNSTemplateTier  = tiertest.NewNSTemplateTier("base", "dev", "stage")
 	base2NSTemplateTier = tiertest.NewNSTemplateTier("base2", "dev", "stage")
-	deactivate30Tier    = testusertier.NewUserTier("deactivate30", 30)
-	deactivate80Tier    = testusertier.NewUserTier("deactivate80", 80)
+	deactivate30Tier    = commontier.NewUserTier(commontier.WithName("deactivate30"), commontier.WithDeactivationTimeoutDays(30))
+	deactivate80Tier    = commontier.NewUserTier(commontier.WithName("deactivate80"), commontier.WithDeactivationTimeoutDays(80))
 	event               = testsocialevent.NewSocialEvent(test.HostOperatorNs, commonsocialevent.NewName(),
 		testsocialevent.WithUserTier(deactivate80Tier.Name),
 		testsocialevent.WithSpaceTier(base2NSTemplateTier.Name))
@@ -735,7 +735,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 func TestNonDefaultNSTemplateTier(t *testing.T) {
 	// given
 	customNSTemplateTier := tiertest.NewNSTemplateTier("custom", "dev", "stage")
-	customUserTier := testusertier.NewUserTier("custom", 120)
+	customUserTier := commontier.NewUserTier(commontier.WithName("custom"), commontier.WithDeactivationTimeoutDays(120))
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultUserTier("custom"), testconfig.Tiers().DefaultSpaceTier("custom"))
 	userSignup := commonsignup.NewUserSignup()
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
