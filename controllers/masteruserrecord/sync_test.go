@@ -196,8 +196,9 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
-	userTier := commontier.NewUserTier(commontier.WithName("deactivate30")) // Let's use the default tier "deactivate30" but with the deactivation day timeout set to 0. Just to check that the notifaction context set to "(unlimited)".
+	userTier := commontier.NewUserTier(commontier.WithName("nodeactivation"))
 	mur := murtest.NewMasterUserRecord(t, "john",
+		murtest.TierName("nodeactivation"),
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")),
 		murtest.WithOwnerLabel(userSignup.Name))
 
@@ -270,7 +271,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		err := sync.synchronizeStatus(context.TODO())
 
 		// then
-		require.EqualError(t, err, "usertiers.toolchain.dev.openshift.com \"deactivate30\" not found")
+		require.EqualError(t, err, "usertiers.toolchain.dev.openshift.com \"nodeactivation\" not found")
 	})
 }
 
