@@ -47,6 +47,13 @@ objects:
           - toolchain.dev.openshift.com
         resources:
           - bannedusers
+        verbs:
+          - watch
+          - get
+          - list
+      - apiGroups:
+          - toolchain.dev.openshift.com
+        resources:
           - toolchainclusters
         verbs:
           - get
