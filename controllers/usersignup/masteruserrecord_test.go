@@ -1,13 +1,12 @@
 package usersignup
 
 import (
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	"testing"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonmur "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
-
-	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -49,13 +48,13 @@ func TestNewMasterUserRecordWhenSpaceCreationIsSkipped(t *testing.T) {
 }
 
 func TestMigrateMurIfNecessary(t *testing.T) {
+	defaultUserTier := commontier.NewUserTier(commontier.WithName("deactivate90"), commontier.WithDeactivationTimeoutDays(90))
 
 	t.Run("no update needed", func(t *testing.T) {
 
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
 			userSignup := commonsignup.NewUserSignup()
-			defaultUserTier := testusertier.NewUserTier("deactivate90", 90)
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 			// when
@@ -75,7 +74,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup()
-			defaultUserTier := testusertier.NewUserTier("deactivate90", 90)
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "", "johny") // tierName not set
 
 			// when
