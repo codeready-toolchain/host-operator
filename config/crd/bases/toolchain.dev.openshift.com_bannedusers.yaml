@@ -46,7 +46,6 @@ spec:
                 description: The e-mail address of the account that has been banned
                 type: string
             required:
-            - description
             - email
             type: object
         type: object
