@@ -39,11 +39,11 @@ spec:
           spec:
             description: BannedUserSpec defines the desired state of BannedUser
             properties:
-              description:
-                description: Description about the ban reasons
-                type: string
               email:
                 description: The e-mail address of the account that has been banned
+                type: string
+              reason:
+                description: Reason of the ban
                 type: string
             required:
             - email
