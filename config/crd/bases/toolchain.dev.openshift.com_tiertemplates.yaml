@@ -157,7 +157,7 @@ spec:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
                 type: array
-                x-kubernetes-list-type: set
+                x-kubernetes-list-type: atomic
                 x-kubernetes-preserve-unknown-fields: true
               tierName:
                 description: 'The tier of the template. For example: "basic", "advanced",
