@@ -31,26 +31,11 @@ objects:
       - apiGroups:
           - toolchain.dev.openshift.com
         resources:
-          - masteruserrecords
-          - socialevents
-          - spacebindings
-          - spaces
-          - toolchainconfigs
-          - toolchainstatuses
-          - proxyplugins
-          - nstemplatetiers
+          - "*"
         verbs:
           - get
           - list
           - watch
-      - apiGroups:
-          - toolchain.dev.openshift.com
-        resources:
-          - bannedusers
-          - toolchainclusters
-        verbs:
-          - get
-          - list
       - apiGroups:
           - ""
         resources:
@@ -59,6 +44,7 @@ objects:
         verbs:
           - get
           - list
+          - watch
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
