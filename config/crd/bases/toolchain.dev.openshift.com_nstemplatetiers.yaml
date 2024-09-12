@@ -160,9 +160,11 @@ spec:
                 additionalProperties:
                   type: string
                 description: Revisions is an array containing the names of the last
-                  applied TierTemplateRevision CRs. Those parameters will be evaluated
-                  in the TierTemplates when the NSTemplateTier CR gets created in
-                  the cluster.
+                  applied TierTemplateRevision CRs. Since the TierTemplate can be
+                  managed outside the host-operator, we need to store the TierTemplate
+                  revisions, so we can get to the original contents to be able to
+                  properly propagate the update from the previous version of the template
+                  to the new one.
                 type: object
                 x-kubernetes-map-type: atomic
               updates:
