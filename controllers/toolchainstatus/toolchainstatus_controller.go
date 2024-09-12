@@ -718,26 +718,32 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
 	logger := log.FromContext(ctx)
 	allOk := true
-	for index, member := range toolchainStatus.Status.Members {
+	var newMembers []toolchainv1alpha1.Member
+	for _, member := range toolchainStatus.Status.Members {
 		newMemberStatus, ok := members[member.ClusterName]
 		apiEndpoint := getAPIEndpoint(member.ClusterName, memberClusters)
 		if apiEndpoint != "" {
-			toolchainStatus.Status.Members[index].APIEndpoint = apiEndpoint
+			member.APIEndpoint = apiEndpoint
 		}
 
 		if ok {
-			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
+			member.MemberStatus = newMemberStatus
 			delete(members, member.ClusterName)
 		} else if member.SpaceCount > 0 {
 			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", member.ClusterName)
 			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
-			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
+			member.MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
 			allOk = false
 		} else {
-			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members[:index], toolchainStatus.Status.Members[index+1:]...)
+			continue
 		}
+
+		newMembers = append(newMembers, member)
 	}
+
+	toolchainStatus.Status.Members = newMembers
+
 	for clusterName, memberStatus := range members {
 		apiEndpoint := getAPIEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
