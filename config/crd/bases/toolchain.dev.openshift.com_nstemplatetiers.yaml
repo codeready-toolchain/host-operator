@@ -66,6 +66,29 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              parameters:
+                description: Parameters is an optional array of Parameters used during
+                  the NSTemplateTier and TierTemplate creation. When creation the
+                  NsTemplateTier and referenced TierTemplates, the parameters will
+                  be read from the NSTemplateTier and evaluated in all the TierTemplates
+                  referenced in the spec.
+                items:
+                  description: Parameter defines a name/value variable that is to
+                    be processed during TierTemplate creation.
+                  properties:
+                    name:
+                      description: Name must be set and it can be referenced in the
+                        TierTemplate Items using {{.NAME}}. Required.
+                      type: string
+                    value:
+                      description: Value holds the Parameter data. The value replaces
+                        all occurrences of the Parameter {{.NAME}}.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
               spaceRequestConfig:
                 description: SpaceRequestConfig stores all the configuration related
                   to the Space Request feature
@@ -132,6 +155,15 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              revisions:
+                additionalProperties:
+                  type: string
+                description: Revisions is an optional array of names of the last applied
+                  TierTemplateRevision CR NSTemplateTier creation. Those parameters
+                  will be evaluated in the TierTemplates when the NSTemplateTier CR
+                  gets created in the cluster.
+                type: object
+                x-kubernetes-map-type: atomic
               updates:
                 description: Updates is an array of all NSTemplateTier updates
                 items:

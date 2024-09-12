@@ -42,6 +42,9 @@ spec:
               email:
                 description: The e-mail address of the account that has been banned
                 type: string
+              reason:
+                description: Reason of the ban
+                type: string
             required:
             - email
             type: object
