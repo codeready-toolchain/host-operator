@@ -159,10 +159,10 @@ spec:
               revisions:
                 additionalProperties:
                   type: string
-                description: Revisions is an optional array of names of the last applied
-                  TierTemplateRevision CR NSTemplateTier creation. Those parameters
-                  will be evaluated in the TierTemplates when the NSTemplateTier CR
-                  gets created in the cluster.
+                description: Revisions is an array containing the names of the last
+                  applied TierTemplateRevision CRs. Those parameters will be evaluated
+                  in the TierTemplates when the NSTemplateTier CR gets created in
+                  the cluster.
                 type: object
                 x-kubernetes-map-type: atomic
               updates:
