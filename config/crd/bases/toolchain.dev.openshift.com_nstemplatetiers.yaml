@@ -68,7 +68,7 @@ spec:
                 x-kubernetes-list-type: atomic
               parameters:
                 description: Parameters is an optional array of Parameters used during
-                  the NSTemplateTier and TierTemplate creation. When creation the
+                  the NSTemplateTier and TierTemplate creation. When creating the
                   NsTemplateTier and referenced TierTemplates, the parameters will
                   be read from the NSTemplateTier and evaluated in all the TierTemplates
                   referenced in the spec.
@@ -78,7 +78,7 @@ spec:
                   properties:
                     name:
                       description: Name must be set and it can be referenced in the
-                        TierTemplate Items using {{.NAME}}. Required.
+                        TierTemplate items using {{.NAME}}
                       type: string
                     value:
                       description: Value holds the Parameter data. The value replaces
@@ -86,6 +86,7 @@ spec:
                       type: string
                   required:
                   - name
+                  - value
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
