@@ -736,7 +736,7 @@ func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolch
 			member.MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
 			allOk = false
 		} else {
-			continue
+			continue // member toolchaincluster has been removed and SpaceCount is 0 so the cluster has been intentionally removed
 		}
 
 		newMembers = append(newMembers, member)
