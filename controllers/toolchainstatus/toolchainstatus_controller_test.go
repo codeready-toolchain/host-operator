@@ -999,6 +999,40 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 			})
 		})
+
+		t.Run("unregister member cluster - ToolchainCluster CR of member-1 cluster was intentionally deleted after spaces already migrated", func(t *testing.T) {
+			// given
+			memberStatus := newMemberStatus(ready())
+			toolchainStatus := NewToolchainStatus(
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.External): 20,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 20,
+				}),
+				WithMember("member-1", WithSpaceCount(0)), // 0 spaces because they were migrated before removing the cluster
+				WithMember("member-2", WithSpaceCount(10)),
+			)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
+			InitializeCounters(t, toolchainStatus)
+
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberClusterStatus(
+					memberCluster("member-2", spaceCount(10), ready()), // member-1 status should be removed, only member-2 should remain
+				).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
+		})
+
 	})
 }
 
