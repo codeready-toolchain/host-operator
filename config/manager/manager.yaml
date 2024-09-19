@@ -3,7 +3,6 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-    kubesaw-control-plane: kubesaw-controller-manager
   name: system
 ---
 apiVersion: apps/v1
@@ -13,12 +12,10 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
-    kubesaw-control-plane: kubesaw-controller-manager
 spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      kubesaw-control-plane: kubesaw-controller-manager
     annotations:
       kubectl.kubernetes.io/default-container: manager
   replicas: 1
@@ -26,7 +23,6 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-        kubesaw-control-plane: kubesaw-controller-manager
     spec:
       securityContext:
         runAsNonRoot: true
