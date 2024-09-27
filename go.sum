@@ -137,10 +137,8 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20240815232340-d0c164a83d27 h1:uEH8HAM81QZBccuqQpGKJUoJQe28+DFSYi/mRKZDYrA=
-github.com/codeready-toolchain/api v0.0.0-20240815232340-d0c164a83d27/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240826144207-8833deda63a9 h1:QvFitl9RXiO8tUAwo83zdt8pMi2uoBUu6kblc/1oeno=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20240826144207-8833deda63a9/go.mod h1:aIbki5CFsykeqZn2/ZwvUb3Krx2f2Tbq58R6MGnk6H8=
+github.com/codeready-toolchain/api v0.0.0-20240927104325-b5bfcb3cb1b0 h1:7cXHlRpoi1Owo8fYawl80PUsVWz+9AtMge6OJ4DjvWU=
+github.com/codeready-toolchain/api v0.0.0-20240927104325-b5bfcb3cb1b0/go.mod h1:ie9p4LenCCS0LsnbWp6/xwpFDdCWYE0KWzUO6Sk1g0E=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240905135929-d55d86fdd41e h1:xTqyuImyon/P2QfV5NIJDsVkEWqb9b6Ax9INsmzpI1Q=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20240905135929-d55d86fdd41e/go.mod h1:aIbki5CFsykeqZn2/ZwvUb3Krx2f2Tbq58R6MGnk6H8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -1151,7 +1149,6 @@ gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776/go.mod h1:K4uyk7z7BCEPqu6E+C
 gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=
 gotest.tools/v3 v3.0.2/go.mod h1:3SzNCllyD9/Y+b5r9JIKQ474KzkZyqLqEfYqMsX94Bk=
 gotest.tools/v3 v3.0.3/go.mod h1:Z7Lb0S5l+klDB31fvDQX8ss/FlKDxtlFlw3Oa8Ymbl8=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
