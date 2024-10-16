@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: intel-large-dev
+  name: intellarge-dev
 objects:
 - apiVersion: v1
   kind: Namespace

@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: intel-large-spacerole-admin
+  name: intelmedium-spacerole-admin
 objects:
 
 # Rolebindings that grant permissions to the users in their own namespaces

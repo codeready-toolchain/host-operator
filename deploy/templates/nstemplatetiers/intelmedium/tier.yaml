@@ -1,12 +1,12 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: intel-medium-tier
+  name: intelmedium-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
   metadata:
-    name: intel-medium
+    name: intelmedium
     namespace: ${NAMESPACE}
   spec:
     clusterResources:
