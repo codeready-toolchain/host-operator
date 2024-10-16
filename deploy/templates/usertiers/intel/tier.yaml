@@ -12,6 +12,6 @@ objects:
     deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
 parameters:
 - name: NAMESPACE
-# Oct 18 to Nov 4 (inclusive)
+# 2 months for now
 - name: DEACTIVATION_TIMEOUT_DAYS
-  value: "18"
+  value: "60"

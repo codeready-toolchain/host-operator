@@ -192,7 +192,7 @@ func TestNewUserTier(t *testing.T) {
 				case "deactivate365":
 					assert.Equal(t, 365, tier.Spec.DeactivationTimeoutDays)
 				case "intel":
-					assert.Equal(t, 18, tier.Spec.DeactivationTimeoutDays)
+					assert.Equal(t, 60, tier.Spec.DeactivationTimeoutDays)
 				default:
 					require.Fail(t, "found unexpected tier", "tier '%s' found but not handled", tier.Name)
 				}

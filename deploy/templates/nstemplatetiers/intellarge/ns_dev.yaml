@@ -75,7 +75,7 @@ objects:
     hard:
       limits.cpu: 16000m
       limits.memory: ${MEMORY_LIMIT}
-      requests.cpu: 8000m
+      requests.cpu: 16000m
       requests.memory: ${MEMORY_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -88,7 +88,7 @@ objects:
     hard:
       limits.cpu: 16000m
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: 8000m
+      requests.cpu: 16000m
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
