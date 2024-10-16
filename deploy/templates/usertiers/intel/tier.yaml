@@ -1,0 +1,17 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: intel-usertier
+objects:
+- kind: UserTier
+  apiVersion: toolchain.dev.openshift.com/v1alpha1
+  metadata:
+    name: intel
+    namespace: ${NAMESPACE}
+  spec:
+    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
+parameters:
+- name: NAMESPACE
+# Oct 18 to Nov 4 (inclusive)
+- name: DEACTIVATION_TIMEOUT_DAYS
+  value: "18"
