@@ -48,7 +48,8 @@ spec:
       kind: TierTemplate
       name: tiertemplates.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: TierTemplateRevision is the Schema for the tiertemplaterevions API
+    - description: TierTemplateRevision is the Schema for the tiertemplaterevions
+        API
       displayName: Template Tier Revision
       kind: TierTemplateRevision
       name: tiertemplaterevions.toolchain.dev.openshift.com
