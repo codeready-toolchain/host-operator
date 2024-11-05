@@ -7,17 +7,21 @@ objects:
     kind: ServiceAccount
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
       name: registration-service
       namespace: ${NAMESPACE}
   - kind: Role
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
       name: registration-service
       namespace: ${NAMESPACE}
     rules:
+# !!! IMPORTANT !!!
+# If there is a new resource added to this role, then revisit the registration-service client cache
+# and make sure that the cache is pre-populated with all resources of this new kind.
+# See: https://github.com/codeready-toolchain/registration-service/blob/36ce810d4c4cd68dc100646e8060ec94ae846f52/cmd/main.go#L192-L204
       - apiGroups:
           - toolchain.dev.openshift.com
         resources:
@@ -31,7 +35,16 @@ objects:
       - apiGroups:
           - toolchain.dev.openshift.com
         resources:
-          - "*"
+          - masteruserrecords
+          - socialevents
+          - spacebindings
+          - spaces
+          - toolchainconfigs
+          - toolchainstatuses
+          - proxyplugins
+          - nstemplatetiers
+          - bannedusers
+          - toolchainclusters
         verbs:
           - get
           - list
@@ -40,16 +53,16 @@ objects:
           - ""
         resources:
           - secrets
-          - configmaps
         verbs:
           - get
           - list
           - watch
+# !!! IMPORTANT - see the comment above !!!
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
       name: registration-service
       namespace: ${NAMESPACE}
     subjects:
@@ -63,7 +76,7 @@ objects:
     apiVersion: apps/v1
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
       name: registration-service
       namespace: ${NAMESPACE}
     spec:
@@ -134,7 +147,7 @@ objects:
     apiVersion: v1
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: registration-service
       name: registration-service
       namespace: ${NAMESPACE}
@@ -157,7 +170,7 @@ objects:
       name: registration-service
       namespace: ${NAMESPACE}
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: registration-service
     spec:
       ports:
@@ -177,7 +190,7 @@ objects:
       name: registration-service-metrics
       namespace: ${NAMESPACE}
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: registration-service
     spec:
       ports:
@@ -195,7 +208,7 @@ objects:
     apiVersion: v1
     metadata:
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: registration-service
       annotations:
         haproxy.router.openshift.io/timeout: 24h
@@ -219,7 +232,7 @@ objects:
       name: api
       namespace: ${NAMESPACE}
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: registration-service
     spec:
       ports:
@@ -239,7 +252,7 @@ objects:
       name: proxy-metrics-service
       namespace: ${NAMESPACE}
       labels:
-        provider: codeready-toolchain
+        toolchain.dev.openshift.com/provider: codeready-toolchain
         run: proxy-metrics
     spec:
       ports:
