@@ -2,10 +2,13 @@ package nstemplatetier
 
 import (
 	"context"
+	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -74,6 +77,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Info("Requeing after adding a new entry in tier.status.updates")
 		return reconcile.Result{Requeue: true}, nil
 	}
+
+	if created, err := r.ensureRevision(ctx, tier); err != nil {
+		return reconcile.Result{}, errs.Wrap(err, "unable to create new TierTemplateRevision after NSTemplateTier changed")
+	} else if created {
+		logger.Info("Requeue after creating a new TTR")
+		return reconcile.Result{Requeue: true}, nil
+	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -106,4 +117,145 @@ func (r *Reconciler) addNewTierUpdate(ctx context.Context, tier *toolchainv1alph
 		Hash:      hash,
 	})
 	return r.Client.Status().Update(ctx, tier)
+}
+
+// ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
+// returns `true` if a new TierTemplateRevision CR was created, `err` if something wrong happened
+func (r *Reconciler) ensureRevision(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+	refs := getNSTemplateTierRefs(tmplTier)
+	ns, err := configuration.GetWatchNamespace()
+	if err != nil {
+		return false, err
+	}
+
+	// init revisions
+	if tmplTier.Status.Revisions == nil {
+		tmplTier.Status.Revisions = map[string]string{}
+	}
+	// compare TierTemplateRevision content with TierTemplateContent
+	ttrCreated := false
+	for _, tierTemplateRef := range refs {
+		// get the TierTemplate
+		var tierTemplate toolchainv1alpha1.TierTemplate
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: tierTemplateRef}, &tierTemplate); err != nil {
+			// something went wrong or we haven't found the TierTemplate
+			return false, err
+		}
+
+		// check if there is TTR associated with this TierTemplate
+		ttrCreated, err = r.ensureTTRforTemplate(ctx, tmplTier, tierTemplateRef, tierTemplate)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if ttrCreated {
+		// we need to update the status.revisions with the new ttrs
+		if err := r.Client.Status().Update(ctx, tmplTier); err != nil {
+			return ttrCreated, err
+		}
+		return true, nil
+	}
+
+	// nothing changed
+	return false, nil
+}
+
+func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplateRef string, tierTemplate toolchainv1alpha1.TierTemplate) (bool, error) {
+	ns, err := configuration.GetWatchNamespace()
+	if err != nil {
+		return false, err
+	}
+	if tierTemplateRevisionName, found := tmplTier.Status.Revisions[tierTemplateRef]; found {
+		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
+			if errors.IsNotFound(err) {
+				// no tierTemplateRevision CR was found, let's create one
+				if err := r.createNewTierTemplateRevision(ctx, tmplTier, tierTemplateRef, tierTemplate); err != nil {
+					return false, err
+				}
+				// new ttr created
+				return true, nil
+			} else {
+				// something wrong happened
+				return false, err
+			}
+		}
+		// TODO compare TierTemplate content with TTR content
+		// if the TierTemplate has changes we need to create new TTR
+	} else {
+		// no tierTemplateRevision CR was found, let's create one
+		if err := r.createNewTierTemplateRevision(ctx, tmplTier, tierTemplateRef, tierTemplate); err != nil {
+			return false, err
+		}
+		// new ttr created
+		return true, nil
+	}
+	// nothing changed
+	return false, nil
+}
+
+func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplateRef string, tierTemplate toolchainv1alpha1.TierTemplate) error {
+	newTTR, err := r.createTTR(ctx, &tierTemplate)
+	if err != nil {
+		// something went wrong while creating new ttr
+		return err
+	}
+	// update NSTemplateTierStatus with new TTR
+	tmplTier.Status.Revisions[tierTemplateRef] = newTTR.GetName()
+	return nil
+}
+
+// getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
+func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string {
+	var refs []string
+	for _, ns := range tmplTier.Spec.Namespaces {
+		refs = append(refs, ns.TemplateRef)
+	}
+	if tmplTier.Spec.ClusterResources != nil {
+		refs = append(refs, tmplTier.Spec.ClusterResources.TemplateRef)
+	}
+
+	roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
+	for r := range tmplTier.Spec.SpaceRoles {
+		roles = append(roles, r)
+	}
+	for _, r := range roles {
+		refs = append(refs, tmplTier.Spec.SpaceRoles[r].TemplateRef)
+	}
+	return refs
+}
+
+func (r *Reconciler) createTTR(ctx context.Context, tmplTier *toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.TierTemplateRevision, error) {
+	ttr := NewTTR(tmplTier)
+	err := r.Client.Create(ctx, ttr)
+	if err != nil && !errors.IsAlreadyExists(err) {
+		return nil, errs.Wrap(err, "unable to create TierTemplateRevision")
+	}
+
+	logger := log.FromContext(ctx)
+	logger.Info("created TierTemplateRevision", "tierTemplateRevision.Name", ttr.Name, "tierTemplate.Name", tmplTier.Name)
+	return ttr, nil
+}
+
+// NewTTR creates a TierTemplateRevision CR for a given TierTemplate object.
+func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate) *toolchainv1alpha1.TierTemplateRevision {
+	tierName := tierTmpl.Spec.TierName
+	tierTemplateName := tierTmpl.GetName()
+	labels := map[string]string{
+		toolchainv1alpha1.TierLabelKey:        tierName,
+		toolchainv1alpha1.TemplateRefLabelKey: tierTemplateName,
+	}
+	ttr := &toolchainv1alpha1.TierTemplateRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    tierTmpl.GetNamespace(),
+			GenerateName: fmt.Sprintf("%s-", tierTemplateName),
+			Labels:       labels,
+		},
+		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{
+			TemplateObjects: tierTmpl.Spec.TemplateObjects,
+		},
+	}
+
+	return ttr
 }
