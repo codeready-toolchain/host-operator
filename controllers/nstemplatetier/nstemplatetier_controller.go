@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	errs "github.com/pkg/errors"
@@ -243,6 +244,9 @@ func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string 
 
 func (r *Reconciler) createTTR(ctx context.Context, tmplTier *toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.TierTemplateRevision, error) {
 	ttr := NewTTR(tmplTier)
+	if err := controllerutil.SetControllerReference(tmplTier, ttr, r.Scheme); err != nil {
+		return nil, errs.Wrap(err, "error setting controller reference for TTR "+ttr.Name)
+	}
 	err := r.Client.Create(ctx, ttr)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return nil, errs.Wrap(err, "unable to create TierTemplateRevision")

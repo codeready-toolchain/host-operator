@@ -425,7 +425,7 @@ func TestReconcile(t *testing.T) {
 			})
 		})
 
-		t.Run("using tiertemplaterevision as revisions", func(t *testing.T) {
+		t.Run("using TTR as revisions", func(t *testing.T) {
 			tierTemplates := initTierTemplates(t, true) // initialize tier templates with templateObjects field populated
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
@@ -461,6 +461,9 @@ func TestReconcile(t *testing.T) {
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()), runtimeclient.MatchingLabels(labels))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, 1)
+					// check that owner reference was set
+					assert.Equal(t, "TierTemplate", ttrs.Items[0].OwnerReferences[0].Kind)
+					assert.Equal(t, ref, ttrs.Items[0].OwnerReferences[0].Name)
 				}
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
