@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
 		return reconcile.Result{}, errs.Wrap(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
 	} else if added {
-		logger.Info("Requeing after adding a new entry in tier.status.updates")
+		logger.Info("Requeue after adding a new entry in tier.status.updates")
 		return reconcile.Result{Requeue: true}, nil
 	}
 
@@ -166,11 +166,26 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, tmplTier *toolcha
 	if err != nil {
 		return false, err
 	}
+
+	// tierTemplate doesn't support TTRs
+	// we set TierTemplate as revisions
+	// TODO this step will be removed once we convert all TierTemplates to TTRs
+	if tierTemplate.Spec.TemplateObjects == nil {
+		val, ok := tmplTier.Status.Revisions[tierTemplateRef]
+		if !ok || val != tierTemplate.GetName() {
+			tmplTier.Status.Revisions[tierTemplateRef] = tierTemplate.GetName()
+			return true, nil
+		}
+		// nothing to update
+		return false, nil
+	}
+
 	if tierTemplateRevisionName, found := tmplTier.Status.Revisions[tierTemplateRef]; found {
 		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
+			// no tierTemplateRevision CR was found,
 			if errors.IsNotFound(err) {
-				// no tierTemplateRevision CR was found, let's create one
+				// let's create one
 				if err := r.createNewTierTemplateRevision(ctx, tmplTier, tierTemplateRef, tierTemplate); err != nil {
 					return false, err
 				}
