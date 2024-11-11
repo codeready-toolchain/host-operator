@@ -32,12 +32,15 @@ var expectedProdTiers = []string{
 	"base1ns6didler",
 	"baselarge",
 	"baseextendedidling",
+	"intelmedium",
+	"intellarge",
+	"intelxlarge",
 	"test",
 }
 
 func nsTypes(tier string) []string {
 	switch tier {
-	case "base1ns", "base1nsnoidling", "base1ns6didler", "test":
+	case "base1ns", "base1nsnoidling", "base1ns6didler", "intelmedium", "intellarge", "intelxlarge", "test":
 		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}

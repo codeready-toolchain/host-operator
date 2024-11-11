@@ -11,6 +11,7 @@ resources:
 - bases/toolchain.dev.openshift.com_spaceprovisionerconfigs.yaml
 - bases/toolchain.dev.openshift.com_spaces.yaml
 - bases/toolchain.dev.openshift.com_tiertemplates.yaml
+- bases/toolchain.dev.openshift.com_tiertemplaterevisions.yaml
 - bases/toolchain.dev.openshift.com_toolchainclusters.yaml
 - bases/toolchain.dev.openshift.com_toolchainconfigs.yaml
 - bases/toolchain.dev.openshift.com_toolchainstatuses.yaml

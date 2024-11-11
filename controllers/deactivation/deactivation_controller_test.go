@@ -3,6 +3,7 @@ package deactivation
 import (
 	"context"
 	"fmt"
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/pkg/errors"
 	"os"
@@ -14,7 +15,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
@@ -53,9 +53,9 @@ func TestReconcile(t *testing.T) {
 	username := "test-user"
 
 	// UserTiers
-	userTier30 := testusertier.NewUserTier("deactivate30", 30)
-	userTier90 := testusertier.NewUserTier("deactivate90", 90)
-	userTierNoDeactivation := testusertier.NewUserTier("nodeactivation", 0)
+	userTier30 := commontier.NewUserTier(commontier.WithName("deactivate30"), commontier.WithDeactivationTimeoutDays(30))
+	userTier90 := commontier.NewUserTier(commontier.WithName("deactivate90"), commontier.WithDeactivationTimeoutDays(90))
+	userTierNoDeactivation := commontier.NewUserTier(commontier.WithName("nodeactivation"))
 
 	userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
 	userSignupRedhat := userSignupWithEmail(username, "foo@redhat.com")
@@ -767,7 +767,7 @@ func TestAutomaticDeactivation(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(0))
 
 	// UserTiers
-	userTier30 := testusertier.NewUserTier("deactivate30", 30)
+	userTier30 := commontier.NewUserTier(commontier.WithName("deactivate30"), commontier.WithDeactivationTimeoutDays(30))
 
 	userSignupMember1 := usersignup.NewUserSignup(
 		usersignup.WithUsername("usertoautodeactivate"),

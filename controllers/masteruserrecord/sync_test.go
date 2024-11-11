@@ -7,17 +7,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
-	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +124,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 func TestSynchronizeSpec(t *testing.T) {
 	// given
 	apiScheme(t)
-	otherTier := testusertier.NewUserTier("other", 90)
+	otherTier := commontier.NewUserTier(commontier.WithName("other"), commontier.WithDeactivationTimeoutDays(90))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()), murtest.TierName(otherTier.Name))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
@@ -185,8 +185,7 @@ func TestSynchronizeStatus(t *testing.T) {
 		err := sync.synchronizeStatus(context.TODO())
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, "some error", err.Error())
+		require.EqualError(t, err, "some error")
 	})
 }
 
@@ -197,7 +196,9 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
+	userTier := commontier.NewUserTier(commontier.WithName("nodeactivation"))
 	mur := murtest.NewMasterUserRecord(t, "john",
+		murtest.TierName("nodeactivation"),
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")),
 		murtest.WithOwnerLabel(userSignup.Name))
 
@@ -230,7 +231,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	t.Run("successful and ready", func(t *testing.T) {
 		// given
 
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur.DeepCopy(), readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -243,12 +244,14 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "(unlimited)"))
 	})
 
-	t.Run("failed on the host side", func(t *testing.T) {
+	t.Run("failed on the host side when status update failed", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur.DeepCopy(), userSignup, userTier, readyToolchainStatus)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("some error")
 		}
@@ -258,7 +261,19 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		err := sync.synchronizeStatus(context.TODO())
 
 		// then
-		require.Error(t, err)
+		require.EqualError(t, err, "some error")
+	})
+
+	t.Run("failed on the host side when failed to load user tier", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur.DeepCopy(), userSignup, readyToolchainStatus)
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus(context.TODO())
+
+		// then
+		require.EqualError(t, err, "usertiers.toolchain.dev.openshift.com \"nodeactivation\" not found")
 	})
 }
 
@@ -296,7 +311,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur.DeepCopy())
+		hostClient := test.NewFakeClient(t, mur.DeepCopy(), readyToolchainStatus)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return fmt.Errorf("some error")
 		}
@@ -306,7 +321,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 		err := sync.synchronizeStatus(context.TODO())
 
 		// then
-		require.Error(t, err)
+		require.EqualError(t, err, "some error")
 	})
 }
 
@@ -320,6 +335,7 @@ func TestAlignReadiness(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"), commontier.WithDeactivationTimeoutDays(30))
 
 	preparedMUR := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
@@ -343,7 +359,7 @@ func TestAlignReadiness(t *testing.T) {
 	t.Run("ready propagated and notification created", func(t *testing.T) {
 		// given
 		mur := preparedMUR.DeepCopy()
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur, readyToolchainStatus, dummyNotification)
 
 		// when
 		preAlignTime := metav1.Now()
@@ -357,7 +373,9 @@ func TestAlignReadiness(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts(test.MemberClusterName).
 			AllUserAccountsHaveCondition(toBeProvisioned())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "30"))
 	})
 
 	t.Run("ready propagated and notification created with two accounts", func(t *testing.T) {
@@ -367,7 +385,7 @@ func TestAlignReadiness(t *testing.T) {
 			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
 			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()),
 			murtest.WithOwnerLabel(userSignup.Name))
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
+		hostClient := test.NewFakeClient(t, userSignup, mur, userTier, readyToolchainStatus, dummyNotification)
 
 		// when
 		preAlignTime := metav1.Now()
@@ -381,7 +399,9 @@ func TestAlignReadiness(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts(test.MemberClusterName, test.Member2ClusterName).
 			AllUserAccountsHaveCondition(toBeProvisioned())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "30"))
 	})
 
 	t.Run("UserAccount not ready", func(t *testing.T) {
@@ -459,7 +479,7 @@ func TestAlignReadiness(t *testing.T) {
 			murtest.WithOwnerLabel(userSignup.Name),
 			murtest.ProvisionedMur(&provisionedTime))
 
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur, readyToolchainStatus)
 
 		// when
 		ready, err := alignReadiness(ctx, s, hostClient, mur)
@@ -471,7 +491,9 @@ func TestAlignReadiness(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts()
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "30"))
 	})
 
 	t.Run("no UserAccount in status, space creation not skipped, with pre-existing MUR ready condition", func(t *testing.T) {
@@ -481,7 +503,7 @@ func TestAlignReadiness(t *testing.T) {
 			murtest.WithOwnerLabel(userSignup.Name))
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
 		mur.Status.ProvisionedTime = &provisionTime
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur, readyToolchainStatus)
 
 		// when
 		ready, err := alignReadiness(ctx, s, hostClient, mur)
@@ -492,7 +514,9 @@ func TestAlignReadiness(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
 			HasStatusUserAccounts().
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "30"))
 	})
 
 	t.Run("no UserAccount in status, space creation is skipped", func(t *testing.T) {
@@ -506,7 +530,7 @@ func TestAlignReadiness(t *testing.T) {
 			murtest.WithAnnotation("toolchain.dev.openshift.com/skip-auto-create-space", "true"))
 
 		for _, mur := range []*toolchainv1alpha1.MasterUserRecord{murWithoutCondition, murWithCondition} {
-			hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus)
+			hostClient := test.NewFakeClient(t, userSignup, userTier, mur, readyToolchainStatus)
 
 			// when
 			preAlignTime := metav1.Now()
@@ -520,7 +544,9 @@ func TestAlignReadiness(t *testing.T) {
 				HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 				HasStatusUserAccounts().
 				AllUserAccountsHaveCondition(toBeProvisioned())
-			OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+			OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+				HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+				HasContext("DeactivationTimeoutDays", "30"))
 		}
 
 	})
@@ -528,7 +554,7 @@ func TestAlignReadiness(t *testing.T) {
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
 		mur := preparedMUR.DeepCopy()
-		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur, readyToolchainStatus, dummyNotification)
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
 		mur.Status.ProvisionedTime = &provisionTime
 
@@ -545,7 +571,9 @@ func TestAlignReadiness(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts(test.MemberClusterName).
 			AllUserAccountsHaveCondition(toBeProvisioned())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned,
+			HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
+			HasContext("DeactivationTimeoutDays", "30"))
 	})
 
 	t.Run("When notification was already created, but the update of status failed before, which means that the condition is not set", func(t *testing.T) {
@@ -602,7 +630,7 @@ func TestAlignReadiness(t *testing.T) {
 	t.Run("failed on the host side when creating notification", func(t *testing.T) {
 		// given
 		mur := preparedMUR.DeepCopy()
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, userSignup, userTier, mur)
 		hostClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 			return fmt.Errorf("some error")
 		}
@@ -611,7 +639,7 @@ func TestAlignReadiness(t *testing.T) {
 		ready, err := alignReadiness(ctx, s, hostClient, mur)
 
 		// then
-		require.Error(t, err)
+		require.EqualError(t, err, "some error")
 		assert.False(t, ready)
 		AssertNoNotificationsExist(t, hostClient)
 		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
@@ -652,9 +680,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		createdOrUpdated, err := sync.synchronizeSpec(context.TODO())
 
 		// then
-		require.Error(t, err)
+		require.EqualError(t, err, "unable to update user account john")
 		assert.False(t, createdOrUpdated)
-		assert.Contains(t, err.Error(), "unable to update user account john")
 	})
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
@@ -682,8 +709,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			err := sync.synchronizeStatus(context.TODO())
 
 			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to update MUR john")
+			require.EqualError(t, err, "unable to update MUR john")
 			assert.Empty(t, provisionedMur.Status.UserAccounts)
 		})
 
@@ -700,10 +726,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			err := sync.synchronizeStatus(context.TODO())
 
 			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to update MUR john")
+			require.EqualError(t, err, "unable to update MUR john")
 			assert.Len(t, provisionedMur.Status.UserAccounts, 1)
-			assert.Contains(t, provisionedMur.Status.UserAccounts, additionalUserAcc)
 		})
 
 		t.Run("when the UserAccount was modified", func(t *testing.T) {
@@ -719,10 +743,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			err := sync.synchronizeStatus(context.TODO())
 
 			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to update MUR john")
+			require.EqualError(t, err, "unable to update MUR john")
 			assert.Len(t, provisionedMur.Status.UserAccounts, 1)
-			assert.Contains(t, provisionedMur.Status.UserAccounts, toBeModified)
 		})
 
 		t.Run("when routes are not set", func(t *testing.T) {
@@ -776,6 +798,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
 
 	t.Run("remove UserAccount from the status when there is one item and the MUR was already provisioned before", func(t *testing.T) {
 		// given
@@ -785,7 +808,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
 			murtest.StatusUserAccount(test.MemberClusterName, toBeProvisioned()),
 			murtest.ProvisionedMur(&provisionedTime))
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		hostClient := test.NewFakeClient(t, userTier, mur, readyToolchainStatus, userSignup)
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 
 		// when
@@ -805,7 +828,7 @@ func TestRemoveAccountFromStatus(t *testing.T) {
 			murtest.StatusCondition(toBeNotReady("Provisioning", "")),
 			murtest.StatusUserAccount(test.MemberClusterName, toBeNotReady("terminating", "")),
 			murtest.StatusUserAccount(test.Member2ClusterName, toBeProvisioned()))
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, userSignup)
+		hostClient := test.NewFakeClient(t, userTier, mur, readyToolchainStatus, userSignup)
 		sync, _ := prepareSynchronizer(t, nil, mur, hostClient)
 
 		// when

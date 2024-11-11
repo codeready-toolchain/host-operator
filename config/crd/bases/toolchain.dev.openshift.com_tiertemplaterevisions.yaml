@@ -5,24 +5,25 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: bannedusers.toolchain.dev.openshift.com
+  name: tiertemplaterevisions.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
-    kind: BannedUser
-    listKind: BannedUserList
-    plural: bannedusers
-    singular: banneduser
+    kind: TierTemplateRevision
+    listKind: TierTemplateRevisionList
+    plural: tiertemplaterevisions
+    singular: tiertemplaterevision
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.email
-      name: Email
+    - jsonPath: .spec.type
+      name: Type
       type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: BannedUser is used to maintain a list of banned e-mail addresses
+        description: TierTemplateRevision is the Schema for the tiertemplaterevisions
+          API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -37,16 +38,19 @@ spec:
           metadata:
             type: object
           spec:
-            description: BannedUserSpec defines the desired state of BannedUser
+            description: TierTemplateRevisionSpec defines the desired state of TierTemplateRevision
             properties:
-              email:
-                description: The e-mail address of the account that has been banned
-                type: string
-              reason:
-                description: Reason of the ban
-                type: string
-            required:
-            - email
+              templateObjects:
+                description: TemplateObjects contains list of Unstructured Objects
+                  that can be parsed at runtime and will be applied as part of the
+                  tier provisioning. The template parameters values will be defined
+                  in the NSTemplateTier CRD.
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                type: array
+                x-kubernetes-list-type: atomic
+                x-kubernetes-preserve-unknown-fields: true
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true

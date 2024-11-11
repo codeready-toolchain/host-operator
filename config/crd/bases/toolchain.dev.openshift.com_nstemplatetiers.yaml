@@ -66,6 +66,30 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              parameters:
+                description: Parameters is an optional array of Parameters to be used
+                  to replace "global" variables defined in the TierTemplate CRs of
+                  the NSTemplateTier.
+                items:
+                  description: Parameter defines a name/value variable that is to
+                    be processed during TierTemplate creation.
+                  properties:
+                    name:
+                      description: Name must be set and it can be referenced in the
+                        TierTemplate content using {{.NAME}}
+                      type: string
+                    value:
+                      description: Value holds the Parameter data. The value replaces
+                        all occurrences of the Parameter {{.NAME}}.
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               spaceRequestConfig:
                 description: SpaceRequestConfig stores all the configuration related
                   to the Space Request feature
@@ -132,6 +156,20 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              revisions:
+                additionalProperties:
+                  type: string
+                description: Revisions is a map of TierTemplate CR names (as the keys)
+                  and TierTemplateRevision CR names (as the values) The map represents
+                  the current content of the TierTemplate CRs combined with the parameters
+                  defined in the tier. Each of the referenced TierTemplateRevision
+                  CRs represents the content of the associated TierTemplate CR processed
+                  with the parameters. If the content of the already referenced TierTemplateRevision
+                  CR doesn't match the expected outcome of the processed TierTemplate
+                  CR, then a new TierTemplateRevision CR is created and the name here
+                  is updated.
+                type: object
+                x-kubernetes-map-type: atomic
               updates:
                 description: Updates is an array of all NSTemplateTier updates
                 items:

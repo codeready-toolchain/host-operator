@@ -238,11 +238,18 @@ func alignReadiness(ctx context.Context, scheme *runtime.Scheme, hostClient runt
 				return false, err
 			}
 
+			// Lookup the UserTier
+			userTier := &toolchainv1alpha1.UserTier{}
+			if err := hostClient.Get(ctx, types.NamespacedName{Namespace: mur.Namespace, Name: mur.Spec.TierName}, userTier); err != nil {
+				return false, err
+			}
+
 			_, err = notify.NewNotificationBuilder(hostClient, mur.Namespace).
 				WithNotificationType(toolchainv1alpha1.NotificationTypeProvisioned).
 				WithControllerReference(mur, scheme).
 				WithTemplate(notificationtemplates.UserProvisionedTemplateName).
 				WithUserContext(userSignup).
+				WithUserTierContext(userTier).
 				WithKeysAndValues(keysAndVals).
 				Create(ctx, userSignup.Spec.IdentityClaims.Email)
 

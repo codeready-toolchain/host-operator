@@ -65,10 +65,6 @@ spec:
               maxAttendees:
                 description: The maximum number of attendees
                 type: integer
-              preferSameCluster:
-                description: If true, best effort is made to provision all attendees
-                  of the event on the same cluster
-                type: boolean
               spaceTier:
                 description: The tier to assign to spaces created for users who registered
                   for the event. This must be the valid name of an nstemplatetier
@@ -78,6 +74,10 @@ spec:
                 description: The timestamp from which users may register via this
                   event's activation code
                 format: date-time
+                type: string
+              targetCluster:
+                description: The cluster in which the user/space should be provisioned
+                  in If not set then the target cluster will be picked automatically
                 type: string
               userTier:
                 description: The tier to assign to users registering for the event.
