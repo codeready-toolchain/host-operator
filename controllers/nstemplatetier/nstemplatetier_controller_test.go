@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
@@ -372,22 +373,26 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("revisions management", func(t *testing.T) {
 
+		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+		tierHash, err := hash.ComputeHashForNSTemplateTier(base1nsTier)
+		require.NoError(t, err)
+		// let's set the update so that we can skip the first reconciliation loop when this is updated
+		base1nsTier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
+			{
+				StartTime: metav1.Now(),
+				Hash:      tierHash,
+			},
+		}
+		initObjs := []runtime.Object{base1nsTier}
+
 		// TODO remove this subtest once we completely switch to using TTRs
 		t.Run("using tiertemplates as revisions", func(t *testing.T) {
 			tierTemplates := initTierTemplates(t, false)
 			t.Run("add revisions when they are missing", func(t *testing.T) {
 				// given
-				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtime.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
-
-				// when
-				res, err = r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
@@ -429,17 +434,9 @@ func TestReconcile(t *testing.T) {
 			tierTemplates := initTierTemplates(t, true) // initialize tier templates with templateObjects field populated
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
-				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtime.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
-
-				// when
-				res, err = r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
@@ -490,10 +487,10 @@ func TestReconcile(t *testing.T) {
 
 			t.Run("revision field is set but TierTemplateRevision CRs are missing, they should be created", func(t *testing.T) {
 				// given
-				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 				// the NSTemplateTier has already the status.revisions field populated
 				// but the TierTemplateRevision CRs are missing
-				base1nsTier.Status.Revisions = map[string]string{
+				base1nsTierWithRevisions := base1nsTier
+				base1nsTierWithRevisions.Status.Revisions = map[string]string{
 					"base1ns-admin-123456new": "base1ns-admin-123456new-abcd", "base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd", "base1ns-code-123456new": "base1ns-code-123456new-abcd", "base1ns-dev-123456new": "base1ns-dev-123456new-abcd", "base1ns-edit-123456new": "`base1ns-edit-123456new-abcd", "base1ns-stage-123456new": "base1ns-stage-123456new-abcd", "base1ns-viewer-123456new": "base1ns-viewer-123456new-abcd"}
 				initObjs := []runtime.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
@@ -503,11 +500,6 @@ func TestReconcile(t *testing.T) {
 				err := cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 				require.NoError(t, err)
 				require.Empty(t, ttrs.Items)
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after adding an entry in `status.updates`
-				// when
 				_, err = r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
@@ -528,14 +520,9 @@ func TestReconcile(t *testing.T) {
 
 				t.Run("error when TierTemplate is missing ", func(t *testing.T) {
 					// given
-					base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-					initObjs := []runtime.Object{base1nsTier}
+					// make sure revisions field is nill before starting the test
+					base1nsTier.Status.Revisions = nil
 					r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
-					// when
-					res, err := r.Reconcile(context.TODO(), req)
-					// then
-					require.NoError(t, err)
-					require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
 					// when
 					_, err = r.Reconcile(context.TODO(), req)
 					// then
