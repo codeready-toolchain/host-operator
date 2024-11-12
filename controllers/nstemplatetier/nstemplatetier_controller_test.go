@@ -401,7 +401,7 @@ func TestReconcile(t *testing.T) {
 				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 				require.NoError(t, err)
-				require.Len(t, ttrs.Items, 0)
+				require.Empty(t, ttrs.Items)
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
 					// the NSTemplateTier already has the revisions from previous test
@@ -420,7 +420,7 @@ func TestReconcile(t *testing.T) {
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 					require.NoError(t, err)
-					require.Len(t, ttrs.Items, 0)
+					require.Empty(t, ttrs.Items)
 				})
 			})
 		})
@@ -502,13 +502,13 @@ func TestReconcile(t *testing.T) {
 				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 				err := cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 				require.NoError(t, err)
-				require.Len(t, ttrs.Items, 0)
+				require.Empty(t, ttrs.Items)
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after adding an entry in `status.updates`
 				// when
-				res, err = r.Reconcile(context.TODO(), req)
+				_, err = r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				// check that revisions field was populated
@@ -537,7 +537,7 @@ func TestReconcile(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
 					// when
-					res, err = r.Reconcile(context.TODO(), req)
+					_, err = r.Reconcile(context.TODO(), req)
 					// then
 					// we expect an error caused by the absence of the tiertemplate for the `code` namespace CR
 					require.ErrorContains(t, err, "tiertemplates.toolchain.dev.openshift.com \"base1ns-code-123456new\" not found")
@@ -548,7 +548,7 @@ func TestReconcile(t *testing.T) {
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 					require.NoError(t, err)
-					require.Len(t, ttrs.Items, 0)
+					require.Empty(t, ttrs.Items)
 				})
 
 			})
@@ -569,19 +569,19 @@ func initTierTemplates(t *testing.T, withTemplateObjects bool) []runtime.Object 
 	viewerRoleContent := test.CreateTemplate(test.WithObjects(spaceViewer, spaceViewerRb), test.WithParams(namespace, username))
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()
-	clusterResourceTierTemplate, err := createTierTemplate(decoder, clusterResourcesContent, "base1ns", "clusterresources", "123456new", withTemplateObjects)
+	clusterResourceTierTemplate, err := createTierTemplate(decoder, clusterResourcesContent, "clusterresources", withTemplateObjects)
 	require.NoError(t, err)
-	codeNsTierTemplate, err := createTierTemplate(decoder, nsContent, "base1ns", "code", "123456new", withTemplateObjects)
+	codeNsTierTemplate, err := createTierTemplate(decoder, nsContent, "code", withTemplateObjects)
 	require.NoError(t, err)
-	devNsTierTemplate, err := createTierTemplate(decoder, nsContent, "base1ns", "dev", "123456new", withTemplateObjects)
+	devNsTierTemplate, err := createTierTemplate(decoder, nsContent, "dev", withTemplateObjects)
 	require.NoError(t, err)
-	stageNsTierTemplate, err := createTierTemplate(decoder, nsContent, "base1ns", "stage", "123456new", withTemplateObjects)
+	stageNsTierTemplate, err := createTierTemplate(decoder, nsContent, "stage", withTemplateObjects)
 	require.NoError(t, err)
-	adminRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "base1ns", "admin", "123456new", withTemplateObjects)
+	adminRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "admin", withTemplateObjects)
 	require.NoError(t, err)
-	viewerRoleTierTemplate, err := createTierTemplate(decoder, viewerRoleContent, "base1ns", "viewer", "123456new", withTemplateObjects)
+	viewerRoleTierTemplate, err := createTierTemplate(decoder, viewerRoleContent, "viewer", withTemplateObjects)
 	require.NoError(t, err)
-	editRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "base1ns", "edit", "123456new", withTemplateObjects)
+	editRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "edit", withTemplateObjects)
 	require.NoError(t, err)
 	tierTemplates := []runtime.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
@@ -605,8 +605,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	}, cl
 }
 
-func createTierTemplate(decoder runtime.Decoder, tmplContent string, tierName, typeName, revision string, withTemplateObjects bool) (*toolchainv1alpha1.TierTemplate, error) {
+func createTierTemplate(decoder runtime.Decoder, tmplContent string, typeName string, withTemplateObjects bool) (*toolchainv1alpha1.TierTemplate, error) {
 	tmplContent = strings.ReplaceAll(tmplContent, "NSTYPE", typeName)
+	tierName := "base1ns"
+	revision := "123456new"
 	tmpl := templatev1.Template{}
 	_, _, err := decoder.Decode([]byte(tmplContent), nil, &tmpl)
 	if err != nil {
