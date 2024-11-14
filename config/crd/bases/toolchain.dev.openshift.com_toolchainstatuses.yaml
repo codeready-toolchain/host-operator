@@ -367,20 +367,23 @@ spec:
                           description: HostConnection is the status of the connection
                             with the host cluster
                           properties:
+                            apiEndpoint:
+                              description: APIEndpoint is the API endpoint of the
+                                remote cluster. This can be a hostname, hostname:port,
+                                IP or IP:port.
+                              type: string
                             conditions:
                               description: Conditions is an array of current cluster
                                 conditions.
                               items:
-                                description: ToolchainClusterCondition describes current
-                                  state of a cluster.
                                 properties:
-                                  lastProbeTime:
-                                    description: Last time the condition was checked.
-                                    format: date-time
-                                    type: string
                                   lastTransitionTime:
                                     description: Last time the condition transit from
                                       one status to another.
+                                    format: date-time
+                                    type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
                                     format: date-time
                                     type: string
                                   message:
@@ -396,16 +399,18 @@ spec:
                                       False, Unknown.
                                     type: string
                                   type:
-                                    description: Type of cluster condition, Ready
-                                      or Offline.
+                                    description: Type of condition
                                     type: string
                                 required:
-                                - lastProbeTime
                                 - status
                                 - type
                                 type: object
                               type: array
                               x-kubernetes-list-type: atomic
+                            operatorNamespace:
+                              description: OperatorNamespace is the namespace in which
+                                the operator runs in the remote cluster
+                              type: string
                           required:
                           - conditions
                           type: object

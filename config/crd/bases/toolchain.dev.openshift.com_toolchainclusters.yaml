@@ -42,26 +42,9 @@ spec:
           spec:
             description: ToolchainClusterSpec defines the desired state of ToolchainCluster
             properties:
-              apiEndpoint:
-                description: The API endpoint of the member cluster. This can be a
-                  hostname, hostname:port, IP or IP:port.
-                type: string
-              caBundle:
-                description: CABundle contains the certificate authority information.
-                type: string
-              disabledTLSValidations:
-                description: DisabledTLSValidations defines a list of checks to ignore
-                  when validating the TLS connection to the member cluster.  This
-                  can be any of *, SubjectName, or ValidityPeriod. If * is specified,
-                  it is expected to be the only option in list.
-                items:
-                  type: string
-                type: array
-                x-kubernetes-list-type: set
               secretRef:
-                description: Name of the secret containing the token required to access
-                  the member cluster. The secret needs to exist in the same namespace
-                  as the control plane and should have a "token" key.
+                description: Name of the secret containing the kubeconfig required
+                  to connect to the cluster.
                 properties:
                   name:
                     description: Name of a secret within the enclosing namespace
@@ -70,26 +53,27 @@ spec:
                 - name
                 type: object
             required:
-            - apiEndpoint
             - secretRef
             type: object
           status:
             description: ToolchainClusterStatus contains information about the current
               status of a cluster updated periodically by cluster controller.
             properties:
+              apiEndpoint:
+                description: APIEndpoint is the API endpoint of the remote cluster.
+                  This can be a hostname, hostname:port, IP or IP:port.
+                type: string
               conditions:
                 description: Conditions is an array of current cluster conditions.
                 items:
-                  description: ToolchainClusterCondition describes current state of
-                    a cluster.
                   properties:
-                    lastProbeTime:
-                      description: Last time the condition was checked.
-                      format: date-time
-                      type: string
                     lastTransitionTime:
                       description: Last time the condition transit from one status
                         to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
                       format: date-time
                       type: string
                     message:
@@ -103,15 +87,18 @@ spec:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of cluster condition, Ready or Offline.
+                      description: Type of condition
                       type: string
                   required:
-                  - lastProbeTime
                   - status
                   - type
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              operatorNamespace:
+                description: OperatorNamespace is the namespace in which the operator
+                  runs in the remote cluster
+                type: string
             required:
             - conditions
             type: object
