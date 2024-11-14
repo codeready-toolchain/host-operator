@@ -82,8 +82,11 @@ spec:
           status:
             properties:
               conditions:
-                description: Conditions describes the state of the configuration (its
-                  validity). The only known condition type is "Ready".
+                description: 'Conditions describes the state of the configuration
+                  (its validity). The only known condition type is "Ready". The SpaceProvisionerConfig
+                  is ready when the following is true: * the referenced ToolchainCluster
+                  object exists and is itself ready * the consumed capacity doesn''t
+                  breach the thresholds defined in the spec'
                 items:
                   properties:
                     lastTransitionTime:
@@ -116,6 +119,25 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              consumedCapacity:
+                description: ConsumedCapacity reflects the runtime state of the cluster
+                  and the capacity it currently consumes. Nil if the consumed capacity
+                  is not known
+                properties:
+                  memoryUsagePercentPerNode:
+                    additionalProperties:
+                      type: integer
+                    description: MemoryUsagePercentPerNodeRole is the percent of the
+                      memory used per node role (eg. worker, master)
+                    type: object
+                  spaceCount:
+                    description: SpaceCount is the number of spaces currently deployed
+                      to the cluster
+                    type: integer
+                required:
+                - memoryUsagePercentPerNode
+                - spaceCount
+                type: object
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true
