@@ -2,9 +2,9 @@ package usersignup
 
 import (
 	"context"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -195,6 +195,7 @@ func (u *StatusUpdater) setStatusDeactivationInProgress(ctx context.Context, use
 }
 
 func (u *StatusUpdater) setStatusDeactivated(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	userSignup.Status.ScheduledDeactivationTimestamp = nil
 	return u.updateStatusConditions(
 		ctx,
 		userSignup,
@@ -447,4 +448,12 @@ func (u *StatusUpdater) updateStatusHomeSpace(ctx context.Context, userSignup *t
 		return u.Client.Status().Update(ctx, userSignup)
 	}
 	return nil // Nothing changed
+}
+
+func (u *StatusUpdater) SetScheduledDeactivationStatus(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, scheduledTime *metav1.Time) error {
+	if !userSignup.Status.ScheduledDeactivationTimestamp.Equal(scheduledTime) {
+		userSignup.Status.ScheduledDeactivationTimestamp = scheduledTime
+		return u.Client.Status().Update(ctx, userSignup)
+	}
+	return nil
 }

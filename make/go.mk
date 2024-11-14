@@ -26,7 +26,6 @@ vendor:
 
 NSTEMPLATES_BASEDIR = deploy/templates/nstemplatetiers
 NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
-NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 
 USERTEMPLATES_BASEDIR = deploy/templates/usertiers
 USERTEMPLATES_TEST_BASEDIR = test/templates/usertiers
@@ -57,9 +56,6 @@ generate-assets: go-bindata
 	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
 	@$(GO_BINDATA) -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
-	@echo "generating bindata for files in $(NSTEMPLATES_TEST_BASEDIR) ..."
-	@rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
-	@$(GO_BINDATA) -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
 	
 	@echo "generating bindata for files in $(USERTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/usertiers/usertier_assets.go 2>/dev/null || true
@@ -71,3 +67,19 @@ generate-assets: go-bindata
 	@echo "generating registration service template data..."
 	@$(GO_BINDATA) -pkg registrationservice -o ./pkg/templates/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 
+.PHONY: verify-dependencies
+## Runs commands to verify after the updated dependecies of toolchain-common/API(go mod replace), if the repo needs any changes to be made
+verify-dependencies: tidy vet build test lint-go-code
+
+.PHONY: tidy
+tidy: 
+	go mod tidy
+
+.PHONY: vet
+vet:
+	go vet ./...
+
+.PHONY: pre-verify
+pre-verify: generate
+	echo "Pre-requisite completed"
+	

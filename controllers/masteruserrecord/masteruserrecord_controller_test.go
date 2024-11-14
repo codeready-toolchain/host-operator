@@ -18,6 +18,7 @@ import (
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,7 @@ func TestAddFinalizer(t *testing.T) {
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel("john-123"))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
@@ -123,7 +125,7 @@ func TestAddFinalizer(t *testing.T) {
 		murSkipSpace := mur.DeepCopy()
 		murSkipSpace.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = "true"
 		memberClient := commontest.NewFakeClient(t)
-		hostClient := commontest.NewFakeClient(t, murSkipSpace, signup)
+		hostClient := commontest.NewFakeClient(t, murSkipSpace, signup, userTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithMember(commontest.MemberClusterName),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -383,6 +385,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	s := apiScheme(t)
 
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
 
 	provisionedTime := metav1.Now()
 	mur := murtest.NewMasterUserRecord(t, "john",
@@ -529,7 +532,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacetest.WithDeletionTimestamp()(terminatingSpace)
 		spacetest.WithFinalizer()(terminatingSpace)
 
-		hostClient := commontest.NewFakeClient(t, mur, signup, spaceBinding, terminatingSpace, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, spaceBinding, terminatingSpace, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -563,7 +566,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacebindingtest.WithDeletionTimestamp()(terminatingSpaceBinding)
 		spacebindingtest.WithFinalizer()(terminatingSpaceBinding)
 
-		hostClient := commontest.NewFakeClient(t, mur, signup, terminatingSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, terminatingSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -595,7 +598,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		memberClient2 := commontest.NewFakeClient(t)
 
 		otherSpaceBinding := spacebindingtest.NewSpaceBinding("other-john", "john-space", "admin", "john-123")
-		hostClient := commontest.NewFakeClient(t, mur, signup, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
@@ -1038,6 +1041,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	space := spacetest.NewSpace(commontest.HostOperatorNs, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
+	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
 
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
 		// given
@@ -1133,7 +1137,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}))
-		hostClient := commontest.NewFakeClient(t, userSignup, mur, spaceBinding, space, toolchainStatus)
+		hostClient := commontest.NewFakeClient(t, userSignup, userTier, mur, spaceBinding, space, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		memberClient := commontest.NewFakeClient(t, userAccount)

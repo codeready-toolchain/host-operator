@@ -3,10 +3,11 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
-	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
-	"github.com/redhat-cop/operator-utils/pkg/util"
 	"strconv"
 	"time"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -97,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			if createdTime.Time.Before(unverifiedThreshold) {
 				reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
-				return reconcile.Result{}, r.DeleteUserSignup(ctx, instance)
+				return reconcile.Result{}, r.deleteSignupUnverifiedRetentionPeriod(ctx, instance)
 			}
 
 			// Requeue this for reconciliation after the time has passed between the last active time
@@ -230,12 +231,31 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	return hash.EncodeString(userEmail) == userEmailHash
 }
 
-// DeleteUserSignup deletes the specified UserSignup
-func (r *Reconciler) DeleteUserSignup(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) error {
+// deleteSignupUnverifiedRetentionPeriod deletes specified Usersignup and increments metrics if applicable.
+// metrics incremented - UserSignupDeletedWithInitiatingVerificationTotal and UserSignupDeletedWithoutInitiatingVerificationTotal
+func (r *Reconciler) deleteSignupUnverifiedRetentionPeriod(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) error {
 	// before deleting the resource, we want to "remember" if the user triggered a phone verification or not,
 	// based on the presence of the `toolchain.dev.openshift.com/verification-code` annotation
 	_, phoneVerificationTriggered := userSignup.Annotations[toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey]
 
+	err := r.DeleteUserSignup(ctx, userSignup)
+	if err != nil {
+		return err
+	}
+
+	// increment the appropriate counter, based on whether the phone verification was triggered or not
+	if phoneVerificationTriggered {
+		metrics.UserSignupDeletedWithInitiatingVerificationTotal.Inc()
+	} else {
+		metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.Inc()
+	}
+	logger := log.FromContext(ctx)
+	logger.Info("incremented counter", "name", userSignup.Name, "phone verification triggered", phoneVerificationTriggered)
+	return err
+}
+
+// DeleteUserSignup deletes the specified UserSignup
+func (r *Reconciler) DeleteUserSignup(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup) error {
 	propagationPolicy := metav1.DeletePropagationForeground
 	err := r.Client.Delete(ctx, userSignup, &runtimeclient.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
@@ -246,12 +266,5 @@ func (r *Reconciler) DeleteUserSignup(ctx context.Context, userSignup *toolchain
 
 	logger := log.FromContext(ctx)
 	logger.Info("Deleted UserSignup", "name", userSignup.Name)
-	// increment the appropriate counter, based whether the phone verification was triggered or not
-	if phoneVerificationTriggered {
-		metrics.UserSignupDeletedWithInitiatingVerificationTotal.Inc()
-	} else {
-		metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.Inc()
-	}
-	logger.Info("incremented counter", "name", userSignup.Name, "phone verification triggered", phoneVerificationTriggered)
 	return nil
 }

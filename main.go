@@ -34,6 +34,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclustercache"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchainclusterresources"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
@@ -173,6 +174,17 @@ func main() { // nolint:gocyclo
 	}
 	crtConfig.Print()
 
+	if crtConfig.RegistrationService().Verification().CaptchaEnabled() {
+		if err := createCaptchaFileFromSecret(crtConfig.RegistrationService()); err != nil {
+			panic(fmt.Sprintf("failed to create captcha file: %s", err.Error()))
+		}
+
+		// set application credentials env var required for recaptcha client
+		if err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", toolchainconfig.CaptchaFilePath); err != nil {
+			panic(fmt.Sprintf("cannot set captcha credentials: %s", err.Error()))
+		}
+	}
+
 	// initialize the Segment client
 	segmentClient, err := segment.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
 	if err != nil {
@@ -223,6 +235,16 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
 		os.Exit(1)
 	}
+
+	if err := (&toolchaincluster.Reconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RequeAfter: 10 * time.Second,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
+		os.Exit(1)
+	}
+
 	if err := (&deactivation.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -381,9 +403,6 @@ func main() { // nolint:gocyclo
 			os.Exit(1)
 		}
 
-		setupLog.Info("Starting ToolchainCluster health checks.")
-		toolchainclustercache.StartHealthChecks(ctx, mgr, namespace, 10*time.Second)
-
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
 		if err := toolchainstatus.CreateOrUpdateResources(ctx, mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
@@ -496,4 +515,12 @@ func (kw klogWriter) Write(p []byte) (n int, err error) {
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
 	}
 	return len(p), nil
+}
+
+func createCaptchaFileFromSecret(cfg toolchainconfig.RegistrationServiceConfig) error {
+	contents := cfg.Verification().CaptchaServiceAccountFileContents()
+	if err := os.WriteFile(toolchainconfig.CaptchaFilePath, []byte(contents), 0600); err != nil {
+		return errors.Wrap(err, "error writing captcha file")
+	}
+	return nil
 }

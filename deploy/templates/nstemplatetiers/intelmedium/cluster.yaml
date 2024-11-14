@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-cluster-resources
+  name: intelmedium-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
@@ -10,9 +10,10 @@ objects:
   spec:
     quota:
       hard:
-        count/deployments.apps: ${{DEPLOYMENT_QUOTA}}
-        count/deploymentconfigs.apps: ${{DEPLOYMENT_QUOTA}}
-        count/pods: ${{POD_QUOTA}}
+        count/deployments.apps: "30"
+        count/deploymentconfigs.apps: "30"
+        count/pods: "50"
+        count/virtualmachines.kubevirt.io: "2"
     selector:
       annotations: null
       labels:
@@ -25,8 +26,8 @@ objects:
   spec:
     quota:
       hard:
-        count/replicasets.apps: ${{REPLICASET_QUOTA}}
-        count/replicationcontrollers: ${{REPLICASET_QUOTA}}
+        count/replicasets.apps: "30"
+        count/replicationcontrollers: "30"
     selector:
       annotations: null
       labels:
@@ -39,8 +40,8 @@ objects:
   spec:
     quota:
       hard:
-        count/ingresses.extensions: ${{ROUTE_QUOTA}}
-        count/routes.route.openshift.io: ${{ROUTE_QUOTA}}
+        count/ingresses.extensions: "30"
+        count/routes.route.openshift.io: "30"
     selector:
       annotations: null
       labels:
@@ -69,7 +70,8 @@ objects:
   spec:
     quota:
       hard:
-        count/services: ${{SERVICE_QUOTA}}
+        count/services: "30"
+        services.loadbalancers: '0'
     selector:
       annotations: null
       labels:
@@ -95,7 +97,7 @@ objects:
   spec:
     quota:
       hard:
-        count/secrets: ${{SECRET_QUOTA}}
+        count/secrets: "100"
     selector:
       annotations: null
       labels:
@@ -108,36 +110,35 @@ objects:
   spec:
     quota:
       hard:
-        count/configmaps: ${{CONFIGMAP_QUOTA}}
+        count/configmaps: "100"
     selector:
       annotations: null
       labels:
         matchLabels:
           toolchain.dev.openshift.com/space: ${SPACE_NAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: osl-access-${SPACE_NAME}
+    annotations:
+      toolchain.dev.openshift.com/feature: openshift-lightspeed
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: lightspeed-operator-query-access
+  subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: ${SPACE_NAME}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
-    name: ${SPACE_NAME}
+    name: ${SPACE_NAME}-dev
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 parameters:
 - name: SPACE_NAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
-  # No Idling
-  value: "0"
-# Quota
-- name: REPLICASET_QUOTA
-  value: "30"
-- name: DEPLOYMENT_QUOTA
-  value: "30"
-- name: POD_QUOTA
-  value: "600"
-- name: ROUTE_QUOTA
-  value: "30"
-- name: SERVICE_QUOTA
-  value: "30"
-- name: CONFIGMAP_QUOTA
-  value: "100"
-- name: SECRET_QUOTA
-  value: "100"
+  # 48 hours
+  value: "172800"

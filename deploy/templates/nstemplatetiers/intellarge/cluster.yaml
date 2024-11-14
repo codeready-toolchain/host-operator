@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-env-cluster-resources
+  name: intellarge-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
@@ -12,7 +12,8 @@ objects:
       hard:
         count/deployments.apps: "30"
         count/deploymentconfigs.apps: "30"
-        count/pods: "150"
+        count/pods: "50"
+        count/virtualmachines.kubevirt.io: "2"
     selector:
       annotations: null
       labels:
@@ -70,6 +71,7 @@ objects:
     quota:
       hard:
         count/services: "30"
+        services.loadbalancers: '0'
     selector:
       annotations: null
       labels:
@@ -114,15 +116,29 @@ objects:
       labels:
         matchLabels:
           toolchain.dev.openshift.com/space: ${SPACE_NAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: osl-access-${SPACE_NAME}
+    annotations:
+      toolchain.dev.openshift.com/feature: openshift-lightspeed
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: lightspeed-operator-query-access
+  subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: ${SPACE_NAME}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
-    name: ${SPACE_NAME}-env
+    name: ${SPACE_NAME}-dev
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 parameters:
 - name: SPACE_NAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
-  # No Idling
-  value: "0"
+  # 48 hours
+  value: "172800"
