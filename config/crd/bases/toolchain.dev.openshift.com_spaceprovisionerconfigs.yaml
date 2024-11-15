@@ -124,7 +124,7 @@ spec:
                   and the capacity it currently consumes. Nil if the consumed capacity
                   is not known
                 properties:
-                  memoryUsagePercentPerNode:
+                  memoryUsagePercentPerNodeRole:
                     additionalProperties:
                       type: integer
                     description: MemoryUsagePercentPerNodeRole is the percent of the
@@ -135,7 +135,7 @@ spec:
                       to the cluster
                     type: integer
                 required:
-                - memoryUsagePercentPerNode
+                - memoryUsagePercentPerNodeRole
                 - spaceCount
                 type: object
             type: object
