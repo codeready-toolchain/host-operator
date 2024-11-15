@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"testing"
 	"time"
@@ -45,7 +46,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -326,6 +326,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		commonsignup.BeingDeleted(),
 		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+	controllerutil.AddFinalizer(userSignup, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -866,7 +867,7 @@ func TestUserSignupFailedMissingTier(t *testing.T) {
 				})
 			spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 
-			objs := []runtime.Object{userSignup, v.config, spaceProvisionerConfig}
+			objs := []runtimeclient.Object{userSignup, v.config, spaceProvisionerConfig}
 			if strings.Contains(v.description, "spacetier") { // when testing missing spacetier then create mur and usertier so that the error is about space tier
 				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier.Name, "foo"))
 				objs = append(objs, deactivate30Tier)
@@ -1618,7 +1619,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			space := NewSpace(userSignup, "member1", "foo", "base")
 
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
-			initObjs := []runtime.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
+			initObjs := []runtimeclient.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
 			if testcase.testName == "create space error" {
 				// mur must exist first, space is created on the reconcile after the mur is created
 				initObjs = append(initObjs, mur)
@@ -1744,7 +1745,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1790,7 +1791,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1835,7 +1836,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj := obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {
@@ -2656,7 +2657,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 		))
 
-		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			switch obj.(type) {
 			case *toolchainv1alpha1.UserSignup:
 				return errors.New("failed to update UserSignup status")
@@ -3569,7 +3570,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("mock error")
@@ -3631,7 +3632,7 @@ func TestDeathBy100Signups(t *testing.T) {
 				commonsignup.WithName(testusername.username),
 				commonsignup.ApprovedManually())
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
-			initObjs := make([]runtime.Object, 0, 110)
+			initObjs := make([]runtimeclient.Object, 0, 110)
 			initObjs = append(initObjs,
 				userSignup,
 				deactivate30Tier,
@@ -4046,7 +4047,7 @@ func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
 				userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = tc.userSignupCaptchaAnnotatedAssessmentAnnotationKey
 			}
 
-			initObjs := []runtime.Object{userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.RegistrationService().Verification().CaptchaEnabled(tc.captchEnabled)), baseNSTemplateTier, deactivate30Tier}
+			initObjs := []runtimeclient.Object{userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.RegistrationService().Verification().CaptchaEnabled(tc.captchEnabled)), baseNSTemplateTier, deactivate30Tier}
 			if tc.isBanned {
 				bannedUser := &toolchainv1alpha1.BannedUser{
 					ObjectMeta: metav1.ObjectMeta{
@@ -4075,7 +4076,7 @@ func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
 	}
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
@@ -4641,7 +4642,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			}
 			return nil
 		}
-		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			s, ok := obj.(*toolchainv1alpha1.UserSignup)
 			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
 				return fmt.Errorf("some error")

@@ -146,7 +146,7 @@ func TestCreateSpace(t *testing.T) {
 								Name: "john-stage",
 							},
 						}
-						err := member1.Client.Update(context.TODO(), nsTmplSet)
+						err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 						require.NoError(t, err)
 						ctrl := newReconciler(hostClient, member1, member2)
 
@@ -502,7 +502,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -536,7 +536,7 @@ func TestCreateSpace(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("john", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
 			member1Client := test.NewFakeClient(t, nsTmplSet)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				if space, ok := obj.(*toolchainv1alpha1.Space); ok {
 					if len(space.Status.ProvisionedNamespaces) > 0 {
 						return fmt.Errorf("update error")
@@ -858,7 +858,7 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithFinalizer(),
 			)
 			hostClient := test.NewFakeClient(t, s)
-			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithFinalizer(), nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -964,7 +964,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 				nstemplatetsettest.Updating(),
 			}
-			err := member1.Client.Update(context.TODO(), nsTmplSet)
+			err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
 
 			// when
@@ -991,7 +991,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
-				err := member1.Client.Update(context.TODO(), nsTmplSet)
+				err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
 
 				// when
@@ -2163,8 +2163,8 @@ func mockDeleteNSTemplateSetFail(cl runtimeclient.Client) func(ctx context.Conte
 	}
 }
 
-func mockUpdateSpaceStatusFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+func mockUpdateSpaceStatusFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 			return fmt.Errorf("mock error")
 		}

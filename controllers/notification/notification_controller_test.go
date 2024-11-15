@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -378,7 +377,7 @@ func deletionCond(msg string) toolchainv1alpha1.Condition {
 }
 
 func newController(t *testing.T, deliveryService DeliveryService,
-	initObjs ...runtime.Object) (*Reconciler, *test.FakeClient) {
+	initObjs ...runtimeclient.Object) (*Reconciler, *test.FakeClient) {
 	restore := test.SetEnvVarAndRestore(t, commonconfig.WatchNamespaceEnvVar, test.HostOperatorNs)
 	t.Cleanup(restore)
 

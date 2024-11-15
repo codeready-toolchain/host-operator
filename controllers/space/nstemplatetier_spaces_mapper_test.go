@@ -44,7 +44,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		hostClient := test.NewFakeClient(t, nsTmplTier, outdatedSpace, otherSpace1, otherSpace2, otherSpace3)
 		mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 		// when
-		result := mapFrom(nsTmplTier)
+		result := mapFrom(context.TODO(), nsTmplTier)
 
 		// then
 		assert.Equal(t, []reconcile.Request{
@@ -71,7 +71,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		hostClient := test.NewFakeClient(t, nsTmplTier, outdatedSpace1, outdatedSpace2, otherSpace1, otherSpace2, otherSpace3)
 		mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 		// when
-		result := mapFrom(nsTmplTier)
+		result := mapFrom(context.TODO(), nsTmplTier)
 
 		// then
 		assert.ElementsMatch(t, []reconcile.Request{
@@ -96,7 +96,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		hostClient := test.NewFakeClient(t, nsTmplTier, otherSpace1, otherSpace2, otherSpace3)
 		mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 		// when
-		result := mapFrom(nsTmplTier)
+		result := mapFrom(context.TODO(), nsTmplTier)
 
 		// then
 		assert.Empty(t, result)
@@ -114,7 +114,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 			mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 
 			// when
-			result := mapFrom(nsTmplTier)
+			result := mapFrom(context.TODO(), nsTmplTier)
 
 			// then
 			assert.Empty(t, result)
@@ -126,7 +126,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 			mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
 
 			// when
-			result := mapFrom(spacetest.NewSpace(test.HostOperatorNs, "oddity")) // wrong type of resource as arg
+			result := mapFrom(context.TODO(), spacetest.NewSpace(test.HostOperatorNs, "oddity")) // wrong type of resource as arg
 
 			// then
 			assert.Empty(t, result)

@@ -1,6 +1,7 @@
 package toolchainconfig
 
 import (
+	"context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -13,8 +14,8 @@ type SecretToToolchainConfigMapper struct{}
 var mapperLog = ctrl.Log.WithName("SecretToToolchainConfigMapper")
 
 // MapSecretToToolchainConfig maps secrets to the singular instance of ToolchainConfig named "config"
-func MapSecretToToolchainConfig() func(object runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapSecretToToolchainConfig() func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		if secret, ok := obj.(*corev1.Secret); ok {
 			mapperLog.Info("Secret mapped to ToolchainConfig", "name", secret.Name)
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: secret.Namespace, Name: "config"}}}

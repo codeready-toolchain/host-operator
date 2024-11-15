@@ -1,6 +1,6 @@
 # see go.mod
-CONTROLLER_GEN_VERSION=v0.10.0
-KUSTOMIZE_VERSION=v4.5.5
+CONTROLLER_GEN_VERSION=v0.12.0
+KUSTOMIZE_VERSION=v5.0.1
 GO_BINDATA_VERSION=v3.1.2
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -13,7 +13,7 @@ go-bindata: ## Download go-bindata locally if necessary.
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4,$(KUSTOMIZE_VERSION))
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 
 # go-get-tool will 'go get' any package $2 with version $3 and install it to $1.
 PROJECT_DIR := $(shell pwd)

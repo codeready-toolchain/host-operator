@@ -3,6 +3,7 @@ package spaceprovisionerconfig
 import (
 	"context"
 	"errors"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"testing"
 	"time"
 
@@ -73,7 +74,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 					Status: v1.ConditionFalse,
 				},
 			}
-			require.NoError(t, cl.Update(context.TODO(), tc))
+			require.NoError(t, cl.Status().Update(context.TODO(), tc))
 
 			// when
 			_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -136,7 +137,7 @@ func TestSpaceProvisionerConfigValidation(t *testing.T) {
 					Status: v1.ConditionTrue,
 				},
 			}
-			require.NoError(t, cl.Update(context.TODO(), tc))
+			require.NoError(t, cl.Status().Update(context.TODO(), tc))
 
 			// when
 			_, reconcileErr = r.Reconcile(context.TODO(), req)
@@ -263,7 +264,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		r, req, cl := prepareReconcile(t, spc.DeepCopy())
 
 		expectedErr := errors.New("purposefully failing the get request")
-		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			return expectedErr
 		}
 
@@ -293,6 +294,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		// given
 		spc := spc.DeepCopy()
 		spc.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+		controllerutil.AddFinalizer(spc, toolchainv1alpha1.FinalizerName)
 		r, req, cl := prepareReconcile(t, spc)
 
 		// when
@@ -326,7 +328,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfig, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := runtime.NewScheme()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

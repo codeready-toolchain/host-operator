@@ -42,14 +42,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// SpaceBindingRequest owns spacebindings so events will be triggered for those from the host cluster.
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceBindingRequest{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+		Watches(&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToSpaceBindingRequest()),
 		)
 
 	// Watch SpaceBindingRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
-		b = b.Watches(
-			source.NewKindWithCache(&toolchainv1alpha1.SpaceBindingRequest{}, memberCluster.Cache),
+		b = b.WatchesRawSource(
+			source.Kind(memberCluster.Cache, &toolchainv1alpha1.SpaceBindingRequest{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}

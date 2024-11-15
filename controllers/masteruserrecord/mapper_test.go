@@ -26,7 +26,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		client := test.NewFakeClient(t, spaceBinding, noise)
 
 		// when
-		requests := MapSpaceToMasterUserRecord(client)(space)
+		requests := MapSpaceToMasterUserRecord(client)(context.TODO(), space)
 
 		// then
 		assert.Len(t, requests, 1)
@@ -38,7 +38,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		client := test.NewFakeClient(t, spaceBinding, spaceBindingJane, noise)
 
 		// when
-		requests := MapSpaceToMasterUserRecord(client)(space)
+		requests := MapSpaceToMasterUserRecord(client)(context.TODO(), space)
 
 		// then
 		assert.Len(t, requests, 2)
@@ -51,7 +51,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		client := test.NewFakeClient(t, noise)
 
 		// when
-		requests := MapSpaceToMasterUserRecord(client)(space)
+		requests := MapSpaceToMasterUserRecord(client)(context.TODO(), space)
 
 		// then
 		assert.Empty(t, requests)
@@ -65,7 +65,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		}
 
 		// when
-		requests := MapSpaceToMasterUserRecord(client)(space)
+		requests := MapSpaceToMasterUserRecord(client)(context.TODO(), space)
 
 		// then
 		assert.Empty(t, requests)
