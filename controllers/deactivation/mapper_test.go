@@ -1,6 +1,7 @@
 package deactivation
 
 import (
+	"context"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -28,7 +29,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		}
 
 		// when
-		req := MapUserSignupToMasterUserRecord()(userSignup)
+		req := MapUserSignupToMasterUserRecord()(context.TODO(), userSignup)
 
 		// then
 		require.Len(t, req, 1)
@@ -53,7 +54,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		}
 
 		// when
-		req := MapUserSignupToMasterUserRecord()(userSignup)
+		req := MapUserSignupToMasterUserRecord()(context.TODO(), userSignup)
 
 		// then
 		require.Empty(t, req)
@@ -76,7 +77,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		}
 
 		// when
-		req := MapUserSignupToMasterUserRecord()(mur)
+		req := MapUserSignupToMasterUserRecord()(context.TODO(), mur)
 
 		// then
 		require.Empty(t, req)

@@ -899,7 +899,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient := commontest.NewFakeClient(t, provisionedMur, toolchainStatus, spaceBinding, space)
 		InitializeCounters(t, toolchainStatus)
 
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			hostClient.MockStatusUpdate = nil // mock only once
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
@@ -1240,8 +1240,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		s := apiScheme(t)
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
-		userAcc := uatest.NewUserAccountFromMur(mur,
-			uatest.DeletedUa())
+		userAcc := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa(), uatest.WithFinalizer())
 
 		hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
 		memberClient := commontest.NewFakeClient(t, userAcc)
@@ -1256,8 +1255,11 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			HasFinalizer()
 
-		err = memberClient.Delete(context.TODO(), userAcc)
+		// remove finalizer on UserAcc to delete
+		userAcc.SetFinalizers(nil)
+		err = memberClient.Client.Update(context.TODO(), userAcc)
 		require.NoError(t, err)
+
 		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
@@ -1291,7 +1293,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
-		userAcc := uatest.NewUserAccountFromMur(mur)
+		userAcc := uatest.NewUserAccountFromMur(mur, uatest.WithFinalizer())
 		// set deletion timestamp to indicate UserAccount deletion is in progress
 		userAcc.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-60 * time.Second)}
 

@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Reconciler reconciles a SocialEvent object
@@ -33,7 +32,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			// watches UserSignups when their labels are *changed* (in particular, to track the approved users)
 			// and they have a `toolchain.dev.openshift.com/social-event` label
-			&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
+			&toolchainv1alpha1.UserSignup{},
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SocialEventUserSignupLabelKey)),
 			builder.WithPredicates(predicate.LabelChangedPredicate{}),
 		).Complete(r)

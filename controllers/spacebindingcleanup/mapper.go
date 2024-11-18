@@ -2,7 +2,6 @@ package spacebindingcleanup
 
 import (
 	"context"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -15,8 +14,8 @@ var mapperLog = ctrl.Log.WithName("MapToSpaceBindingByBoundObjectName")
 
 // MapToSpaceBindingByBoundObjectName maps the bound object (MUR or Space) to the associated SpaceBindings.
 // The correct SpaceBindings are listed using the given label whose value should equal to the object's name.
-func MapToSpaceBindingByBoundObjectName(cl runtimeclient.Client, label string) func(object runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapToSpaceBindingByBoundObjectName(cl runtimeclient.Client, label string) func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 		spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
 		err := cl.List(context.TODO(), spaceBindings,

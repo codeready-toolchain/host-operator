@@ -2,6 +2,7 @@ package counter_test
 
 import (
 	"context"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"testing"
 
@@ -17,7 +18,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -308,7 +308,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			"chocolate": 2,
 		}),
 	)
-	initObjs := append([]runtime.Object{}, murs...)
+	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
 	initObjs = append(initObjs, spaces...)
 
@@ -367,7 +367,7 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 	)
 	// ... but config flag will force synchronization from resources
 	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(true))
-	initObjs := append([]runtime.Object{}, murs...)
+	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
 	initObjs = append(initObjs, toolchainConfig)
 	initObjs = append(initObjs, spaces...)
@@ -409,7 +409,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	spaces := CreateMultipleSpaces("user-", 10, "member-1")
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithSpaceCount(0)))
-	initObjs := append([]runtime.Object{}, murs...)
+	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
 	InitializeCounters(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
@@ -442,7 +442,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithSpaceCount(0)),
 		WithMember("member-2", WithSpaceCount(0)))
-	initObjs := append([]runtime.Object{}, murs...)
+	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
 	InitializeCounters(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)

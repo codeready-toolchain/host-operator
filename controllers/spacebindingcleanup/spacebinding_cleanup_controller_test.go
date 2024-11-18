@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"testing"
 	"time"
 
@@ -165,6 +166,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				sbLaraRedhatAdmin := sbLaraRedhatAdmin.DeepCopy()
 				now := metav1.Now()
 				sbLaraRedhatAdmin.DeletionTimestamp = &now
+				controllerutil.AddFinalizer(sbLaraRedhatAdmin, v1alpha1.FinalizerName)
 				fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
