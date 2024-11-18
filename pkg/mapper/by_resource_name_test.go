@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"context"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -18,7 +19,7 @@ func TestMapNSTemplateSet(t *testing.T) {
 		},
 	}
 	// when
-	req := MapByResourceName("host-operator")(NSTemplateSet)
+	req := MapByResourceName("host-operator")(context.TODO(), NSTemplateSet)
 
 	// then
 	require.Len(t, req, 1)
@@ -37,7 +38,7 @@ func TestMapUserAccount(t *testing.T) {
 		},
 	}
 	// when
-	req := MapByResourceName("host-operator")(userAccount)
+	req := MapByResourceName("host-operator")(context.TODO(), userAccount)
 
 	// then
 	require.Len(t, req, 1)

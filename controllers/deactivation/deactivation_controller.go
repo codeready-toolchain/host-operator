@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // SetupWithManager sets up the controller with the Manager.
@@ -35,7 +34,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("deactivation").
 		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateAndUpdateOnlyPredicate{})).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
+		Watches(&toolchainv1alpha1.UserSignup{},
 			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord())).
 		Complete(r)
 }
@@ -194,7 +193,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If the usersignup state hasn't been set to deactivating, then set it now
 	if !states.Deactivating(usersignup) {
-		states.SetDeactivating(usersignup, true)
 
 		// Before we update the UserSignup in order to set the deactivating state, we should reset the scheduled
 		// deactivation time if required just in case the current value is nil or has somehow changed.  Since the UserSignup
@@ -208,6 +206,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		logger.Info("setting usersignup state to deactivating")
+		states.SetDeactivating(usersignup, true)
 		if err := r.Client.Update(ctx, usersignup); err != nil {
 			logger.Error(err, "failed to update usersignup")
 			return reconcile.Result{}, err

@@ -57,7 +57,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		defer restore()
 
 		// when
-		req := MapBannedUserToUserSignup(c)(bannedUser)
+		req := MapBannedUserToUserSignup(c)(context.TODO(), bannedUser)
 
 		// then
 		require.Len(t, req, 1)
@@ -74,7 +74,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		}
 
 		// when
-		req := MapBannedUserToUserSignup(c)(bannedUser)
+		req := MapBannedUserToUserSignup(c)(context.TODO(), bannedUser)
 
 		// then
 		require.Nil(t, req)
@@ -86,7 +86,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		t.Cleanup(restore)
 
 		// when
-		req := MapBannedUserToUserSignup(c)(bannedUser)
+		req := MapBannedUserToUserSignup(c)(context.TODO(), bannedUser)
 
 		// then
 		require.Nil(t, req)

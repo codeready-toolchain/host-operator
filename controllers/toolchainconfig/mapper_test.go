@@ -1,6 +1,7 @@
 package toolchainconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -21,7 +22,7 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 		secret := test.CreateSecret("test-secret", test.HostOperatorNs, secretData)
 
 		// when
-		req := MapSecretToToolchainConfig()(secret)
+		req := MapSecretToToolchainConfig()(context.TODO(), secret)
 
 		// then
 		require.Len(t, req, 1)
@@ -36,7 +37,7 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 		pod := &corev1.Pod{}
 
 		// when
-		req := MapSecretToToolchainConfig()(pod)
+		req := MapSecretToToolchainConfig()(context.TODO(), pod)
 
 		// then
 		require.Empty(t, req)

@@ -16,10 +16,10 @@ import (
 	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type CounterAssertion struct {
@@ -69,16 +69,16 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 	return a
 }
 
-func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
-	murs := make([]runtime.Object, number)
+func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtimeclient.Object {
+	murs := make([]runtimeclient.Object, number)
 	for index := range murs {
 		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
 	}
 	return murs
 }
 
-func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
-	usersignups := make([]runtime.Object, number)
+func CreateMultipleUserSignups(prefix string, number int) []runtimeclient.Object {
+	usersignups := make([]runtimeclient.Object, number)
 	for index := range usersignups {
 		usersignups[index] = commonsignup.NewUserSignup(
 			commonsignup.WithName(fmt.Sprintf("%s%d", prefix, index)),
@@ -88,15 +88,15 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	return usersignups
 }
 
-func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtime.Object {
-	spaces := make([]runtime.Object, number)
+func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtimeclient.Object {
+	spaces := make([]runtimeclient.Object, number)
 	for index := range spaces {
 		spaces[index] = spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("%s%d", prefix, index), spacetest.WithSpecTargetCluster(targetCluster))
 	}
 	return spaces
 }
 
-func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtime.Object) {
+func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	counter.Reset()
 	t.Cleanup(counter.Reset)
