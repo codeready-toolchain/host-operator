@@ -240,7 +240,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("without previous entry", func(t *testing.T) {
 			// given
 			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-			initObjs := []runtime.Object{base1nsTier}
+			initObjs := []runtimeclient.Object{base1nsTier}
 			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -266,7 +266,7 @@ func TestReconcile(t *testing.T) {
 					StartTime: metav1.Now(),
 					Hash:      "def456",
 				}))
-			initObjs := []runtime.Object{base1nsTier}
+			initObjs := []runtimeclient.Object{base1nsTier}
 			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -291,7 +291,7 @@ func TestReconcile(t *testing.T) {
 			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 				tiertest.WithCurrentUpdate()) // current update already exists
 
-			initObjs := []runtime.Object{base1nsTier}
+			initObjs := []runtimeclient.Object{base1nsTier}
 			r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -313,7 +313,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtime.Object{base1nsTier}
+				initObjs := []runtimeclient.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
@@ -331,7 +331,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("other error", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtime.Object{base1nsTier}
+				initObjs := []runtimeclient.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
@@ -353,9 +353,9 @@ func TestReconcile(t *testing.T) {
 			t.Run("when adding new update", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtime.Object{base1nsTier}
+				initObjs := []runtimeclient.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
@@ -383,7 +383,7 @@ func TestReconcile(t *testing.T) {
 				Hash:      tierHash,
 			},
 		}
-		initObjs := []runtime.Object{base1nsTier}
+		initObjs := []runtimeclient.Object{base1nsTier}
 
 		// TODO remove this subtest once we completely switch to using TTRs
 		t.Run("using tiertemplates as revisions", func(t *testing.T) {
@@ -492,7 +492,7 @@ func TestReconcile(t *testing.T) {
 				base1nsTierWithRevisions := base1nsTier
 				base1nsTierWithRevisions.Status.Revisions = map[string]string{
 					"base1ns-admin-123456new": "base1ns-admin-123456new-abcd", "base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd", "base1ns-code-123456new": "base1ns-code-123456new-abcd", "base1ns-dev-123456new": "base1ns-dev-123456new-abcd", "base1ns-edit-123456new": "`base1ns-edit-123456new-abcd", "base1ns-stage-123456new": "base1ns-stage-123456new-abcd", "base1ns-viewer-123456new": "base1ns-viewer-123456new-abcd"}
-				initObjs := []runtime.Object{base1nsTier}
+				initObjs := []runtimeclient.Object{base1nsTier}
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
 				// when
 				// check no TTR is present before reconciling
@@ -546,7 +546,7 @@ func TestReconcile(t *testing.T) {
 }
 
 // initTierTemplates creates the TierTemplates objects for the base1ns tier
-func initTierTemplates(t *testing.T, withTemplateObjects bool) []runtime.Object {
+func initTierTemplates(t *testing.T, withTemplateObjects bool) []runtimeclient.Object {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -570,11 +570,11 @@ func initTierTemplates(t *testing.T, withTemplateObjects bool) []runtime.Object 
 	require.NoError(t, err)
 	editRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "edit", withTemplateObjects)
 	require.NoError(t, err)
-	tierTemplates := []runtime.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
+	tierTemplates := []runtimeclient.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)

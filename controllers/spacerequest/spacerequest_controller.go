@@ -53,14 +53,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// SpaceRequest owns subSpaces so events will be triggered for those from the host cluster.
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.SpaceRequest{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}},
+		Watches(&toolchainv1alpha1.Space{},
 			handler.EnqueueRequestsFromMapFunc(MapSubSpaceToSpaceRequest()),
 		)
 
 	// Watch SpaceRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
-		b = b.Watches(
-			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
+		b = b.WatchesRawSource(
+			source.Kind(memberCluster.Cache, &toolchainv1alpha1.SpaceRequest{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}

@@ -314,7 +314,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
 			janeSpace := spacetest.NewSpace(test.HostOperatorNs, "jane",
-				spacetest.WithDeletionTimestamp()) // space is being deleted ...
+				spacetest.WithDeletionTimestamp(), spacetest.WithFinalizer()) // space is being deleted ...
 			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
@@ -434,7 +434,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 
 		t.Run("SpaceBinding is being deleted", func(t *testing.T) {
 			// given
-			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.GetName(), spacebindingtest.WithSpaceBindingRequest(sbr), spacebindingtest.WithDeletionTimestamp())
+			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.GetName(), spacebindingtest.WithSpaceBindingRequest(sbr), spacebindingtest.WithDeletionTimestamp(), spacebindingtest.WithFinalizer())
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)
 			ctrl := newReconciler(t, hostClient, member1)
@@ -646,24 +646,6 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			})
 		})
 
-		t.Run("finalizer was already removed", func(t *testing.T) {
-			// given
-			// spaceBindingRequest has no finalizer
-			sbrNoFinalizer := sbrtestcommon.NewSpaceBindingRequest("lana", "lana-tenant",
-				sbrtestcommon.WithMUR("lana"),
-				sbrtestcommon.WithSpaceRole("admin"),
-				sbrtestcommon.WithDeletionTimestamp()) // spaceBindingRequest was deleted
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbrNoFinalizer, sbrNamespace), "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrNoFinalizer))
-
-			// then
-			require.NoError(t, err)
-			sbrtestcommon.AssertThatSpaceBindingRequest(t, sbrNoFinalizer.GetNamespace(), sbrNoFinalizer.GetName(), member1.Client).HasNoFinalizers() // spaceBindingRequest is gone
-		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -674,7 +656,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				sbrtestcommon.WithFinalizer(),
 				sbrtestcommon.WithMUR(janeMur.Name),
 			) // sbr is being deleted
-			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr))
+			spaceBinding := spacebindingtest.NewSpaceBinding(janeMur.Name, janeSpace.Name, "admin", sbr.Name, spacebindingtest.WithSpaceBindingRequest(sbr), spacebindingtest.WithFinalizer())
 			spaceBinding.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-121 * time.Second)} // is being deleted since more than 2 minutes
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, base1nsTier, janeSpace, janeMur, spaceBinding)

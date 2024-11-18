@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Reconciler reconciles a Space object
@@ -32,7 +31,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("spacecleanup").
 		For(&toolchainv1alpha1.Space{}).
 		Watches(
-			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+			&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceBindingSpaceLabelKey))).
 		Complete(r)
 }

@@ -1,6 +1,7 @@
 package spacerequest
 
 import (
+	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -10,8 +11,8 @@ import (
 
 // MapSubSpaceToSpaceRequest checks whether a space was created from a spacerequest, in case it finds the required labels,
 // triggers an event for the given spacerequest associated with the space.
-func MapSubSpaceToSpaceRequest() func(object runtimeclient.Object) []reconcile.Request {
-	return func(obj runtimeclient.Object) []reconcile.Request {
+func MapSubSpaceToSpaceRequest() func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
+	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		// get eventual spaceRequest name and namespace associated with current Space
 		spaceRequestName, spaceRequestExists := obj.GetLabels()[toolchainv1alpha1.SpaceRequestLabelKey]
 		spaceRequestNamespace, spaceRequestNamespaceExists := obj.GetLabels()[toolchainv1alpha1.SpaceRequestNamespaceLabelKey]

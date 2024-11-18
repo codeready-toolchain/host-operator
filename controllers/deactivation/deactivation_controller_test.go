@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -164,7 +163,7 @@ func TestReconcile(t *testing.T) {
 
 			r, req, fakeClient := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
-			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
@@ -261,7 +260,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupRedhat, config)
 
 			// First cause the status update to fail
-			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
@@ -310,7 +309,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
 			// First cause the status update to fail
-			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
@@ -350,7 +349,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
 				// First cause the status update to fail
-				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 					switch obj.(type) {
 					case *toolchainv1alpha1.UserSignup:
 						return errors.New("mock error")
@@ -405,7 +404,7 @@ func TestReconcile(t *testing.T) {
 					r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
 
 					// First cause the status update to fail
-					cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+					cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 						switch obj.(type) {
 						case *toolchainv1alpha1.UserSignup:
 							return errors.New("mock error")
@@ -659,7 +658,7 @@ func TestReconcile(t *testing.T) {
 				require.False(t, states.Deactivating(userSignupFoobar))
 
 				// Mock client which returns an error when the update fails
-				fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+				fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 					switch obj.(type) {
 					case *toolchainv1alpha1.UserSignup:
 						return errors.New("mock error")
@@ -806,7 +805,7 @@ func TestAutomaticDeactivation(t *testing.T) {
 	require.True(t, states.Deactivated(reloaded))
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *commontest.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (reconcile.Reconciler, reconcile.Request, *commontest.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	metrics.Reset()
 	s := scheme.Scheme
