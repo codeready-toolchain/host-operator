@@ -6,7 +6,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -125,10 +124,6 @@ func (r *Reconciler) addNewTierUpdate(ctx context.Context, tier *toolchainv1alph
 // returns `true` if a new TierTemplateRevision CR was created, `err` if something wrong happened
 func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	refs := getNSTemplateTierRefs(nsTmplTier)
-	ns, err := configuration.GetWatchNamespace()
-	if err != nil {
-		return false, err
-	}
 
 	// init revisions
 	if nsTmplTier.Status.Revisions == nil {
@@ -139,12 +134,13 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	for _, tierTemplateRef := range refs {
 		// get the TierTemplate
 		var tierTemplate toolchainv1alpha1.TierTemplate
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: tierTemplateRef}, &tierTemplate); err != nil {
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRef}, &tierTemplate); err != nil {
 			// something went wrong or we haven't found the TierTemplate
 			return false, err
 		}
 
 		// check if there is TTR associated with this TierTemplate
+		var err error
 		ttrCreated, err = r.ensureTTRforTemplate(ctx, nsTmplTier, tierTemplate)
 		if err != nil {
 			return false, err
@@ -164,11 +160,6 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 }
 
 func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate toolchainv1alpha1.TierTemplate) (bool, error) {
-	ns, err := configuration.GetWatchNamespace()
-	if err != nil {
-		return false, err
-	}
-
 	// tierTemplate doesn't support TTRs
 	// we set TierTemplate as revisions
 	// TODO this step will be removed once we convert all TierTemplates to TTRs
@@ -184,7 +175,7 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 
 	if tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]; found {
 		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
 			// no tierTemplateRevision CR was found,
 			if errors.IsNotFound(err) {
 				// let's create one
