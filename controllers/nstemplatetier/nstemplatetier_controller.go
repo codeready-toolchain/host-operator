@@ -140,8 +140,8 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		}
 
 		// check if there is TTR associated with this TierTemplate
-		var err error
-		ttrCreated, err = r.ensureTTRforTemplate(ctx, nsTmplTier, tierTemplate)
+		ttrCreatedLatest, err := r.ensureTTRforTemplate(ctx, nsTmplTier, tierTemplate)
+		ttrCreated = ttrCreated || ttrCreatedLatest
 		if err != nil {
 			return false, err
 		}

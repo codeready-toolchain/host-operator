@@ -481,6 +481,29 @@ func TestReconcile(t *testing.T) {
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, 7) // it's one TTR per each tiertemplate in the NSTemplateTier
+					t.Run("revision field is set but some TierTemplateRevision is missing, status should be updated", func(t *testing.T) {
+						// given
+						// the NSTemplateTier already has the revisions from previous test
+						// we delete the first TTR to make sure the status is updated and the TTR get's recreated
+						err = cl.Delete(context.TODO(), &ttrs.Items[0])
+						require.NoError(t, err)
+
+						// when
+						res, err = r.Reconcile(context.TODO(), req)
+						// then
+						require.NoError(t, err)
+						require.Equal(t, reconcile.Result{Requeue: true}, res) // reconcile after status update
+						// revisions are the same
+						tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+							HasStatusTierTemplateRevisions([]string{
+								"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+							})
+						// expected TierTemplateRevision CRs are there
+						ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
+						err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
+						require.NoError(t, err)
+						require.Len(t, ttrs.Items, 7) // it's one TTR per each tiertemplate in the NSTemplateTier
+					})
 				})
 
 			})
