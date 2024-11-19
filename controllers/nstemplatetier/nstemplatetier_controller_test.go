@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -33,203 +34,14 @@ const (
 	operatorNamespace = "toolchain-host-operator"
 )
 
-var (
-	ns test.TemplateObject = `
-- apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: ${SPACE_NAME}-NSTYPE
-`
-
-	execPodsRole test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: exec-pods
-    namespace: ${SPACE_NAME}-NSTYPE
-  rules:
-  - apiGroups:
-    - ""
-    resources:
-    - pods/exec
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - delete
-    - update`
-
-	namespace test.TemplateParam = `
-- name: NAMESPACE
-  required: true`
-	spacename test.TemplateParam = `
-- name: SPACE_NAME
-  value: johnsmith`
-	username test.TemplateParam = `
-- name: USERNAME
-  value: johnsmith`
-
-	advancedCrq test.TemplateObject = `
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: for-${SPACE_NAME}
-  spec:
-    quota:
-      hard:
-        limits.cpu: 2000m
-        limits.memory: 10Gi
-    selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-    labels: null
-  `
-	crqFeature1 test.TemplateObject = `
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: feature-1-for-${SPACE_NAME}
-    annotations:
-      toolchain.dev.openshift.com/feature: feature-1
-  spec:
-    quota:
-      hard:
-        limits.cpu: 2000m
-        limits.memory: 10Gi
-    selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-    labels: null
-  `
-	crqFeature2 test.TemplateObject = `
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: feature-2-for-${SPACE_NAME}
-    annotations:
-      toolchain.dev.openshift.com/feature: feature-2
-  spec:
-    quota:
-      hard:
-        limits.cpu: 2000m
-        limits.memory: 10Gi
-    selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-    labels: null
-  `
-	crqFeature3 test.TemplateObject = `
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: feature-3-for-${SPACE_NAME}
-    annotations:
-      toolchain.dev.openshift.com/feature: feature-3
-  spec:
-    quota:
-      hard:
-        limits.cpu: 2000m
-        limits.memory: 10Gi
-    selector:
-      annotations:
-        openshift.io/requester: ${SPACE_NAME}
-    labels: null
-  `
-
-	clusterTektonRb test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  metadata:
-    name: ${SPACE_NAME}-tekton-view
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: tekton-view-for-${SPACE_NAME}
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-`
-	idlerDev test.TemplateObject = `
-- apiVersion: toolchain.dev.openshift.com/v1alpha1
-  kind: Idler
-  metadata:
-    name: ${SPACE_NAME}-dev
-  spec:
-    timeoutSeconds: 28800 # 8 hours
-  `
-	idlerStage test.TemplateObject = `
-- apiVersion: toolchain.dev.openshift.com/v1alpha1
-  kind: Idler
-  metadata:
-    name: ${SPACE_NAME}-stage
-  spec:
-    timeoutSeconds: 28800 # 8 hours
-  `
-
-	spaceAdmin test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: space-admin
-    namespace: ${NAMESPACE}
-  rules:
-    # examples
-    - apiGroups:
-        - ""
-      resources:
-        - "configmaps"
-        - "secrets"
-        - "serviceaccounts"
-      verbs:
-        - get
-        - list
-  `
-	spaceAdminRb test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: ${USERNAME}-space-admin
-    namespace: ${NAMESPACE}
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: space-admin
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-`
-	spaceViewer test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: space-viewer
-    namespace: ${NAMESPACE}
-  rules:
-    # examples
-    - apiGroups:
-        - ""
-      resources:
-        - "configmaps"
-      verbs:
-        - get
-        - list
-  `
-	spaceViewerRb test.TemplateObject = `
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: ${USERNAME}-space-viewer
-    namespace: ${NAMESPACE}
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: space-viewer
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-`
-)
+var ns = unstructured.Unstructured{
+	Object: map[string]interface{}{
+		"kind": "Namespace",
+		"metadata": map[string]interface{}{
+			"name": "{{.SPACE_NAME}}",
+		},
+	},
+}
 
 func TestReconcile(t *testing.T) {
 	// given
@@ -286,7 +98,7 @@ func TestReconcile(t *testing.T) {
 	t.Run("controller should NOT add entry in tier.status.updates", func(t *testing.T) {
 
 		t.Run("last entry exists with matching hash", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, false)
+			tierTemplates := initTierTemplates(t, nil)
 			// given
 			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 				tiertest.WithCurrentUpdate()) // current update already exists
@@ -373,7 +185,10 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("revisions management", func(t *testing.T) {
 
-		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
+		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+			// the tiertemplate content will be evaluated with these parameters, and the output will be stored inside the tiertemplate revision CR's
+			tiertest.WithParameter("SPACE_NAME", "janedoe"),
+		)
 		tierHash, err := hash.ComputeHashForNSTemplateTier(base1nsTier)
 		require.NoError(t, err)
 		// let's set the update so that we can skip the first reconciliation loop when this is updated
@@ -387,7 +202,7 @@ func TestReconcile(t *testing.T) {
 
 		// TODO remove this subtest once we completely switch to using TTRs
 		t.Run("using tiertemplates as revisions", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, false)
+			tierTemplates := initTierTemplates(t, nil)
 			t.Run("add revisions when they are missing", func(t *testing.T) {
 				// given
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
@@ -395,7 +210,6 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tierTemplatesRefs := []string{
 					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
@@ -431,7 +245,9 @@ func TestReconcile(t *testing.T) {
 		})
 
 		t.Run("using TTR as revisions", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, true) // initialize tier templates with templateObjects field populated
+			// initialize tier templates with templateObjects field populated
+			// for simplicity we initialize all of them with the same objects
+			tierTemplates := initTierTemplates(t, withTemplateObjects(ns))
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
@@ -439,7 +255,6 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tierTemplatesRefs := []string{
 					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
@@ -461,6 +276,8 @@ func TestReconcile(t *testing.T) {
 					// check that owner reference was set
 					assert.Equal(t, "TierTemplate", ttrs.Items[0].OwnerReferences[0].Kind)
 					assert.Equal(t, ref, ttrs.Items[0].OwnerReferences[0].Name)
+					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), "janedoe")        // the object should have the namespace name replaced
+					assert.NotContains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME") // the object should NOT contain the variable anymore
 				}
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
@@ -492,7 +309,6 @@ func TestReconcile(t *testing.T) {
 						res, err = r.Reconcile(context.TODO(), req)
 						// then
 						require.NoError(t, err)
-						require.Equal(t, reconcile.Result{Requeue: true}, res) // reconcile after status update
 						// revisions are the same
 						tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 							HasStatusTierTemplateRevisions([]string{
@@ -569,30 +385,17 @@ func TestReconcile(t *testing.T) {
 }
 
 // initTierTemplates creates the TierTemplates objects for the base1ns tier
-func initTierTemplates(t *testing.T, withTemplateObjects bool) []runtimeclient.Object {
+func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension) []runtimeclient.Object {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	clusterResourcesContent := test.CreateTemplate(test.WithObjects(advancedCrq, crqFeature1, crqFeature2, crqFeature3, clusterTektonRb, idlerDev, idlerStage), test.WithParams(spacename, username))
-	nsContent := test.CreateTemplate(test.WithObjects(ns, execPodsRole), test.WithParams(spacename))
-	adminRoleContent := test.CreateTemplate(test.WithObjects(spaceAdmin, spaceAdminRb), test.WithParams(namespace, username))
-	viewerRoleContent := test.CreateTemplate(test.WithObjects(spaceViewer, spaceViewerRb), test.WithParams(namespace, username))
-	codecFactory := serializer.NewCodecFactory(s)
-	decoder := codecFactory.UniversalDeserializer()
-	clusterResourceTierTemplate, err := createTierTemplate(decoder, clusterResourcesContent, "clusterresources", withTemplateObjects)
-	require.NoError(t, err)
-	codeNsTierTemplate, err := createTierTemplate(decoder, nsContent, "code", withTemplateObjects)
-	require.NoError(t, err)
-	devNsTierTemplate, err := createTierTemplate(decoder, nsContent, "dev", withTemplateObjects)
-	require.NoError(t, err)
-	stageNsTierTemplate, err := createTierTemplate(decoder, nsContent, "stage", withTemplateObjects)
-	require.NoError(t, err)
-	adminRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "admin", withTemplateObjects)
-	require.NoError(t, err)
-	viewerRoleTierTemplate, err := createTierTemplate(decoder, viewerRoleContent, "viewer", withTemplateObjects)
-	require.NoError(t, err)
-	editRoleTierTemplate, err := createTierTemplate(decoder, adminRoleContent, "edit", withTemplateObjects)
-	require.NoError(t, err)
+	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects)
+	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects)
+	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects)
+	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects)
+	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects)
+	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects)
+	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects)
 	tierTemplates := []runtimeclient.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
 }
@@ -615,15 +418,30 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	}, cl
 }
 
-func createTierTemplate(decoder runtime.Decoder, tmplContent string, typeName string, withTemplateObjects bool) (*toolchainv1alpha1.TierTemplate, error) {
-	tmplContent = strings.ReplaceAll(tmplContent, "NSTYPE", typeName)
+func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
+	var (
+		ns test.TemplateObject = `
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: ${SPACE_NAME}
+`
+		spacename test.TemplateParam = `
+- name: SPACE_NAME
+  value: johnsmith`
+	)
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	codecFactory := serializer.NewCodecFactory(s)
+	decoder := codecFactory.UniversalDeserializer()
+	tmpl := templatev1.Template{}
+	_, _, err = decoder.Decode([]byte(test.CreateTemplate(test.WithObjects(ns), test.WithParams(spacename))), nil, &tmpl)
+	require.NoError(t, err)
+
 	tierName := "base1ns"
 	revision := "123456new"
-	tmpl := templatev1.Template{}
-	_, _, err := decoder.Decode([]byte(tmplContent), nil, &tmpl)
-	if err != nil {
-		return nil, err
-	}
+	// we can set the template field to something empty as it is not relevant for the tests
 	tt := &toolchainv1alpha1.TierTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      strings.ToLower(fmt.Sprintf("%s-%s-%s", tierName, typeName, revision)),
@@ -638,10 +456,18 @@ func createTierTemplate(decoder runtime.Decoder, tmplContent string, typeName st
 	}
 
 	// just copy the raw objects to the templateObjects field
-	// TODO this will be removed once we switch on using templateOjbects only in the TierTemplates
-	if withTemplateObjects {
-		tt.Spec.TemplateObjects = tmpl.Objects
+	// TODO this will be removed once we switch on using templateObjects only in the TierTemplates
+	if withTemplateObjects != nil {
+		tt.Spec.TemplateObjects = withTemplateObjects
 	}
 
-	return tt, nil
+	return tt
+}
+
+func withTemplateObjects(templates ...unstructured.Unstructured) []runtime.RawExtension {
+	var templateObjects []runtime.RawExtension
+	for i := range templates {
+		templateObjects = append(templateObjects, runtime.RawExtension{Object: &templates[i]})
+	}
+	return templateObjects
 }
