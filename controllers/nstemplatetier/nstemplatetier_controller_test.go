@@ -273,9 +273,6 @@ func TestReconcile(t *testing.T) {
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()), runtimeclient.MatchingLabels(labels))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, 1)
-					// check that owner reference was set
-					assert.Equal(t, "TierTemplate", ttrs.Items[0].OwnerReferences[0].Kind)
-					assert.Equal(t, ref, ttrs.Items[0].OwnerReferences[0].Name)
 					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), "janedoe")        // the object should have the namespace name replaced
 					assert.NotContains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME") // the object should NOT contain the variable anymore
 				}

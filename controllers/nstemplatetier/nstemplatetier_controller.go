@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	errs "github.com/pkg/errors"
@@ -154,7 +153,12 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 			return err
 		}
 	}
-
+	// TODO handle removal of TierTemplate from NSTemplateTier
+	// scenario:
+	// 		a. TierTemplate is removed/replaced from NSTemplateTier.Spec
+	//		b. NSTemplateTier.Status.Revisions must be cleaned up
+	// Thus here we should iterate over the Status.Revisions field
+	// and check if there is any reference to a TierTemplate that is not in the Spec anymore
 	if ttrCreated {
 		// we need to update the status.revisions with the new ttrs
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
@@ -312,9 +316,6 @@ func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string 
 }
 
 func (r *Reconciler) createTTR(ctx context.Context, ttr *toolchainv1alpha1.TierTemplateRevision, tmplTier *toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.TierTemplateRevision, error) {
-	if err := controllerutil.SetControllerReference(tmplTier, ttr, r.Scheme); err != nil {
-		return nil, errs.Wrap(err, "error setting controller reference for TTR "+ttr.Name)
-	}
 	err := r.Client.Create(ctx, ttr)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return nil, errs.Wrap(err, "unable to create TierTemplateRevision")
