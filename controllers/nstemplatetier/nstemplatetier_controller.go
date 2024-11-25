@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"context"
 
-	gherrors "github.com/pkg/errors"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-
 	"fmt"
 	"io"
 	"text/template"
+
+	gherrors "github.com/pkg/errors"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -40,9 +39,8 @@ import (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&toolchainv1alpha1.TierTemplateRevision{},
-			handler.EnqueueRequestsFromMapFunc(MapTierTemplateRevisionToNSTemplateTier()),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		// NOTE: watching TTRs will trigger a race condition in the controller generating copies of each TTR
+		// This happens because the creation of the TTR is faster than the update of the NSTemplateTier.Status.Revisions field.
 		Complete(r)
 }
 
@@ -89,8 +87,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
-	if err := r.ensureRevision(ctx, tier); err != nil {
-		return reconcile.Result{}, err
+	if created, err := r.ensureRevision(ctx, tier); err != nil {
+		return reconcile.Result{}, errs.Wrap(err, "unable to create new TierTemplateRevision after NSTemplateTier changed")
+	} else if created {
+		logger.Info("Requeue after creating a new TTR")
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	return reconcile.Result{}, nil
@@ -129,7 +130,8 @@ func (r *Reconciler) addNewTierUpdate(ctx context.Context, tier *toolchainv1alph
 
 // ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
 // returns `true` if a new TierTemplateRevision CR was created, `err` if something wrong happened
-func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier) error {
+func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+	logger := log.FromContext(ctx)
 	refs := getNSTemplateTierRefs(nsTmplTier)
 
 	// init revisions
@@ -143,14 +145,14 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		var tierTemplate toolchainv1alpha1.TierTemplate
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRef}, &tierTemplate); err != nil {
 			// something went wrong or we haven't found the TierTemplate
-			return err
+			return false, err
 		}
 
 		// check if there is TTR associated with this TierTemplate
 		ttrCreatedLatest, err := r.ensureTTRforTemplate(ctx, nsTmplTier, &tierTemplate)
 		ttrCreated = ttrCreated || ttrCreatedLatest
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 	// TODO handle removal of TierTemplate from NSTemplateTier
@@ -161,15 +163,17 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	// and check if there is any reference to a TierTemplate that is not in the Spec anymore
 	if ttrCreated {
 		// we need to update the status.revisions with the new ttrs
+		logger.Info("ttr created updating status")
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
-			return err
+			return ttrCreated, err
 		}
 	}
 
-	return nil
+	return ttrCreated, nil
 }
 
 func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (bool, error) {
+	logger := log.FromContext(ctx)
 	// tierTemplate doesn't support TTRs
 	// we set TierTemplate as revisions
 	// TODO this step will be removed once we convert all TierTemplates to TTRs
@@ -184,10 +188,13 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 	}
 
 	if tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]; found {
+		logger.Info("TTR set in the status.revisions for tiertemplate", "tierTemplate.Name", tierTemplate.GetName(), "ttr.Name", tierTemplateRevisionName)
 		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
 			// no tierTemplateRevision CR was found,
+			logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
 			if errors.IsNotFound(err) {
+
 				// let's create one
 				if err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate); err != nil {
 					return false, err

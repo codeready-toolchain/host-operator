@@ -210,6 +210,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tierTemplatesRefs := []string{
 					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
@@ -255,6 +256,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tierTemplatesRefs := []string{
 					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
