@@ -1,19 +1,13 @@
 package nstemplatetier
 
 import (
-	"bytes"
 	"context"
-	errs "errors"
-
 	"fmt"
-	"io"
-	"text/template"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -219,12 +213,8 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) error {
-	parsedObjects, err := replaceTemplateParameters(tierTemplate.Spec.TemplateObjects, nsTmplTier.Spec.Parameters)
-	if err != nil {
-		return err
-	}
-	ttr := NewTTR(tierTemplate, nsTmplTier, parsedObjects)
-	ttr, err = r.createTTR(ctx, ttr, tierTemplate)
+	ttr := NewTTR(tierTemplate, nsTmplTier)
+	ttr, err := r.createTTR(ctx, ttr, tierTemplate)
 	if err != nil {
 		// something went wrong while creating new ttr
 		return err
@@ -232,72 +222,6 @@ func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTi
 	// update NSTemplateTierStatus with new TTR
 	nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttr.GetName()
 	return nil
-}
-
-func replaceTemplateParameters(templateObjects []runtime.RawExtension, parameters []toolchainv1alpha1.Parameter) ([]runtime.RawExtension, error) {
-	p := constructParameterMap(parameters)
-
-	var parsedObjects []runtime.RawExtension
-	for _, rawObject := range templateObjects {
-		// get the json object
-		jsonObject, err := rawObject.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		// replace the parameters inside the json
-		buf, err := replaceParametersInTemplate(jsonObject, p)
-		if err != nil {
-			return nil, err
-		}
-		// convert back the buffer to rawextension list of objects
-		parsedObjects, err = getParsedObjectsFromBuffer(buf, parsedObjects)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return parsedObjects, nil
-}
-
-func getParsedObjectsFromBuffer(buf *bytes.Buffer, parsedObjects []runtime.RawExtension) ([]runtime.RawExtension, error) {
-	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(buf.Bytes()), 100)
-	for {
-		var rawExt runtime.RawExtension
-		if err := decoder.Decode(&rawExt); err != nil {
-			if errs.Is(err, io.EOF) {
-				break
-			}
-			return parsedObjects, err
-		}
-		rawExt.Raw = bytes.TrimSpace(rawExt.Raw)
-		if len(rawExt.Raw) == 0 || bytes.Equal(rawExt.Raw, []byte("null")) {
-			continue
-		}
-		parsedObjects = append(parsedObjects, rawExt)
-	}
-	return parsedObjects, nil
-}
-
-func replaceParametersInTemplate(jsonObject []byte, p map[string]string) (*bytes.Buffer, error) {
-	var buf bytes.Buffer
-	tmpl, err := template.New("ttr").Parse(string(jsonObject))
-	if err != nil {
-		return nil, err
-	}
-	// replace the parameters from the nstemplatetier
-	if err := tmpl.Execute(&buf, p); err != nil {
-		return nil, err
-	}
-	return &buf, nil
-}
-
-func constructParameterMap(parameters []toolchainv1alpha1.Parameter) map[string]string {
-	// construct the parameter map
-	// name -> value
-	p := make(map[string]string, len(parameters))
-	for _, param := range parameters {
-		p[param.Name] = param.Value
-	}
-	return p
 }
 
 // getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
@@ -332,7 +256,7 @@ func (r *Reconciler) createTTR(ctx context.Context, ttr *toolchainv1alpha1.TierT
 }
 
 // NewTTR creates a TierTemplateRevision CR for a given TierTemplate object.
-func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alpha1.NSTemplateTier, templateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplateRevision {
+func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.TierTemplateRevision {
 	tierName := nsTmplTier.GetName()
 	tierTemplateName := tierTmpl.GetName()
 	labels := map[string]string{
@@ -347,7 +271,8 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{
-			TemplateObjects: templateObjects,
+			TemplateObjects: tierTmpl.Spec.TemplateObjects,
+			Parameters:      nsTmplTier.Spec.Parameters, // save the parameters from the NSTemplateTier,to detect further changes and for evaluating those in the TemplateObjects when provisioning Spaces.
 		},
 	}
 

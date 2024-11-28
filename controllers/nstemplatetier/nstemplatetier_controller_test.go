@@ -175,9 +175,9 @@ func TestReconcile(t *testing.T) {
 	})
 
 	t.Run("revisions management", func(t *testing.T) {
-
+		// given
 		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
-			// the tiertemplate content will be evaluated with these parameters, and the output will be stored inside the tiertemplate revision CR's
+			// the tiertemplate revision CR should have a copy of those parameters
 			tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 		)
 		tierHash, err := hash.ComputeHashForNSTemplateTier(base1nsTier)
@@ -242,7 +242,7 @@ func TestReconcile(t *testing.T) {
 			var crq = unstructured.Unstructured{Object: map[string]interface{}{
 				"kind": "ClusterResourceQuota",
 				"metadata": map[string]interface{}{
-					"name": "{{\".SPACE_NAME\"}}",
+					"name": "for-{{.SPACE_NAME}}-deployments",
 				},
 				"spec": map[string]interface{}{
 					"quota": map[string]interface{}{
@@ -289,9 +289,12 @@ func TestReconcile(t *testing.T) {
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()), runtimeclient.MatchingLabels(labels))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, 1)
-					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME")          // the object should have the SPACE_NAME variable still there since this one will be replaced when provisioning the Space
-					assert.NotContains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".DEPLOYMENT_QUOTA") // the object should NOT contain this variable anymore
-					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), "60")                   // the parameter value is set in the template
+					// the object should have all the variables still there since this one will be replaced when provisioning the Space
+					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME")
+					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".DEPLOYMENT_QUOTA")
+					// the parameter is copied from the NSTemplateTier
+					assert.Equal(t, ttrs.Items[0].Spec.Parameters[0].Name, base1nsTier.Spec.Parameters[0].Name)
+					assert.Equal(t, ttrs.Items[0].Spec.Parameters[0].Value, base1nsTier.Spec.Parameters[0].Value)
 				}
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given

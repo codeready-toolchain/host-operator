@@ -38,8 +38,6 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/api v0.0.0-20241114213029-44333bf24bcf h1:tOHKd4PT6gnV8lLh3kmqqK9YONvL6oFKHpi0kGzfsvw=
-github.com/codeready-toolchain/api v0.0.0-20241114213029-44333bf24bcf/go.mod h1:DUq1ffy9Mbersdgji48i/cm9Y+6NMwAdAQJNlfOrPRo=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20241114215157-a6a85252b2f5 h1:vW0C32c6sI9ZUGcUw3e9ftE9hqJ/bMo+TtRHp84Hung=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20241114215157-a6a85252b2f5/go.mod h1:wx/d4HVbDPOadwpbxn28ZGClC5OmzelIK8p4wupDJVI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
@@ -180,6 +178,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
 github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
+github.com/mfrancisc/api v0.0.0-20241128133539-a24a5d454de5 h1:Qg1+lu+mgzyvvLAqBGCRTOljEbNy9jtLggnyWCMxx00=
+github.com/mfrancisc/api v0.0.0-20241128133539-a24a5d454de5/go.mod h1:DUq1ffy9Mbersdgji48i/cm9Y+6NMwAdAQJNlfOrPRo=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
 github.com/migueleliasweb/go-github-mock v0.0.18/go.mod h1:CcgXcbMoRnf3rRVHqGssuBquZDIcaplxL2W6G+xs7kM=
 github.com/mitchellh/copystructure v1.0.0 h1:Laisrj+bAB6b/yJwB5Bt3ITZhGJdqmxquMKeZ+mmkFQ=
