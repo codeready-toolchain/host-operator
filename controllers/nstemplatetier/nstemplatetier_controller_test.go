@@ -34,15 +34,6 @@ const (
 	operatorNamespace = "toolchain-host-operator"
 )
 
-var ns = unstructured.Unstructured{
-	Object: map[string]interface{}{
-		"kind": "Namespace",
-		"metadata": map[string]interface{}{
-			"name": "{{.SPACE_NAME}}",
-		},
-	},
-}
-
 func TestReconcile(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -187,7 +178,7 @@ func TestReconcile(t *testing.T) {
 
 		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 			// the tiertemplate content will be evaluated with these parameters, and the output will be stored inside the tiertemplate revision CR's
-			tiertest.WithParameter("SPACE_NAME", "janedoe"),
+			tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 		)
 		tierHash, err := hash.ComputeHashForNSTemplateTier(base1nsTier)
 		require.NoError(t, err)
@@ -248,7 +239,30 @@ func TestReconcile(t *testing.T) {
 		t.Run("using TTR as revisions", func(t *testing.T) {
 			// initialize tier templates with templateObjects field populated
 			// for simplicity we initialize all of them with the same objects
-			tierTemplates := initTierTemplates(t, withTemplateObjects(ns))
+			var crq = unstructured.Unstructured{Object: map[string]interface{}{
+				"kind": "ClusterResourceQuota",
+				"metadata": map[string]interface{}{
+					"name": "{{\".SPACE_NAME\"}}",
+				},
+				"spec": map[string]interface{}{
+					"quota": map[string]interface{}{
+						"hard": map[string]interface{}{
+							"count/deploymentconfigs.apps": "{{.DEPLOYMENT_QUOTA}}",
+							"count/deployments.apps":       "{{.DEPLOYMENT_QUOTA}}",
+							"count/pods":                   "600",
+						},
+					},
+					"selector": map[string]interface{}{
+						"annotations": map[string]interface{}{},
+						"labels": map[string]interface{}{
+							"matchLabels": map[string]interface{}{
+								"toolchain.dev.openshift.com/space": "'{{.SPACE_NAME}}'",
+							},
+						},
+					},
+				},
+			}}
+			tierTemplates := initTierTemplates(t, withTemplateObjects(crq))
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
@@ -275,8 +289,9 @@ func TestReconcile(t *testing.T) {
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()), runtimeclient.MatchingLabels(labels))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, 1)
-					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), "janedoe")        // the object should have the namespace name replaced
-					assert.NotContains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME") // the object should NOT contain the variable anymore
+					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME")          // the object should have the SPACE_NAME variable still there since this one will be replaced when provisioning the Space
+					assert.NotContains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".DEPLOYMENT_QUOTA") // the object should NOT contain this variable anymore
+					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), "60")                   // the parameter value is set in the template
 				}
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
