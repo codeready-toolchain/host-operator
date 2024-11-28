@@ -37,7 +37,8 @@ import (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		// NOTE: watching TTRs will trigger a race condition in the controller generating copies of each TTR
+		// NOTE: DO NOT introduce watcher for TTRs!!
+		// watching TTRs will trigger a race condition in the controller generating copies of each TTR
 		// This happens because the creation of the TTR is faster than the update of the NSTemplateTier.Status.Revisions field.
 		Complete(r)
 }
