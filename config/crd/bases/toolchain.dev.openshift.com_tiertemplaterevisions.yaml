@@ -4,7 +4,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.12.0
-  creationTimestamp: null
   name: tiertemplaterevisions.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -40,6 +39,30 @@ spec:
           spec:
             description: TierTemplateRevisionSpec defines the desired state of TierTemplateRevision
             properties:
+              parameters:
+                description: Parameters is an optional array of Parameters which will
+                  be used to replace the variables present in the TemplateObjects
+                  list when provisioning a Space.
+                items:
+                  description: Parameter defines a name/value variable that is to
+                    be processed during TierTemplate creation.
+                  properties:
+                    name:
+                      description: Name must be set and it can be referenced in the
+                        TierTemplate content using {{.NAME}}
+                      type: string
+                    value:
+                      description: Value holds the Parameter data. The value replaces
+                        all occurrences of the Parameter {{.NAME}}.
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               templateObjects:
                 description: TemplateObjects contains list of Unstructured Objects
                   that can be parsed at runtime and will be applied as part of the
