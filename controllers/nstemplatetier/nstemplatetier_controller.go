@@ -190,10 +190,9 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		logger.Info("TTR set in the status.revisions for tiertemplate", "tierTemplate.Name", tierTemplate.GetName(), "ttr.Name", tierTemplateRevisionName)
 		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
-			// no tierTemplateRevision CR was found,
-			logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
 			if errors.IsNotFound(err) {
-
+				// no tierTemplateRevision CR was found,
+				logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
 				// let's create one
 				if err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate); err != nil {
 					return false, err
