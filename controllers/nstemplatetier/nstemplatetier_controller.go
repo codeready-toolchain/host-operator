@@ -177,8 +177,8 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 	// we set TierTemplate as revisions
 	// TODO this step will be removed once we convert all TierTemplates to TTRs
 	if tierTemplate.Spec.TemplateObjects == nil {
-		val, ok := nsTmplTier.Status.Revisions[tierTemplate.GetName()]
-		if !ok || val != tierTemplate.GetName() {
+		_, ok := nsTmplTier.Status.Revisions[tierTemplate.GetName()]
+		if !ok {
 			nsTmplTier.Status.Revisions[tierTemplate.GetName()] = tierTemplate.GetName()
 			return true, nil
 		}
