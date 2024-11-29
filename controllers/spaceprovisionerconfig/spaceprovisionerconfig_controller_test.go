@@ -458,7 +458,7 @@ func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfi
 	return r, req, fakeClient
 }
 
-func readyToolchainCluster(name string) *toolchainv1alpha1.ToolchainCluster {
+func readyToolchainCluster(name string) *toolchainv1alpha1.ToolchainCluster { //nolint: unparam // it makes sense to have this param even if it always receives the same value
 	return &toolchainv1alpha1.ToolchainCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
