@@ -18,7 +18,7 @@ type (
 	spaceProvisionerConfigPredicate func(context.Context, *toolchainv1alpha1.SpaceProvisionerConfig) bool
 
 	// SpaceCountGetter is a function useful for mocking the counts cache and can be passed
-	// to the NewClusterManagerForTest function. The returned tuple represents the actual number
+	// to the NewClusterManager function. The returned tuple represents the actual number
 	// of the spaces found for given cluster and the fact whether the value was actually found or not
 	// (similar to the return value of the map lookup).
 	SpaceCountGetter func(ctx context.Context, clusterName string) (int, bool)

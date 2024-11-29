@@ -32,13 +32,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		return spc.NewSpaceProvisionerConfig(name, commontest.HostOperatorNs, opts...)
 	}
 
-	// preferred == 0 => m1 preferred
-	//           == 1 => m2 preferred
-	//           == 2 => none preferred
+	// preferred == 0 => no cluster preferred
+	//           == 1 => m1 preferred
+	//           == 2 => m2 preferred
 	for preferred := 0; preferred < 3; preferred++ {
 		// 16 because we have 4 flags that we need to produce combinations of
 		for i := 0; i < 16; i++ {
-			// the flags telling whether the m1 and m2 are valid and have the appropriate placement role
+			// the flags tell whether the m1 and m2 are valid and have the appropriate placement role
 			m1_valid := i&1 > 0
 			m1_has_role := i&2 > 0
 			m2_valid := i&4 > 0
@@ -62,7 +62,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				preferredMember = ""
 			}
 
-			// here we decide on which member the algorithm should choose
+			// here we define the expected test result, i.e. which member the algorithm should choose
 			if m1_eligible {
 				if m2_eligible {
 					if m1_preferred {
