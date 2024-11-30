@@ -267,7 +267,7 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	ttr := &toolchainv1alpha1.TierTemplateRevision{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    tierTmpl.GetNamespace(),
-			GenerateName: fmt.Sprintf("%s-", tierTemplateName),
+			GenerateName: fmt.Sprintf("%s-%s-", tierName, tierTemplateName),
 			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{
