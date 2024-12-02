@@ -201,6 +201,21 @@ func WithCurrentUpdate() TierOption {
 	}
 }
 
+// WithParameter appends a parameter to the parameter's list
+func WithParameter(name, value string) TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		if tier.Spec.Parameters == nil {
+			tier.Spec.Parameters = []toolchainv1alpha1.Parameter{}
+		}
+		tier.Spec.Parameters = append(tier.Spec.Parameters,
+			toolchainv1alpha1.Parameter{
+				Name:  name,
+				Value: value,
+			},
+		)
+	}
+}
+
 // OtherTier returns an "other" NSTemplateTier
 func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 	return &toolchainv1alpha1.NSTemplateTier{
