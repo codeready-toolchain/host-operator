@@ -30,7 +30,7 @@ type (
 //
 // NOTE: THE RETURNED FUNCTION ACTUALLY UPDATES THE SPC IT RECEIVES WITH THE LATEST SPACE COUNT FROM THE
 // CACHE. THIS CAN BE TAKEN ADVANTAGE OF LATER WHEN FURTHER PROCESSING THE CANDIDATE SPCS.
-func recheckSpaceCount(getSpaceCount SpaceCountGetter) spaceProvisionerConfigPredicate {
+func recheckHasNotReachedSpaceCountThreshold(getSpaceCount SpaceCountGetter) spaceProvisionerConfigPredicate {
 	return func(ctx context.Context, spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
 		var spaceCount int
 		if spc.Status.ConsumedCapacity != nil {
@@ -169,7 +169,13 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 		ctx,
 		optimalClusterFilter.PreferredCluster,
 		isReady(),
-		recheckSpaceCount(spaceCountGetter),
+		// N.B.: The readiness of the SPC already takes into account the space count and the memory consumption.
+		// In here, we check only the space count again by comparing it to the space count reconrded in the cache
+		// beceause we do really care for the space counts to never breach the threshold (and the cache is updated
+		// more or less instantly after a new space is added to a cluster). We do NOT care that much about memory
+		// consumption because it fluctuates a lot. It is enough for the memory consumption check to be incorporated
+		// into the readiness of the SPC.
+		recheckHasNotReachedSpaceCountThreshold(spaceCountGetter),
 		hasPlacementRoles(optimalClusterFilter.ClusterRoles))
 	if err != nil {
 		return "", fmt.Errorf("failed to find the optimal space provisioner config: %w", err)
