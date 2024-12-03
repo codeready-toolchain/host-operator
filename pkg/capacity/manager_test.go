@@ -8,6 +8,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/test"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
@@ -186,6 +188,44 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			assert.Equal(t, "", clusterName)
 		})
 	})
+}
+
+func TestGetSpaceCountsFromCountsCache(t *testing.T) {
+	toolchainStatus := test.NewToolchainStatus(
+		test.WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1000,
+		}),
+		test.WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1000,
+		}),
+		test.WithMember("member1", test.WithSpaceCount(1000)),
+	)
+	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10), spc.WithConsumedSpaceCount(8))
+
+	fakeClient := commontest.NewFakeClient(t, toolchainStatus, spaceProvisionerConfig)
+	test.InitializeCounters(t, toolchainStatus)
+
+	cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, nil)
+
+	// when
+	cluster, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
+
+	// then
+	require.NoError(t, err)
+	// we should see no cluster selected, because the ToolchainStatus contains a higher number than the max number of spaces
+	assert.Empty(t, cluster)
+}
+
+func TestUsesCountsCacheToGetSpaceCountsByDefault(t *testing.T) {
+	fakeClient := commontest.NewFakeClient(t)
+	cm := capacity.DefaultClusterManager(commontest.HostOperatorNs, fakeClient)
+
+	// when
+	_, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
+
+	// then
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "counter is not initialized")
 }
 
 func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *testing.T) {
