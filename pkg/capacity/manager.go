@@ -162,8 +162,7 @@ type OptimalTargetClusterFilter struct {
 func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
 	spaceCountGetter, err := b.getSpaceCountGetter()
 	if err != nil {
-		log.FromContext(ctx).Info("failed to get the function to obtain the space counts", "error", err)
-		return "", err
+		return "", fmt.Errorf("failed to get the function to obtain the space counts: %w", err)
 	}
 
 	optimalSpaceProvisioners, err := b.getOptimalTargetClusters(
