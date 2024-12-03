@@ -150,9 +150,6 @@ func (r *Reconciler) refreshStatus(ctx context.Context, spc *toolchainv1alpha1.S
 func collectConsumedCapacity(ctx context.Context, cl runtimeclient.Client, clusterName string, toolchainStatusNs string) (*toolchainv1alpha1.ConsumedCapacity, error) {
 	status := &toolchainv1alpha1.ToolchainStatus{}
 	if err := cl.Get(ctx, types.NamespacedName{Namespace: toolchainStatusNs, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("unable to read ToolchainStatus resource: %w", err)
 	}
 

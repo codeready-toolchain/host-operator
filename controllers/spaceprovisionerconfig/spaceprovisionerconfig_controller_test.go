@@ -393,7 +393,7 @@ func TestCollectConsumedCapacity(t *testing.T) {
 		require.Nil(t, cc)
 	})
 
-	t.Run("returns no error when no toolchain-status is found", func(t *testing.T) {
+	t.Run("returns error when no toolchain-status is found", func(t *testing.T) {
 		// given
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKey{Name: "toolchain-status", Namespace: test.HostOperatorNs}, toolchainStatus))
@@ -403,7 +403,7 @@ func TestCollectConsumedCapacity(t *testing.T) {
 		cc, err := collectConsumedCapacity(context.TODO(), cl, "unknown-cluster", test.HostOperatorNs)
 
 		// then
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.Nil(t, cc)
 	})
 
