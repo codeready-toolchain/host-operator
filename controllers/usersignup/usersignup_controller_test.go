@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	. "github.com/codeready-toolchain/host-operator/pkg/space"
 
@@ -4513,7 +4514,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			HasTargetCluster("member1")
 	})
 
-	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
+	t.Run("last target cluster annotation is set but cluster is not ready", func(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup()
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
@@ -4532,7 +4533,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTargetCluster("member1")
 	})
 
-	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
+	t.Run("last target cluster annotation is set and cluster is ready", func(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup()
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
