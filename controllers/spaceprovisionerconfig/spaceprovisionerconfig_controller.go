@@ -205,11 +205,11 @@ func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpacePro
 		freeSpaces = corev1.ConditionFalse
 	}
 
-	enoughMemory := corev1.ConditionUnknown
+	enoughMemory := corev1.ConditionUnknown // let the state be unknown if we have no information
 
 	if spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent == 0 { // unlimited
 		enoughMemory = corev1.ConditionTrue
-	} else if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) > 0 { // let the state be unknown if we have no information
+	} else if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) > 0 { 
 		enoughMemory = corev1.ConditionTrue
 		for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
 			if uint(val) >= spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent {
