@@ -170,6 +170,29 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)), Has(ConsumedSpaceCount(3)), Has(ConsumedMemoryUsage(map[string]int{"worker": 90, "master": 40})))
 	})
 
+	t.Run("is not ready when memory is depleted in more", func(t *testing.T) {
+		// given
+		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
+
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), map[string]toolchainv1alpha1.ConsumedCapacity{
+			"cluster1": {
+				SpaceCount:                    3,
+				MemoryUsagePercentPerNodeRole: map[string]int{"worker": 42, "master": 90, "magic": 90},
+			},
+		}, readyToolchainCluster("cluster1"))
+
+		// when
+		_, reconcileErr := r.Reconcile(context.TODO(), req)
+		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
+
+		// then
+		assert.NoError(t, reconcileErr)
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
+			Has(ConsumedSpaceCount(3)),
+			Has(ConsumedMemoryUsage(map[string]int{"worker": 42, "master": 90, "magic": 90})))
+	})
+
 	t.Run("has ready unknown if consumed capacity not known", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
