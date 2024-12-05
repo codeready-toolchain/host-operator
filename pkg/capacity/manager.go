@@ -170,8 +170,8 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 		optimalClusterFilter.PreferredCluster,
 		isReady(),
 		// N.B.: The readiness of the SPC already takes into account the space count and the memory consumption.
-		// In here, we check only the space count again by comparing it to the space count reconrded in the cache
-		// beceause we do really care for the space counts to never breach the threshold (and the cache is updated
+		// In here, we check only the space count again by comparing it to the space count recorded in the cache
+		// because we do really care for the space counts to never breach the threshold (and the cache is updated
 		// more or less instantly after a new space is added to a cluster). We do NOT care that much about memory
 		// consumption because it fluctuates a lot. It is enough for the memory consumption check to be incorporated
 		// into the readiness of the SPC.
