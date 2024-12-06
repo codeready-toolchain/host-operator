@@ -3,7 +3,6 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -22,8 +21,7 @@ import (
 
 func TestGetClusterIfApproved(t *testing.T) {
 	// given
-	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-
+	commontest.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", commontest.HostOperatorNs)
 	ctx := context.TODO()
 	signup := commonsignup.NewUserSignup()
 
