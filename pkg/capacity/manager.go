@@ -6,57 +6,38 @@ import (
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
-	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type (
 	spaceProvisionerConfigPredicate func(*toolchainv1alpha1.SpaceProvisionerConfig) bool
+
+	// SpaceCountGetter is a function useful for mocking the counts cache and can be passed
+	// to the NewClusterManager function. The returned tuple represents the actual number
+	// of the spaces found for given cluster and the fact whether the value was actually found or not
+	// (similar to the return value of the map lookup).
+	SpaceCountGetter func(ctx context.Context, clusterName string) (int, bool)
 )
 
-func hasNotReachedMaxNumberOfSpacesThreshold(counts counter.Counts) spaceProvisionerConfigPredicate {
+// Even though the readiness status of the SpaceProvisionerConfig is based (in part) on the space count
+// we do another check here using the fresh data from the counts cache. This is to ensure we don't
+// overcommit spaces to the clusters.
+// The returned predicate assumes that the incoming SPC has already been updated with the fresh value
+// from the counts cache.
+func checkHasNotReachedSpaceCountThreshold() spaceProvisionerConfigPredicate {
 	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
-		numberOfSpaces := uint(counts.SpacesPerClusterCounts[spc.Spec.ToolchainCluster])
+		var spaceCount int
+		if spc.Status.ConsumedCapacity != nil {
+			spaceCount = spc.Status.ConsumedCapacity.SpaceCount
+		}
+
 		threshold := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
-		return threshold == 0 || numberOfSpaces < threshold
-	}
-}
 
-func hasEnoughMemoryCapacity(status *toolchainv1alpha1.ToolchainStatus) spaceProvisionerConfigPredicate {
-	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
-		threshold := spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent
-		if threshold == 0 {
-			return true
-		}
-		for _, memberStatus := range status.Status.Members {
-			if memberStatus.ClusterName == spc.Spec.ToolchainCluster {
-				return hasMemberEnoughMemoryCapacity(memberStatus, threshold)
-			}
-		}
-		return false
-	}
-}
-
-func hasMemberEnoughMemoryCapacity(memberStatus toolchainv1alpha1.Member, threshold uint) bool {
-	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
-		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-			if uint(usagePerNode) >= threshold {
-				return false
-			}
-		}
-		return true
-	}
-	return false
-}
-
-func isProvisioningEnabled() spaceProvisionerConfigPredicate {
-	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
-		return spc.Spec.Enabled
+		return threshold == 0 || uint(spaceCount) < threshold // nolint:gosec // we're not gonna overflow with the number of spaces
 	}
 }
 
@@ -89,17 +70,30 @@ func hasPlacementRoles(placementRoles []string) spaceProvisionerConfigPredicate 
 	}
 }
 
-func NewClusterManager(namespace string, cl runtimeclient.Client) *ClusterManager {
+func DefaultClusterManager(namespace string, cl runtimeclient.Client) *ClusterManager {
+	return NewClusterManager(namespace, cl, nil)
+}
+
+// NewClusterManager constructs a new cluster manager for the namespace using the provided client.
+// If the `getSpaceCount` is nil, the default behavior is to find the space count in the counts cache.
+//
+// In tests this can be replaced with
+// github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig.GetSpaceCountFromSpaceProvisionerConfigs
+// function that reads the counts solely from the configured SPCs so that the counts cache and ToolchainStatus
+// doesn't have to be constructed and initialized making the setup of the tests slightly easier.
+func NewClusterManager(namespace string, cl runtimeclient.Client, getSpaceCount SpaceCountGetter) *ClusterManager {
 	return &ClusterManager{
-		namespace: namespace,
-		client:    cl,
+		namespace:     namespace,
+		client:        cl,
+		getSpaceCount: getSpaceCount,
 	}
 }
 
 type ClusterManager struct {
-	namespace string
-	client    runtimeclient.Client
-	lastUsed  string
+	getSpaceCount SpaceCountGetter
+	namespace     string
+	client        runtimeclient.Client
+	lastUsed      string
 }
 
 // OptimalTargetClusterFilter is used by GetOptimalTargetCluster
@@ -108,9 +102,6 @@ type OptimalTargetClusterFilter struct {
 	// PreferredCluster if specified and available,
 	// it will be used to find the desired member cluster by name.
 	PreferredCluster string
-	// ToolchainStatusNamespace is the namespace where the toolchainstatus CR will be searched,
-	// in order to check which cluster has enough resources and can be candidate for the "optimal" cluster for Space provisioning.
-	ToolchainStatusNamespace string
 	// ClusterRoles is a list of cluster-role labels,
 	// if provided, only the clusters matching those labels will be selected as candidates for the "optimal" cluster.
 	ClusterRoles []string
@@ -126,26 +117,24 @@ type OptimalTargetClusterFilter struct {
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 // In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
 func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
-	counts, err := counter.GetCounts()
+	spaceCountGetter, err := b.getSpaceCountGetter()
 	if err != nil {
-		return "", fmt.Errorf("unable to get the number of provisioned spaces: %w", err)
+		return "", fmt.Errorf("failed to get the function to obtain the space counts: %w", err)
 	}
 
-	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := b.client.Get(ctx, types.NamespacedName{Namespace: optimalClusterFilter.ToolchainStatusNamespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
-		return "", fmt.Errorf("unable to read ToolchainStatus resource: %w", err)
-	}
 	optimalSpaceProvisioners, err := b.getOptimalTargetClusters(
 		ctx,
 		optimalClusterFilter.PreferredCluster,
+		spaceCountGetter,
 		isReady(),
-		isProvisioningEnabled(),
-		hasPlacementRoles(optimalClusterFilter.ClusterRoles),
-		hasNotReachedMaxNumberOfSpacesThreshold(counts),
-		hasEnoughMemoryCapacity(status))
+		checkHasNotReachedSpaceCountThreshold(),
+		hasPlacementRoles(optimalClusterFilter.ClusterRoles))
 	if err != nil {
 		return "", fmt.Errorf("failed to find the optimal space provisioner config: %w", err)
 	}
+
+	// after the above function call, we will have the candidate SPCs which are also updated with the latest
+	// stats from the cache. We can therefore only use the SPCs in the code below.
 
 	if len(optimalSpaceProvisioners) == 0 {
 		return "", nil
@@ -156,9 +145,10 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 	}
 
 	for _, spc := range optimalSpaceProvisioners {
+		spc := spc
 		clusterName := spc.Spec.ToolchainCluster
 		if clusterName == b.lastUsed {
-			provisioned := counts.SpacesPerClusterCounts[clusterName]
+			provisioned := getConsumedSpaceCount(&spc)
 			if provisioned%50 != 0 {
 				return clusterName, nil
 			}
@@ -167,13 +157,11 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 
 	sort.Slice(optimalSpaceProvisioners, func(i, j int) bool {
 		spc1 := optimalSpaceProvisioners[i]
-		cluster1 := spc1.Spec.ToolchainCluster
-		provisioned1 := counts.SpacesPerClusterCounts[cluster1]
+		provisioned1 := getConsumedSpaceCount(&spc1)
 		threshold1 := spc1.Spec.CapacityThresholds.MaxNumberOfSpaces
 
 		spc2 := optimalSpaceProvisioners[j]
-		cluster2 := spc2.Spec.ToolchainCluster
-		provisioned2 := counts.SpacesPerClusterCounts[cluster2]
+		provisioned2 := getConsumedSpaceCount(&spc2)
 		threshold2 := spc2.Spec.CapacityThresholds.MaxNumberOfSpaces
 
 		// Let's round the number of provisioned users down to the closest multiple of 50
@@ -187,6 +175,22 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 
 	b.lastUsed = optimalSpaceProvisioners[0].Spec.ToolchainCluster
 	return b.lastUsed, nil
+}
+
+func (b *ClusterManager) getSpaceCountGetter() (SpaceCountGetter, error) {
+	if b.getSpaceCount != nil {
+		return b.getSpaceCount, nil
+	}
+
+	counts, err := counter.GetCounts()
+	if err != nil {
+		return nil, err
+	}
+
+	return func(_ context.Context, clusterName string) (int, bool) {
+		count, ok := counts.SpacesPerClusterCounts[clusterName]
+		return count, ok
+	}, nil
 }
 
 func matches(spc *toolchainv1alpha1.SpaceProvisionerConfig, predicates []spaceProvisionerConfigPredicate) bool {
@@ -203,7 +207,9 @@ func matches(spc *toolchainv1alpha1.SpaceProvisionerConfig, predicates []spacePr
 // If the preferred target cluster was not provided or not available, but a list of clusterRoles was provided, then it filters only the available clusters matching all those roles.
 // If no cluster roles were provided then it returns all the available clusters.
 // The function returns a slice of matching SpaceProvisionerConfigs. If there are no matches, the empty slice is represented by a nil value (which is the default value in Go).
-func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferredCluster string, predicates ...spaceProvisionerConfigPredicate) ([]toolchainv1alpha1.SpaceProvisionerConfig, error) {
+// The returned SpaceProvisionerConfigs have their space counts updated from the counts cache and therefore can have a more recent information about the space count than what's
+// actually persisted in the cluster at the moment.
+func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferredCluster string, spaceCountGetter SpaceCountGetter, predicates ...spaceProvisionerConfigPredicate) ([]toolchainv1alpha1.SpaceProvisionerConfig, error) {
 	list := &toolchainv1alpha1.SpaceProvisionerConfigList{}
 	if err := b.client.List(ctx, list, runtimeclient.InNamespace(b.namespace)); err != nil {
 		return nil, err
@@ -213,6 +219,7 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 
 	for _, spc := range list.Items {
 		spc := spc
+		updateSpaceCountFromCache(ctx, spaceCountGetter, &spc)
 		if matches(&spc, predicates) {
 			matching = append(matching, spc)
 		}
@@ -233,4 +240,21 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 
 	// return the member names in case some were found
 	return matching, nil
+}
+
+func updateSpaceCountFromCache(ctx context.Context, getSpaceCount SpaceCountGetter, spc *toolchainv1alpha1.SpaceProvisionerConfig) {
+	if spaceCount, ok := getSpaceCount(ctx, spc.Spec.ToolchainCluster); ok {
+		// the cached spaceCount is always going to be fresher than (or as fresh as) what's in the SPC
+		if spc.Status.ConsumedCapacity == nil {
+			spc.Status.ConsumedCapacity = &toolchainv1alpha1.ConsumedCapacity{}
+		}
+		spc.Status.ConsumedCapacity.SpaceCount = spaceCount
+	}
+}
+
+func getConsumedSpaceCount(spc *toolchainv1alpha1.SpaceProvisionerConfig) int {
+	if spc.Status.ConsumedCapacity == nil {
+		return 0
+	}
+	return spc.Status.ConsumedCapacity.SpaceCount
 }

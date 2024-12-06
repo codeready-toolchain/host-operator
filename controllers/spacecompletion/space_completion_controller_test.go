@@ -232,7 +232,7 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 	r := &spacecompletion.Reconciler{
 		Client:         fakeClient,
 		Namespace:      test.HostOperatorNs,
-		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, fakeClient),
+		ClusterManager: capacity.DefaultClusterManager(test.HostOperatorNs, fakeClient),
 	}
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
