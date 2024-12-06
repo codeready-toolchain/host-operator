@@ -40,7 +40,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, toolchainConfig, spc1, spc2)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, toolchainConfig, spc1, spc2)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -124,7 +124,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			fakeClient := commontest.NewFakeClient(t, toolchainConfig, spc1)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 			// then
 			if testFields.ErrorExpected {
@@ -151,7 +151,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, toolchainConfig, spc1, spc2)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, toolchainConfig)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, commonconfig.NewToolchainConfigObjWithReset(t), spc1, spc2)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -197,7 +197,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -213,7 +213,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -245,7 +245,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -261,7 +261,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 		// then
 		require.NoError(t, err)
@@ -278,7 +278,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			}
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
@@ -297,7 +297,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			}
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)))
 
 			// then
 			require.EqualError(t, err, "unable to get the optimal target cluster: failed to find the optimal space provisioner config: some error")

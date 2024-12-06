@@ -9,7 +9,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -75,6 +74,13 @@ func DefaultClusterManager(namespace string, cl runtimeclient.Client) *ClusterMa
 	return NewClusterManager(namespace, cl, nil)
 }
 
+// NewClusterManager constructs a new cluster manager for the namespace using the provided client.
+// If the `getSpaceCount` is nil, the default behavior is to find the space count in the counts cache.
+//
+// In tests this can be replaced with
+// github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig.GetSpaceCountFromSpaceProvisionerConfigs
+// function that reads the counts solely from the configured SPCs so that the counts cache and ToolchainStatus
+// doesn't have to be constructed and initialized making the setup of the tests slightly easier.
 func NewClusterManager(namespace string, cl runtimeclient.Client, getSpaceCount SpaceCountGetter) *ClusterManager {
 	return &ClusterManager{
 		namespace:     namespace,
@@ -88,45 +94,6 @@ type ClusterManager struct {
 	namespace     string
 	client        runtimeclient.Client
 	lastUsed      string
-}
-
-// GetSpaceCountFromSpaceProvisionerConfigs is a function that returns the space count as it is stored in the SpaceProvisionerConfig
-// objects in the provided namespace.
-//
-// NOTE: THIS FUNCTION SHOULD ONLY BE USED IN UNIT TESTS TO SIMPLIFY THEIR SETUP.
-func GetSpaceCountFromSpaceProvisionerConfigs(cl runtimeclient.Client, namespace string) SpaceCountGetter {
-	return func(ctx context.Context, clusterName string) (int, bool) {
-		l := &toolchainv1alpha1.SpaceProvisionerConfigList{}
-		if err := cl.List(context.TODO(), l, runtimeclient.InNamespace(namespace)); err != nil {
-			log.FromContext(ctx).Error(err, "failed to list the SpaceProvisionerConfig objects while computing figuring out the space count stored in them")
-			return 0, false
-		}
-
-		for _, spc := range l.Items {
-			if spc.Spec.ToolchainCluster == clusterName {
-				if spc.Status.ConsumedCapacity == nil {
-					return 0, false
-				}
-				return spc.Status.ConsumedCapacity.SpaceCount, true
-			}
-		}
-		return 0, false
-	}
-}
-
-// GetSpaceCountFromCountsCache is the default function used by the ClusterManager to obtain
-// the space count from the counter cache. When no specific function is supplied to
-// constructor of the ClusterManager, this function is used instead.
-func GetSpaceCountFromCountsCache() (SpaceCountGetter, error) {
-	counts, err := counter.GetCounts()
-	if err != nil {
-		return nil, err
-	}
-
-	return func(ctx context.Context, clusterName string) (int, bool) {
-		count, ok := counts.SpacesPerClusterCounts[clusterName]
-		return count, ok
-	}, nil
 }
 
 // OptimalTargetClusterFilter is used by GetOptimalTargetCluster
@@ -215,7 +182,15 @@ func (b *ClusterManager) getSpaceCountGetter() (SpaceCountGetter, error) {
 		return b.getSpaceCount, nil
 	}
 
-	return GetSpaceCountFromCountsCache()
+	counts, err := counter.GetCounts()
+	if err != nil {
+		return nil, err
+	}
+
+	return func(_ context.Context, clusterName string) (int, bool) {
+		count, ok := counts.SpacesPerClusterCounts[clusterName]
+		return count, ok
+	}, nil
 }
 
 func matches(spc *toolchainv1alpha1.SpaceProvisionerConfig, predicates []spaceProvisionerConfigPredicate) bool {

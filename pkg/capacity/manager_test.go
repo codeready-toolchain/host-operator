@@ -88,7 +88,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				spc1 := buildSpaceProvisionerConfig("member1", m1_valid, m1_has_role)
 				spc2 := buildSpaceProvisionerConfig("member2", m2_valid, m2_has_role)
 				fakeClient := commontest.NewFakeClient(t, spc1, spc2)
-				cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+				cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 				// when
 				clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -107,7 +107,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 		fakeClient := commontest.NewFakeClient(t, spaceProvisionerConfig)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -124,7 +124,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(200))
 
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -140,7 +140,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
 		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(200))
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -155,7 +155,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
 		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(500))
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -253,7 +253,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						spc.WithConsumedMemoryUsagePercentInNode("master", 50))
 
 					fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
-					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
+					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, commontest.HostOperatorNs))
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
 					member2CurrentCount := numberOfSpaces

@@ -4081,7 +4081,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 			Client: fakeClient,
 		},
 		Scheme:         s,
-		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, fakeClient, capacity.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)),
+		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)),
 		SegmentClient:  segment.NewClient(segmenttest.NewClient()),
 	}
 	return r, newReconcileRequest(name), fakeClient
