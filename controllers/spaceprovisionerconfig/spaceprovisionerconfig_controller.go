@@ -20,14 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type GetUsageFunc func(ctx context.Context, cl runtimeclient.Client, clusterName string, toolchainStatusNs string) (*toolchainv1alpha1.ConsumedCapacity, error)
-
 // Reconciler is the reconciler for the SpaceProvisionerConfig CRs.
 type Reconciler struct {
 	Client runtimeclient.Client
-	// GetUsageFunc is a function that can be used in the tests to mock the fetching of the consumed usage. It defaults to collecting the actual usage
-	// from the ToolchainStatus.
-	GetUsageFunc GetUsageFunc
 }
 
 var _ reconcile.Reconciler = (*Reconciler)(nil)
@@ -109,16 +104,11 @@ func (r *Reconciler) refreshStatus(ctx context.Context, spc *toolchainv1alpha1.S
 	resultCondition := clusterCondition
 
 	if clusterCondition == corev1.ConditionTrue {
-		collectUsage := r.GetUsageFunc
-		if collectUsage == nil {
-			collectUsage = collectConsumedCapacity
-		}
-		cc, err := collectUsage(ctx, r.Client, spc.Spec.ToolchainCluster, spc.Namespace)
+		spc.Status.ConsumedCapacity, err = collectConsumedCapacity(ctx, r.Client, spc.Spec.ToolchainCluster, spc.Namespace)
 		if err != nil {
 			updateReadyCondition(spc, corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigFailedToDetermineCapacityReason, err.Error())
 			return err
 		}
-		spc.Status.ConsumedCapacity = cc
 
 		capacityCondition := r.determineCapacityReadyState(spc)
 		if capacityCondition != corev1.ConditionTrue {
@@ -168,28 +158,20 @@ func collectConsumedCapacity(ctx context.Context, cl runtimeclient.Client, clust
 
 func (r *Reconciler) determineClusterReadyState(ctx context.Context, spc *toolchainv1alpha1.SpaceProvisionerConfig) (corev1.ConditionStatus, error) {
 	toolchainCluster := &toolchainv1alpha1.ToolchainCluster{}
-	toolchainClusterKey := runtimeclient.ObjectKey{Name: spc.Spec.ToolchainCluster, Namespace: spc.Namespace}
-	var toolchainPresent corev1.ConditionStatus
-	var err error
-	if err = r.Client.Get(ctx, toolchainClusterKey, toolchainCluster); err != nil {
-		if !errors.IsNotFound(err) {
-			// IsNotFound is self-explanatory but let's add a little bit of context to the error
-			// in other cases
-			err = fmt.Errorf("failed to get the referenced ToolchainCluster: %w", err)
-			toolchainPresent = corev1.ConditionUnknown
-		} else {
-			toolchainPresent = corev1.ConditionFalse
+	if err := r.Client.Get(ctx, runtimeclient.ObjectKey{Name: spc.Spec.ToolchainCluster, Namespace: spc.Namespace}, toolchainCluster); err != nil {
+		if errors.IsNotFound(err) {
+			return corev1.ConditionFalse, err
 		}
-	} else {
-		readyCond, found := condition.FindConditionByType(toolchainCluster.Status.Conditions, toolchainv1alpha1.ConditionReady)
-		if !found {
-			toolchainPresent = corev1.ConditionFalse
-		} else {
-			toolchainPresent = readyCond.Status
-		}
+		// IsNotFound is self-explanatory but let's add a little bit of context to the error in other cases
+		return corev1.ConditionFalse, fmt.Errorf("failed to get the referenced ToolchainCluster: %w", err)
 	}
 
-	return toolchainPresent, err
+	readyCond, found := condition.FindConditionByType(toolchainCluster.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if !found {
+		return corev1.ConditionFalse, nil
+	}
+
+	return readyCond.Status, nil
 }
 
 func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) corev1.ConditionStatus {
@@ -209,7 +191,7 @@ func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpacePro
 
 	if spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent == 0 { // unlimited
 		enoughMemory = corev1.ConditionTrue
-	} else if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) > 0 { 
+	} else if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) > 0 {
 		enoughMemory = corev1.ConditionTrue
 		for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
 			if uint(val) >= spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent {
