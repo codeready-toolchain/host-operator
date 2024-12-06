@@ -12,6 +12,10 @@ import (
 
 func MapToolchainClusterToSpaceProvisionerConfigs(cl runtimeclient.Client) func(context.Context, runtimeclient.Object) []reconcile.Request {
 	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+		if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); !ok {
+			return nil
+		}
+
 		ret, err := findReferencingProvisionerConfigs(ctx, cl, runtimeclient.ObjectKeyFromObject(obj))
 		if err != nil {
 			log.FromContext(ctx).Error(err, "failed to list SpaceProvisionerConfig objects while determining what objects to reconcile",
@@ -24,6 +28,10 @@ func MapToolchainClusterToSpaceProvisionerConfigs(cl runtimeclient.Client) func(
 
 func MapToolchainStatusToSpaceProvisionerConfigs(cl runtimeclient.Client) func(context.Context, runtimeclient.Object) []reconcile.Request {
 	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+		if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); !ok {
+			return nil
+		}
+
 		ret, err := findAllSpaceProvisionerConfigsInNamespace(ctx, cl, obj.GetNamespace())
 		if err != nil {
 			log.FromContext(ctx).Error(err, "failed to list SpaceProvisionerConfig objects while determining what objects to reconcile",
