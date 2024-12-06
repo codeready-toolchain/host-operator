@@ -176,52 +176,48 @@ func (r *Reconciler) determineClusterReadyState(ctx context.Context, spc *toolch
 
 func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) corev1.ConditionStatus {
 	if spc.Status.ConsumedCapacity == nil {
+		// we don't know anything about the resource consumption in the member
 		return corev1.ConditionUnknown
 	}
 
-	var freeSpaces corev1.ConditionStatus
-	max := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
-	if max == 0 || max > uint(spc.Status.ConsumedCapacity.SpaceCount) {
-		freeSpaces = corev1.ConditionTrue
-	} else {
-		freeSpaces = corev1.ConditionFalse
+	// the cluster capacity is ok if it has room for additional spaces and enough free memory
+
+	roomForAdditionalSpaces := determineSpaceCountReadyState(spc)
+	if !roomForAdditionalSpaces {
+		return corev1.ConditionFalse
 	}
 
-	enoughMemory := corev1.ConditionUnknown // let the state be unknown if we have no information
-
-	if spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent == 0 { // unlimited
-		enoughMemory = corev1.ConditionTrue
-	} else if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) > 0 {
-		enoughMemory = corev1.ConditionTrue
-		for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
-			if uint(val) >= spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent {
-				enoughMemory = corev1.ConditionFalse
-				break
-			}
-		}
-	}
-
-	return And(freeSpaces, enoughMemory)
+	return determineMemoryUtilizationReadyState(spc)
 }
 
-func And(a, b corev1.ConditionStatus) corev1.ConditionStatus {
-	switch a {
-	case corev1.ConditionTrue:
-		return b
-	case corev1.ConditionFalse:
-		return corev1.ConditionFalse
-	case corev1.ConditionUnknown:
-		if b == corev1.ConditionFalse {
-			return b
-		}
+// determineSpaceCountReadyState checks that there is room for additional spaces in the cluster.
+// It always knows this fact so returning a bool is ok, in contrast to determinMemoryUtilizationReadyState.
+func determineSpaceCountReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
+	max := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
+	return max == 0 || max > uint(spc.Status.ConsumedCapacity.SpaceCount)
+}
+
+// determineMemoryUtilizationReadyState checks that the cluster has enough free memory. It may not be able to tell the fact
+// if the SPC doesn't contain memory usage information in the status. It therefore can return true, false or
+// unknown condition values.
+func determineMemoryUtilizationReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) corev1.ConditionStatus {
+	if spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent == 0 {
+		// 0 max memory utilization means no limit
+		return corev1.ConditionTrue
+	}
+
+	if len(spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole) == 0 {
+		// we don't know the memory utilization in the member
 		return corev1.ConditionUnknown
 	}
 
-	// the above switch covers all supported states of condition status
-	// but since it is a mere type alias of string, we need to "cover"
-	// the rest of the cases (i.e. free-form strings), too.
-	// Yay for stringly typed types...
-	return corev1.ConditionUnknown
+	// the memory utilitzation is ok if it is below the threshold in all node types
+	for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
+		if uint(val) >= spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent {
+			return corev1.ConditionFalse
+		}
+	}
+	return corev1.ConditionTrue
 }
 
 func updateReadyCondition(spc *toolchainv1alpha1.SpaceProvisionerConfig, status corev1.ConditionStatus, reason, message string) {
