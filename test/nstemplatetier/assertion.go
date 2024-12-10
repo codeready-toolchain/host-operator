@@ -44,6 +44,25 @@ func (a *Assertion) HasStatusUpdatesItems(expected int) *Assertion {
 	return a
 }
 
+// HasStatusTierTemplateRevisions verifies revisions for the given TierTemplates are set in the `NSTemplateTier.Status.Revisions`
+func (a *Assertion) HasStatusTierTemplateRevisions(revisions []string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	// check that each TierTemplate REF has a TierTemplateRevision set
+	for _, tierTemplateRef := range revisions {
+		require.NotNil(a.t, a.tier.Status.Revisions[tierTemplateRef])
+	}
+	return a
+}
+
+// HasNoStatusTierTemplateRevisions verifies revisions are not set for in the `NSTemplateTier.Status.Revisions`
+func (a *Assertion) HasNoStatusTierTemplateRevisions() *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.Nil(a.t, a.tier.Status.Revisions)
+	return a
+}
+
 // HasValidPreviousUpdates verifies the previous `status.updates`
 // in particular, it checks that:
 // - `StartTime` is not nil
