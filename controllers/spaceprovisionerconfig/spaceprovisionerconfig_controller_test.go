@@ -26,7 +26,9 @@ import (
 )
 
 func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
-	blueprintSpc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"), Enabled(true))
+	blueprintSpc := NewSpaceProvisionerConfig("spc", test.HostOperatorNs,
+		ReferencingToolchainCluster("cluster1"),
+		Enabled(true))
 
 	t.Run("is ready when enabled, cluster present and enabled and enough capacity available", func(t *testing.T) {
 		// given
@@ -53,7 +55,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 	t.Run("is not ready when disabled", func(t *testing.T) {
 		// given
-		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80), Enabled(false))
+		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(),
+			MaxNumberOfSpaces(5),
+			MaxMemoryUtilizationPercent(80),
+			Enabled(false))
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"),
 			hosttest.NewToolchainStatus(
@@ -70,7 +75,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigDisabledReason)), Has(UnknownConsumedCapacity()))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigDisabledReason)),
+			Has(UnknownConsumedCapacity()))
 	})
 
 	t.Run("is not ready when cluster not present", func(t *testing.T) {
@@ -85,12 +92,17 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)), Has(UnknownConsumedCapacity()))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)),
+			Has(UnknownConsumedCapacity()))
 	})
 
 	t.Run("is not ready when no cluster referenced", func(t *testing.T) {
 		// given
-		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80), ReferencingToolchainCluster(""))
+		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(),
+			MaxNumberOfSpaces(5),
+			MaxMemoryUtilizationPercent(80),
+			ReferencingToolchainCluster(""))
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
@@ -108,7 +120,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)), Has(UnknownConsumedCapacity()))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)),
+			Has(UnknownConsumedCapacity()))
 	})
 
 	t.Run("is not ready with cluster not ready", func(t *testing.T) {
@@ -134,7 +148,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)), Has(UnknownConsumedCapacity()))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)),
+			Has(UnknownConsumedCapacity()))
 	})
 
 	t.Run("is not ready when space count is depleted", func(t *testing.T) {
@@ -157,7 +173,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)), Has(ConsumedSpaceCount(5)), Has(ConsumedMemoryUsage(map[string]int{"worker": 50})))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
+			Has(ConsumedSpaceCount(5)),
+			Has(ConsumedMemoryUsage(map[string]int{"worker": 50})))
 	})
 
 	t.Run("is not ready when memory is depleted in one", func(t *testing.T) {
@@ -181,7 +200,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)), Has(ConsumedSpaceCount(3)), Has(ConsumedMemoryUsage(map[string]int{"worker": 90, "master": 40})))
+		AssertThat(t, spc,
+			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
+			Has(ConsumedSpaceCount(3)),
+			Has(ConsumedMemoryUsage(map[string]int{"worker": 90, "master": 40})))
 	})
 
 	t.Run("is not ready when memory is depleted in more", func(t *testing.T) {
@@ -224,7 +246,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)), Has(UnknownConsumedCapacity()))
+		AssertThat(t, spc,
+			Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
+			Has(UnknownConsumedCapacity()))
 	})
 
 	t.Run("has ready unknown if memory capacity not known", func(t *testing.T) {
@@ -245,7 +269,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)), Has(ConsumedSpaceCount(3)), Has(ConsumedMemoryUsage(nil)))
+		AssertThat(t, spc,
+			Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
+			Has(ConsumedSpaceCount(3)),
+			Has(ConsumedMemoryUsage(nil)))
 	})
 
 	t.Run("zero means unlimited", func(t *testing.T) {
@@ -268,7 +295,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		// then
 		assert.NoError(t, reconcileErr)
-		AssertThat(t, spc, Is(Ready()), Has(ConsumedSpaceCount(3_000_000)), Has(ConsumedMemoryUsage(map[string]int{"master": 800, "worker": 3000})))
+		AssertThat(t, spc,
+			Is(Ready()),
+			Has(ConsumedSpaceCount(3_000_000)),
+			Has(ConsumedMemoryUsage(map[string]int{"master": 800, "worker": 3000})))
 	})
 }
 
@@ -308,7 +338,8 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 		// then
 		require.Error(t, reconcileErr)
-		AssertThat(t, spcInCluster, Is(ReadyStatusAndReason(corev1.ConditionFalse, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
+		AssertThat(t, spcInCluster,
+			Is(ReadyStatusAndReason(corev1.ConditionFalse, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)))
 		assert.Len(t, spcInCluster.Status.Conditions, 1)
 		assert.Equal(t, "failed to get the referenced ToolchainCluster: "+getErr.Error(), spcInCluster.Status.Conditions[0].Message)
 	})
