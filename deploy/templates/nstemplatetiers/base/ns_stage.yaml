@@ -230,7 +230,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-dev-sandbox-managed-ns
-    namespace: ${SPACE_NAME}-dev
+    namespace: ${SPACE_NAME}-stage
   spec:
     ingress:
     - from:
