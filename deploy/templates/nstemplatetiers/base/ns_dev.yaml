@@ -226,9 +226,6 @@ objects:
                 kubernetes.io/metadata.name: redhat-ods-applications
     policyTypes:
       - Ingress
-parameters:
-- name: SPACE_NAME
-  required: true
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
