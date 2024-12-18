@@ -4,7 +4,7 @@ image:https://goreportcard.com/badge/github.com/codeready-toolchain/host-operato
 image:https://godoc.org/github.com/codeready-toolchain/host-operator?status.png[GoDoc,link="https://godoc.org/github.com/codeready-toolchain/host-operator"]
 image:https://codecov.io/gh/codeready-toolchain/host-operator/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/codeready-toolchain/host-operator"]
 image:https://github.com/codeready-toolchain/host-operator/actions/workflows/operator-cd.yml/badge.svg[Operator CD,link="https://github.com/codeready-toolchain/host-operator/actions/workflows/operator-cd.yml"]
-image:https://quay.io/repository/codeready-toolchain/host-operator/status["Docker Repository on Quay", link="https://quay.io/repository/codeready-toolchain/host-operator"]
+image:https://quay.io/repository/codeready-toolchain/host-operator/status["Image Repository on Quay", link="https://quay.io/repository/codeready-toolchain/host-operator"]
 
 This is the CodeReady Toolchain Host Operator repository. It contains the OpenShift Operator that is deployed on the "host" cluster in the SaaS.
 
@@ -75,7 +75,7 @@ There are two Makefile targets that will execute the e2e tests:
 * `make test-e2e-local` - this target doesn't clone anything, but it runs run e2e tests for both operators from the directory `../toolchain-e2e`. As deployment for `host-operator` it uses the current code that is at HEAD.
 
 The tests executed within https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo will take care of creating all needed namespaces with random names (or see below for enforcing some specific namespace names).
-It will also create all required CRDs, role and role bindings for the service accounts, build the Docker images for both operators and push them to the OpenShift container registry. Finally, it will deploy the operators and run the tests using the operator-sdk.
+It will also create all required CRDs, role and role bindings for the service accounts, build the container images for both operators and push them to the OpenShift container registry. Finally, it will deploy the operators and run the tests using the operator-sdk.
 
  NOTE: you can override the default namespace names where the end-to-end tests are going to be executed - eg.: `make test-e2e HOST_NS=my-host MEMBER_NS=my-member` file.
 
