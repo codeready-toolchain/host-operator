@@ -34,7 +34,7 @@ NOTE: If the problem occurred when releasing registration-service, then don't do
 
 1. Log in to quay.io using an account that has the write permissions in quay.io/codeready-toolchain/host-operator repo.
 2. Checkout to the problematic (missing) commit that failed in the pipeline and that has to be manually released.
-3. Run `make docker-push QUAY_NAMESPACE=codeready-toolchain`
+3. Run `make podman-push QUAY_NAMESPACE=codeready-toolchain`
 4. Run `make push-to-quay-staging QUAY_NAMESPACE=codeready-toolchain`
 
 === End-to-End tests
