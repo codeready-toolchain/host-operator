@@ -197,6 +197,19 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-dev-sandbox-managed-ns
+    namespace: ${SPACE_NAME}-dev
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            dev-sandbox/policy-group: ingress
+    policyTypes:
+      - Ingress
 parameters:
 - name: SPACE_NAME
   required: true
