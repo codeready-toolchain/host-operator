@@ -51,7 +51,7 @@ func TestNotificationSuccess(t *testing.T) {
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create(context.TODO(), "jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
-		require.NoError(t, cl.Update(context.TODO(), notification))
+		require.NoError(t, cl.Status().Update(context.TODO(), notification))
 
 		// when
 		result, err := reconcileNotification(controller, notification)
@@ -74,7 +74,7 @@ func TestNotificationSuccess(t *testing.T) {
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		require.NoError(t, cl.Update(context.TODO(), notification))
+		require.NoError(t, cl.Status().Update(context.TODO(), notification))
 
 		// when
 		result, err := reconcileNotification(controller, notification)
@@ -103,7 +103,7 @@ func TestNotificationSentFailure(t *testing.T) {
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		require.NoError(t, cl.Update(context.TODO(), notification))
+		require.NoError(t, cl.Status().Update(context.TODO(), notification))
 
 		// when
 		result, err := reconcileNotification(controller, notification)

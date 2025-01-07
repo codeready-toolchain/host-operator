@@ -4899,6 +4899,6 @@ func (r *Reconciler) setSpaceToReady(name string) error {
 		Status: corev1.ConditionTrue,
 		Reason: toolchainv1alpha1.SpaceProvisionedReason,
 	})
-	err = r.Client.Update(context.TODO(), &space)
+	err = r.Client.Status().Update(context.TODO(), &space)
 	return err
 }
