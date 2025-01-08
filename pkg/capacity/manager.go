@@ -122,6 +122,22 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 		return "", fmt.Errorf("failed to get the function to obtain the space counts: %w", err)
 	}
 
+	// NOTE: the isReady(), checkHasNotReachedSpaceCountThreshold() combination of predicates is not perfect and we only use it
+	// to prevent OVER-commitment of spaces to clusters. We do not guarantee that UNDER-commitment doesn't happen.
+	//
+	// isReady() simply checks the ready status of the SPC which might be based on slightly out-of-date information if there were changes
+	// in the space count or memory utilization of the cluster between the last reconcile of the SPC (which happens on every change of ToolchainStatus)
+	// and now.
+	//
+	// So if the SPC is ready (meaning it was underutilized at the last SPC reconcile) but now has breached the space capacity, we can detect that
+	// situation and prevent over-commitment.
+	//
+	// If the SPC was not ready (due to space count or memory utilization reaching the capacity) but is now below the threshold, we DO NOT try to rectify
+	// the result here and still consider such cluster unavailable. Instead, we just wait until the change is propagated through the ToolchainStatus
+	// into the SPC's status.
+	//
+	// This means that we prevent only the over-commitment of spaces. We DO NOT prevent breaching the memory capacity in 100% of the cases (it fluctuates
+	// a lot anyway) and we DO NOT guarantee that a space will be deployed to a cluster that has only very recently dropped under its utilization capacity.
 	optimalSpaceProvisioners, err := b.getOptimalTargetClusters(
 		ctx,
 		optimalClusterFilter.PreferredCluster,
