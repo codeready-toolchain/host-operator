@@ -12,13 +12,13 @@ import (
 
 // Assertion an assertion helper for an NSTemplateTier
 type Assertion struct {
-	tier           *toolchainv1alpha1.NSTemplateTier
+	tier           *toolchainv1alpha1.NSTemplateTier //nolint:golint,unused
 	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
 
-func (a *Assertion) loadResource() error {
+func (a *Assertion) loadResource() error { //nolint:golint,unused
 	tier := &toolchainv1alpha1.NSTemplateTier{}
 	err := a.client.Get(context.TODO(), a.namespacedName, tier)
 	a.tier = tier
