@@ -80,6 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
 	if created, err := r.ensureRevision(ctx, tier); err != nil {
+		// todo add/update ready condition false in the NSTemplateTier when something fails
 		return reconcile.Result{}, fmt.Errorf("unable to create new TierTemplateRevision after NSTemplateTier changed: %w", err)
 	} else if created {
 		logger.Info("Requeue after creating a new TTR")
