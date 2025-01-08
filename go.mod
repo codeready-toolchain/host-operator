@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
 	github.com/codeready-toolchain/api v0.0.0-20241119094246-f6581d52dc80
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20241219071529-34f3205cf0b5
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20241128143121-e2e3546a35e9
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.4.1
@@ -18,7 +18,7 @@ require (
 	github.com/redhat-cop/operator-utils v1.3.8
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/spf13/cast v1.3.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.26.0
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
@@ -115,10 +115,10 @@ require (
 	google.golang.org/protobuf v1.34.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.28.2 // indirect
+	k8s.io/cli-runtime v0.29.2 // indirect
 	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
-	k8s.io/kubectl v0.28.2 // indirect
+	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
@@ -130,6 +130,6 @@ require (
 go 1.21
 
 replace (
-	github.com/codeready-toolchain/api v0.0.0-20241114213029-44333bf24bcf => github.com/ranakan19/api v0.0.0-20241205210150-447a52b817de
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20241114215157-a6a85252b2f5 => github.com/ranakan19/toolchain-common v0.0.0-20210302144622-6e274ed57e69
+	github.com/codeready-toolchain/api v0.0.0-20241119094246-f6581d52dc80 => github.com/ranakan19/api v0.0.0-20250107102252-82f0c9b9a4b9
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20241128143121-e2e3546a35e9 => github.com/ranakan19/toolchain-common v0.0.0-20250107103332-9c6116d21bd0
 )
