@@ -397,7 +397,7 @@ func main() { // nolint:gocyclo
 	}
 	if err = (&spaceprovisionerconfig.Reconciler{
 		Client: mgr.GetClient(),
-	}).SetupWithManager(ctx, mgr); err != nil {
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
 		os.Exit(1)
 	}

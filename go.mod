@@ -10,7 +10,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/mailgun/mailgun-go/v4 v4.8.1
 	// using latest commit from 'github.com/openshift/api branch release-4.16'
-	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
+	github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094
 	// using latest commit from 'github.com/openshift/library-go branch release-4.16'
 	github.com/openshift/library-go v0.0.0-20240711192904-190fec8c3f09 // indirect
 	github.com/pkg/errors v0.9.1
