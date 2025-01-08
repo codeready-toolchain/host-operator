@@ -3,12 +3,12 @@ package spaceprovisionerconfig
 import (
 	"context"
 
-	"github.com/charmbracelet/log"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // GetSpaceCountFromSpaceProvisionerConfigs is a function that returns the space count as it is stored in the SpaceProvisionerConfig
