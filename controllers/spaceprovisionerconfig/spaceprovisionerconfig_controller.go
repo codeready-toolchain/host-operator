@@ -100,35 +100,25 @@ func (r *Reconciler) refreshStatus(ctx context.Context, spc *toolchainv1alpha1.S
 		return err
 	}
 
-	var reason string
-	resultCondition := clusterCondition
-
-	if clusterCondition == corev1.ConditionTrue {
-		spc.Status.ConsumedCapacity, err = collectConsumedCapacity(ctx, r.Client, spc.Spec.ToolchainCluster, spc.Namespace)
-		if err != nil {
-			updateReadyCondition(spc, corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigFailedToDetermineCapacityReason, err.Error())
-			return err
-		}
-
-		capacityCondition := r.determineCapacityReadyState(spc)
-		if capacityCondition != corev1.ConditionTrue {
-			reason = toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason
-		} else {
-			reason = toolchainv1alpha1.SpaceProvisionerConfigValidReason
-		}
-
-		resultCondition = capacityCondition
-	} else {
-		reason = toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason
+	if clusterCondition != corev1.ConditionTrue {
+		updateReadyCondition(spc, clusterCondition, toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason, "")
+		return nil
 	}
 
-	readyCondition := toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: resultCondition,
-		Reason: reason,
+	spc.Status.ConsumedCapacity, err = collectConsumedCapacity(ctx, r.Client, spc.Spec.ToolchainCluster, spc.Namespace)
+	if err != nil {
+		updateReadyCondition(spc, corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigFailedToDetermineCapacityReason, err.Error())
+		return err
 	}
 
-	spc.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(spc.Status.Conditions, readyCondition)
+	capacityCondition := r.determineCapacityReadyState(spc)
+
+	reason := toolchainv1alpha1.SpaceProvisionerConfigValidReason
+	if capacityCondition != corev1.ConditionTrue {
+		reason = toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason
+	}
+
+	updateReadyCondition(spc, capacityCondition, reason, "")
 
 	return nil
 }
