@@ -288,9 +288,7 @@ func TestReconcile(t *testing.T) {
 					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
-						HasStatusTierTemplateRevisions([]string{
-							"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-						})
+						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// expected TierTemplateRevision CRs are still there
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
@@ -309,9 +307,7 @@ func TestReconcile(t *testing.T) {
 						require.NoError(t, err)
 						// revisions are the same
 						tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
-							HasStatusTierTemplateRevisions([]string{
-								"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-							})
+							HasStatusTierTemplateRevisions(tierTemplatesRefs)
 						// expected TierTemplateRevision CRs are there
 						ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 						err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
