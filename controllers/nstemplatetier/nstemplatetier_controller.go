@@ -3,11 +3,13 @@ package nstemplatetier
 import (
 	"context"
 	"fmt"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -31,9 +33,6 @@ import (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		// NOTE: DO NOT introduce watcher for TTRs!!
-		// watching TTRs will trigger a race condition in the controller generating copies of each TTR
-		// This happens because the creation of the TTR is faster than the update of the NSTemplateTier.Status.Revisions field.
 		Complete(r)
 }
 
@@ -84,7 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, fmt.Errorf("unable to create new TierTemplateRevision after NSTemplateTier changed: %w", err)
 	} else if created {
 		logger.Info("Requeue after creating a new TTR")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
 
 	return reconcile.Result{}, nil
@@ -142,11 +141,12 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		}
 
 		// check if there is TTR associated with this TierTemplate
-		ttrCreatedLatest, err := r.ensureTTRforTemplate(ctx, nsTmplTier, &tierTemplate)
+		ttrCreatedLatest, ttrName, err := r.ensureTTRforTemplate(ctx, nsTmplTier, &tierTemplate)
 		ttrCreated = ttrCreated || ttrCreatedLatest
 		if err != nil {
 			return false, err
 		}
+		nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttrName
 	}
 	// TODO handle removal of TierTemplate from NSTemplateTier
 	// scenario:
@@ -165,7 +165,7 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	return ttrCreated, nil
 }
 
-func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (bool, error) {
+func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (bool, string, error) {
 	logger := log.FromContext(ctx)
 	// tierTemplate doesn't support TTRs
 	// we set TierTemplate as revisions
@@ -173,11 +173,10 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 	if tierTemplate.Spec.TemplateObjects == nil {
 		_, ok := nsTmplTier.Status.Revisions[tierTemplate.GetName()]
 		if !ok {
-			nsTmplTier.Status.Revisions[tierTemplate.GetName()] = tierTemplate.GetName()
-			return true, nil
+			return true, tierTemplate.GetName(), nil
 		}
 		// nothing to update
-		return false, nil
+		return false, "", nil
 	}
 
 	if tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]; found {
@@ -188,40 +187,40 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 				// no tierTemplateRevision CR was found,
 				logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
 				// let's create one
-				if err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate); err != nil {
-					return false, err
+				ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+				if err != nil {
+					return false, "", err
 				}
 				// new ttr created
-				return true, nil
+				return true, ttrName, nil
 			} else {
 				// something wrong happened
-				return false, err
+				return false, "", err
 			}
 		}
 		// TODO compare TierTemplate content with TTR content
 		// if the TierTemplate has changes we need to create new TTR
 	} else {
 		// no revision was set for this TierTemplate CR, let's create a TTR for it
-		if err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate); err != nil {
-			return false, err
+		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+		if err != nil {
+			return false, ttrName, err
 		}
 		// new ttr created
-		return true, nil
+		return true, ttrName, nil
 	}
 	// nothing changed
-	return false, nil
+	return false, "", nil
 }
 
-func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) error {
+func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {
 	ttr := NewTTR(tierTemplate, nsTmplTier)
 	ttr, err := r.createTTR(ctx, ttr, tierTemplate)
 	if err != nil {
 		// something went wrong while creating new ttr
-		return err
+		return "", err
 	}
-	// update NSTemplateTierStatus with new TTR
-	nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttr.GetName()
-	return nil
+	return ttr.GetName(), nil
 }
 
 // getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
@@ -264,10 +263,17 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 		toolchainv1alpha1.TemplateRefLabelKey: tierTemplateName,
 	}
 
+	newTTRName := fmt.Sprintf("%s-%s-", tierName, tierTemplateName)
+	// we have to cut it down to the max allowed length
+	// 6 = 5 is generateName suffix length + 1 the "-" char
+	mexNameLength := validation.DNS1123LabelMaxLength + 6
+	if len(newTTRName) > mexNameLength {
+		newTTRName = newTTRName[0:mexNameLength]
+	}
 	ttr := &toolchainv1alpha1.TierTemplateRevision{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    tierTmpl.GetNamespace(),
-			GenerateName: fmt.Sprintf("%s-%s-", tierName, tierTemplateName),
+			GenerateName: newTTRName + "-",
 			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{

@@ -6,11 +6,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
@@ -23,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,8 +46,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("without previous entry", func(t *testing.T) {
 			// given
 			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-			initObjs := []runtimeclient.Object{base1nsTier}
-			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
@@ -69,8 +71,7 @@ func TestReconcile(t *testing.T) {
 					StartTime: metav1.Now(),
 					Hash:      "def456",
 				}))
-			initObjs := []runtimeclient.Object{base1nsTier}
-			r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
@@ -89,13 +90,12 @@ func TestReconcile(t *testing.T) {
 	t.Run("controller should NOT add entry in tier.status.updates", func(t *testing.T) {
 
 		t.Run("last entry exists with matching hash", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, nil)
 			// given
 			base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 				tiertest.WithCurrentUpdate()) // current update already exists
+			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
 
-			initObjs := []runtimeclient.Object{base1nsTier}
-			r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
+			r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
 			// then
@@ -116,8 +116,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtimeclient.Object{base1nsTier}
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
@@ -134,8 +133,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("other error", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtimeclient.Object{base1nsTier}
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
@@ -156,8 +154,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("when adding new update", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-				initObjs := []runtimeclient.Object{base1nsTier}
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
@@ -189,19 +186,21 @@ func TestReconcile(t *testing.T) {
 				Hash:      tierHash,
 			},
 		}
-		initObjs := []runtimeclient.Object{base1nsTier}
+		tierTemplatesRefs := []string{
+			"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+		}
 
 		// TODO remove this subtest once we completely switch to using TTRs
 		t.Run("using tiertemplates as revisions", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, nil)
+			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
 			t.Run("add revisions when they are missing", func(t *testing.T) {
 				// given
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
+				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tierTemplatesRefs := []string{
 					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
@@ -209,10 +208,7 @@ func TestReconcile(t *testing.T) {
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were NOT created when using TierTemplates as revisions
-				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
-				require.NoError(t, err)
-				require.Empty(t, ttrs.Items)
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
 					// the NSTemplateTier already has the revisions from previous test
@@ -224,14 +220,9 @@ func TestReconcile(t *testing.T) {
 					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
-						HasStatusTierTemplateRevisions([]string{
-							"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-						})
+						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// no TierTemplateRevision CRs were created
-					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
-					require.NoError(t, err)
-					require.Empty(t, ttrs.Items)
+					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
 			})
 		})
@@ -262,40 +253,30 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			}}
-			tierTemplates := initTierTemplates(t, withTemplateObjects(crq))
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
+				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding revisions in `status.revisions`
+				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
-				tierTemplatesRefs := []string{
-					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-				}
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were created
-				for _, ref := range tierTemplatesRefs {
-					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-					// list by exptected labels
-					// there should be 1 ttr for each tiertemplateref
-					labels := map[string]string{
-						toolchainv1alpha1.TemplateRefLabelKey: ref,
-						toolchainv1alpha1.TierLabelKey:        "base1ns",
-					}
-					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()), runtimeclient.MatchingLabels(labels))
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).
+					ExistsFor("base1ns", tierTemplatesRefs...).ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
+					// verify the content of the TierTemplate matches the one of the TTR
+					templateRef, ok := ttr.GetLabels()[toolchainv1alpha1.TemplateRefLabelKey]
+					assert.True(t, ok)
+					tierTemplate := toolchainv1alpha1.TierTemplate{}
+					err := cl.Get(context.TODO(), types.NamespacedName{Name: templateRef, Namespace: base1nsTier.GetNamespace()}, &tierTemplate)
 					require.NoError(t, err)
-					require.Len(t, ttrs.Items, 1)
-					// the object should have all the variables still there since this one will be replaced when provisioning the Space
-					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".SPACE_NAME")
-					assert.Contains(t, string(ttrs.Items[0].Spec.TemplateObjects[0].Raw), ".DEPLOYMENT_QUOTA")
-					// the parameter is copied from the NSTemplateTier
-					assert.Equal(t, ttrs.Items[0].Spec.Parameters[0].Name, base1nsTier.Spec.Parameters[0].Name)
-					assert.Equal(t, ttrs.Items[0].Spec.Parameters[0].Value, base1nsTier.Spec.Parameters[0].Value)
-				}
+					assert.Equal(t, tierTemplate.Spec.TemplateObjects, ttr.Spec.TemplateObjects)
+					assert.Equal(t, ttr.Spec.Parameters, base1nsTier.Spec.Parameters)
+				})
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
 					// the NSTemplateTier already has the revisions from previous test
@@ -314,7 +295,7 @@ func TestReconcile(t *testing.T) {
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 					require.NoError(t, err)
-					require.Len(t, ttrs.Items, 7) // it's one TTR per each tiertemplate in the NSTemplateTier
+					require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					t.Run("revision field is set but some TierTemplateRevision is missing, status should be updated", func(t *testing.T) {
 						// given
 						// the NSTemplateTier already has the revisions from previous test
@@ -335,7 +316,7 @@ func TestReconcile(t *testing.T) {
 						ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 						err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 						require.NoError(t, err)
-						require.Len(t, ttrs.Items, 7) // it's one TTR per each tiertemplate in the NSTemplateTier
+						require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					})
 				})
 
@@ -345,30 +326,62 @@ func TestReconcile(t *testing.T) {
 				// given
 				// the NSTemplateTier has already the status.revisions field populated
 				// but the TierTemplateRevision CRs are missing
+				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
 				base1nsTierWithRevisions := base1nsTier
 				base1nsTierWithRevisions.Status.Revisions = map[string]string{
 					"base1ns-admin-123456new": "base1ns-admin-123456new-abcd", "base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd", "base1ns-code-123456new": "base1ns-code-123456new-abcd", "base1ns-dev-123456new": "base1ns-dev-123456new-abcd", "base1ns-edit-123456new": "`base1ns-edit-123456new-abcd", "base1ns-stage-123456new": "base1ns-stage-123456new-abcd", "base1ns-viewer-123456new": "base1ns-viewer-123456new-abcd"}
-				initObjs := []runtimeclient.Object{base1nsTier}
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(initObjs, tierTemplates...)...)
+				r, req, cl := prepareReconcile(t, base1nsTierWithRevisions.Name, append(tierTemplates, base1nsTierWithRevisions)...)
 				// when
 				// check no TTR is present before reconciling
-				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-				err := cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
-				require.NoError(t, err)
-				require.Empty(t, ttrs.Items)
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTierWithRevisions.GetNamespace()).DoNotExist()
 				_, err = r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				// check that revisions field was populated
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
-					HasStatusTierTemplateRevisions([]string{
-						"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-					})
+					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were created
-				ttrs = toolchainv1alpha1.TierTemplateRevisionList{}
-				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
+				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
+				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTierWithRevisions.GetNamespace()))
+				require.NoError(t, err)
+				require.Len(t, ttrs.Items, len(tierTemplatesRefs))
+
+			})
+
+			t.Run("TTR name should stay within 63 chars, so that they can be used as labels", func(t *testing.T) {
+				// given
+				// the TierTemplateRevision CRs are missing, and their name are based on the tier name.
+				// Making the TierName already 63chars long we test that the TTR name stays within 63 chars
+				veryLongTierName := "somerandomstringtomakethenamelongerthan63chars12345678912345678"
+				tierWithVeryLongName := tiertest.Tier(t, veryLongTierName, tiertest.NSTemplateTierSpecWithTierName(veryLongTierName),
+					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
+				)
+				tierHash, err := hash.ComputeHashForNSTemplateTier(tierWithVeryLongName)
+				require.NoError(t, err)
+				// let's set the update so that we can skip the first reconciliation loop when this is updated
+				tierWithVeryLongName.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
+					{
+						StartTime: metav1.Now(),
+						Hash:      tierHash,
+					},
+				}
+				tierTemplatesWithLongNames := initTierTemplates(t, withTemplateObjects(crq), tierWithVeryLongName.Name)
+				r, req, cl := prepareReconcile(t, tierWithVeryLongName.Name, append(tierTemplatesWithLongNames, tierWithVeryLongName)...)
+				// when
+				// check no TTR is present before reconciling
+				tiertemplaterevision.AssertThatTTRs(t, cl, tierWithVeryLongName.GetNamespace()).DoNotExist()
+				_, err = r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				// check that expected TierTemplateRevision CRs were created
+				// with the expected length
+				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
+				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(tierWithVeryLongName.GetNamespace()))
 				require.NoError(t, err)
 				require.Len(t, ttrs.Items, 7)
+				for _, ttr := range ttrs.Items {
+					assert.Empty(t, validation.IsDNS1123Label(ttr.GetName()))
+				}
 
 			})
 
@@ -378,7 +391,7 @@ func TestReconcile(t *testing.T) {
 					// given
 					// make sure revisions field is nill before starting the test
 					base1nsTier.Status.Revisions = nil
-					r, req, cl := prepareReconcile(t, base1nsTier.Name, initObjs...)
+					r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 					// when
 					_, err = r.Reconcile(context.TODO(), req)
 					// then
@@ -388,10 +401,7 @@ func TestReconcile(t *testing.T) {
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 						HasNoStatusTierTemplateRevisions()
 					// and the TierTemplateRevision CRs are not created
-					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
-					require.NoError(t, err)
-					require.Empty(t, ttrs.Items)
+					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
 
 			})
@@ -402,17 +412,17 @@ func TestReconcile(t *testing.T) {
 }
 
 // initTierTemplates creates the TierTemplates objects for the base1ns tier
-func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension) []runtimeclient.Object {
+func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension, tierName string) []runtimeclient.Object {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects)
-	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects)
-	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects)
-	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects)
-	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects)
-	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects)
-	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects)
+	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects, tierName)
+	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects, tierName)
+	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects, tierName)
+	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects, tierName)
+	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects, tierName)
+	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects, tierName)
+	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects, tierName)
 	tierTemplates := []runtimeclient.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
 }
@@ -435,7 +445,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	}, cl
 }
 
-func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
+func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension, tierName string) *toolchainv1alpha1.TierTemplate {
 	var (
 		ns test.TemplateObject = `
 - apiVersion: v1
@@ -456,7 +466,6 @@ func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []run
 	_, _, err = decoder.Decode([]byte(test.CreateTemplate(test.WithObjects(ns), test.WithParams(spacename))), nil, &tmpl)
 	require.NoError(t, err)
 
-	tierName := "base1ns"
 	revision := "123456new"
 	// we can set the template field to something empty as it is not relevant for the tests
 	tt := &toolchainv1alpha1.TierTemplate{

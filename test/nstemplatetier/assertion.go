@@ -50,7 +50,9 @@ func (a *Assertion) HasStatusTierTemplateRevisions(revisions []string) *Assertio
 	require.NoError(a.t, err)
 	// check that each TierTemplate REF has a TierTemplateRevision set
 	for _, tierTemplateRef := range revisions {
-		require.NotNil(a.t, a.tier.Status.Revisions[tierTemplateRef])
+		require.NotNil(a.t, a.tier.Status.Revisions)
+		_, ok := a.tier.Status.Revisions[tierTemplateRef]
+		require.True(a.t, ok)
 	}
 	return a
 }

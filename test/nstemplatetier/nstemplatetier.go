@@ -99,6 +99,36 @@ var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
+func NSTemplateTierSpecWithTierName(tierName string) toolchainv1alpha1.NSTemplateTierSpec {
+	return toolchainv1alpha1.NSTemplateTierSpec{
+		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+			{
+				TemplateRef: tierName + "-code-123456new",
+			},
+			{
+				TemplateRef: tierName + "-dev-123456new",
+			},
+			{
+				TemplateRef: tierName + "-stage-123456new",
+			},
+		},
+		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+			TemplateRef: tierName + "-clusterresources-123456new",
+		},
+		SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+			"admin": {
+				TemplateRef: tierName + "-admin-123456new",
+			},
+			"edit": {
+				TemplateRef: tierName + "-edit-123456new",
+			},
+			"viewer": {
+				TemplateRef: tierName + "-viewer-123456new",
+			},
+		},
+	}
+}
+
 // AppStudioEnvTemplates current templates for the "appstudio-env" tier
 var AppStudioEnvTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
