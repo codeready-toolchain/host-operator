@@ -57,8 +57,8 @@ func (a *Assertion) ExistsFor(tierName string, tierTemplateRef ...string) *Asser
 }
 
 func (a *Assertion) ForEach(assertionFunc func(ttr *toolchainv1alpha1.TierTemplateRevision)) *Assertion {
-	for _, ttr := range a.ttrs {
-		assertionFunc(&ttr)
+	for i := range a.ttrs {
+		assertionFunc(&a.ttrs[i])
 	}
 	return a
 }
