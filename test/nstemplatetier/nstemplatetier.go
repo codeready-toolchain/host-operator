@@ -99,6 +99,36 @@ var CurrentBase1nsTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
+func NSTemplateTierSpecWithTierName(tierName string) toolchainv1alpha1.NSTemplateTierSpec {
+	return toolchainv1alpha1.NSTemplateTierSpec{
+		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+			{
+				TemplateRef: tierName + "-code-123456new",
+			},
+			{
+				TemplateRef: tierName + "-dev-123456new",
+			},
+			{
+				TemplateRef: tierName + "-stage-123456new",
+			},
+		},
+		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+			TemplateRef: tierName + "-clusterresources-123456new",
+		},
+		SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+			"admin": {
+				TemplateRef: tierName + "-admin-123456new",
+			},
+			"edit": {
+				TemplateRef: tierName + "-edit-123456new",
+			},
+			"viewer": {
+				TemplateRef: tierName + "-viewer-123456new",
+			},
+		},
+	}
+}
+
 // AppStudioEnvTemplates current templates for the "appstudio-env" tier
 var AppStudioEnvTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
@@ -175,6 +205,21 @@ func WithoutCodeNamespace() TierOption {
 func WithoutClusterResources() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
 		tier.Spec.ClusterResources = nil
+	}
+}
+
+// WithParameter appends a parameter to the parameter's list
+func WithParameter(name, value string) TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		if tier.Spec.Parameters == nil {
+			tier.Spec.Parameters = []toolchainv1alpha1.Parameter{}
+		}
+		tier.Spec.Parameters = append(tier.Spec.Parameters,
+			toolchainv1alpha1.Parameter{
+				Name:  name,
+				Value: value,
+			},
+		)
 	}
 }
 
