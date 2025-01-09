@@ -7,7 +7,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -22,12 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-// ----------------------------------------------------------------------------------------------------------------------------
-// NSTemplateTier Controller Reconciler:
-// . in case of a new NSTemplateTier update to process:
-// .. inserts a new record in the `status.updates` history
-// ----------------------------------------------------------------------------------------------------------------------------
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -47,8 +40,7 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
 
-// Reconcile takes care of:
-// - inserting a new entry in the `status.updates`
+// Reconcile takes care of fetching the NSTemplateTier
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -69,15 +61,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, fmt.Errorf("unable to get ToolchainConfig: %w", err)
 	}
 
-	// create a new entry in the `status.history` if needed
-	if added, err := r.ensureStatusUpdateRecord(ctx, tier); err != nil {
-		logger.Error(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
-		return reconcile.Result{}, fmt.Errorf("unable to insert a new entry in status.updates after NSTemplateTier changed: %w", err)
-	} else if added {
-		logger.Info("Requeue after adding a new entry in tier.status.updates")
-		return reconcile.Result{Requeue: true}, nil
-	}
-
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
 	if created, err := r.ensureRevision(ctx, tier); err != nil {
 		// todo add/update ready condition false in the NSTemplateTier when something fails
@@ -88,37 +71,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	return reconcile.Result{}, nil
-}
-
-// ensureStatusUpdateRecord adds a new entry in the `status.updates` with the current date/time
-// if needed and the hash of the NSTemplateTier
-// returns `true` if an entry was added, `err` if something wrong happened
-func (r *Reconciler) ensureStatusUpdateRecord(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
-	hash, err := hash.ComputeHashForNSTemplateTier(tier)
-	if err != nil {
-		return false, fmt.Errorf("unable to append an entry in the `status.updates` for NSTemplateTier '%s' : %w", tier.Name, err)
-	}
-	// if there was no previous status:
-	if len(tier.Status.Updates) == 0 {
-		return true, r.addNewTierUpdate(ctx, tier, hash)
-	}
-
-	// check whether the entry was already added
-	logger := log.FromContext(ctx)
-	if tier.Status.Updates[len(tier.Status.Updates)-1].Hash == hash {
-		logger.Info("current tier template already exists in tier.status.updates")
-		return false, nil
-	}
-	logger.Info("Adding a new entry in tier.status.updates")
-	return true, r.addNewTierUpdate(ctx, tier, hash)
-}
-
-func (r *Reconciler) addNewTierUpdate(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier, hash string) error {
-	tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
-		StartTime: metav1.Now(),
-		Hash:      hash,
-	})
-	return r.Client.Status().Update(ctx, tier)
 }
 
 // ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
