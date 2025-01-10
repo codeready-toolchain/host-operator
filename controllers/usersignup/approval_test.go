@@ -7,14 +7,12 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
@@ -26,17 +24,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	// given
 	ctx := context.TODO()
 	signup := commonsignup.NewUserSignup()
-	toolchainStatus := NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 100,
-			string(metrics.External): 800,
-		}),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 200,
-			"1,external": 700,
-		}),
-		WithMember("member1", WithSpaceCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
+	toolchainStatus := NewToolchainStatus()
 
 	t.Run("with two clusters available, the second one is defined as the last-used one", func(t *testing.T) {
 		// given
@@ -48,13 +36,13 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.AutomaticApproval().
 				Enabled(true),
 		)
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(70))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1")
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -75,7 +63,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -140,7 +128,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 			// then
 			if testFields.ErrorExpected {
@@ -168,7 +156,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -185,7 +173,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -201,7 +189,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -217,7 +205,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -234,7 +222,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -244,14 +232,14 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved but no cluster has capacity", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(50))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(50))
+		spc1 := hspc.NewEnabledTenantSPC("member1")
+		spc2 := hspc.NewEnabledTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -261,14 +249,14 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved and second cluster has capacity", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(2000), spc.MaxMemoryUtilizationPercent(62))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(62))
+		spc1 := hspc.NewEnabledTenantSPC("member1")
+		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -278,14 +266,14 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user manually approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
 		InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 		// then
 		require.NoError(t, err)
@@ -303,30 +291,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
-			assert.False(t, approved)
-			assert.Equal(t, unknown, clusterName)
-		})
-
-		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
-			// given
-			fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
-				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
-					return fmt.Errorf("some error")
-				}
-				return fakeClient.Client.Get(ctx, key, obj, opts...)
-			}
-			InitializeCounters(t, toolchainStatus)
-
-			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
-
-			// then
-			require.EqualError(t, err, "unable to get the optimal target cluster: unable to read ToolchainStatus resource: some error")
 			assert.False(t, approved)
 			assert.Equal(t, unknown, clusterName)
 		})
@@ -343,7 +311,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)))
 
 			// then
 			require.EqualError(t, err, "unable to get the optimal target cluster: failed to find the optimal space provisioner config: some error")

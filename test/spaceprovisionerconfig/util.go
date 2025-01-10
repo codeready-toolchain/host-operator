@@ -16,20 +16,20 @@ func NewEnabledValidTenantSPC(referencedToolchainCluster string, opts ...CreateO
 	)
 }
 
-func NewValidTenantSPC(referencedToolchainCluster string, opts ...CreateOption) *toolchainv1alpha1.SpaceProvisionerConfig {
-	return NewSpaceProvisionerConfig(referencedToolchainCluster+"Spc", test.HostOperatorNs,
-		append(opts,
-			WithReadyConditionValid(),
-			ReferencingToolchainCluster(referencedToolchainCluster),
-			WithPlacementRoles(PlacementRole("tenant")))...,
-	)
-}
-
 func NewEnabledValidSPC(referencedToolchainCluster string, opts ...CreateOption) *toolchainv1alpha1.SpaceProvisionerConfig {
 	return NewSpaceProvisionerConfig(referencedToolchainCluster+"Spc", test.HostOperatorNs,
 		append(opts,
 			Enabled(true),
 			WithReadyConditionValid(),
 			ReferencingToolchainCluster(referencedToolchainCluster))...,
+	)
+}
+
+func NewEnabledTenantSPC(referencedToolchainCluster string, opts ...CreateOption) *toolchainv1alpha1.SpaceProvisionerConfig {
+	return NewSpaceProvisionerConfig(referencedToolchainCluster+"Spc", test.HostOperatorNs,
+		append(opts,
+			Enabled(true),
+			ReferencingToolchainCluster(referencedToolchainCluster),
+			WithPlacementRoles(PlacementRole("tenant")))...,
 	)
 }
