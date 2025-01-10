@@ -21,7 +21,7 @@ type (
 
 func hasNotReachedMaxNumberOfSpacesThreshold(counts counter.Counts) spaceProvisionerConfigPredicate {
 	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
-		//the value of this is not going to be negative and it won't overflow, hence its okay to ignore the overflow linter error
+		// the numbers of Spaces per cluster shouldn't be negative, so it's fine to cast it to uint without worrying about the overflow error, and thus also ignore the linter
 		numberOfSpaces := uint(counts.SpacesPerClusterCounts[spc.Spec.ToolchainCluster]) // nolint:gosec
 		threshold := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
 		return threshold == 0 || numberOfSpaces < threshold
