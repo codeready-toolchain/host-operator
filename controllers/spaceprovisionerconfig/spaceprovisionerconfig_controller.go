@@ -184,7 +184,7 @@ func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpacePro
 // It always knows this fact so returning a bool is ok, in contrast to determinMemoryUtilizationReadyState.
 func determineSpaceCountReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
 	max := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
-	//the value of we don't expect that the max number of Space count would ever go above the max size of int and it won't overflow, hence its okay to ignore the overflow linter error
+	// we don't expect that the max number of spaces would ever go above the max size of int, so we don't have to worry about the overflow error, hence its okay to ignore the linter here
 	return max == 0 || int(max) > spc.Status.ConsumedCapacity.SpaceCount // nolint:gosec
 }
 
