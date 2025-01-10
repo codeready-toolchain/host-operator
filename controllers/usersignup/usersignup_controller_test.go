@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -4054,7 +4053,6 @@ func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
-	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -4071,8 +4069,12 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 			"token": []byte("mycooltoken"),
 		},
 	}
+	toolchainStatus := NewToolchainStatus(
+		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 
-	initObjs = append(initObjs, secret)
+	InitializeCounters(t, toolchainStatus)
+
+	initObjs = append(initObjs, secret, toolchainStatus)
 
 	fakeClient := test.NewFakeClient(t, initObjs...)
 
@@ -4081,7 +4083,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 			Client: fakeClient,
 		},
 		Scheme:         s,
-		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, fakeClient, hspc.GetSpaceCountFromSpaceProvisionerConfigs(fakeClient, test.HostOperatorNs)),
+		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)),
 		SegmentClient:  segment.NewClient(segmenttest.NewClient()),
 	}
 	return r, newReconcileRequest(name), fakeClient

@@ -302,7 +302,7 @@ func main() { // nolint:gocyclo
 		Namespace:      namespace,
 		Scheme:         mgr.GetScheme(),
 		SegmentClient:  segmentClient,
-		ClusterManager: capacity.DefaultClusterManager(namespace, mgr.GetClient()),
+		ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
 		os.Exit(1)
@@ -357,7 +357,7 @@ func main() { // nolint:gocyclo
 	if err = (&spacecompletion.Reconciler{
 		Client:         mgr.GetClient(),
 		Namespace:      namespace,
-		ClusterManager: capacity.DefaultClusterManager(namespace, mgr.GetClient()),
+		ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
 		os.Exit(1)

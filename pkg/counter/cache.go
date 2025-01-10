@@ -138,15 +138,40 @@ func UpdateUsersPerActivationCounters(logger logr.Logger, activations int, domai
 	})
 }
 
-// GetCounts returns Counts struct containing number of MURs and number of UserAccounts per member cluster.
+// GetCountsSnapshot() returns Counts struct containing number of MURs and number of UserAccounts per member cluster as they were at the moment of the call.
+// The returned struct is a copy of the cache and will not be updated concurrently.
 // If the counter is not yet initialized, then it returns error
-func GetCounts() (Counts, error) {
+func GetCountsSnapshot() (Counts, error) {
 	cachedCounts.RLock()
 	defer cachedCounts.RUnlock()
 	if !cachedCounts.initialized {
 		return cachedCounts.Counts, fmt.Errorf("counter is not initialized")
 	}
-	return cachedCounts.Counts, nil
+	counts := cachedCounts.Counts
+	cpy := Counts{}
+	cpy.MasterUserRecordPerDomainCounts = copyCountsMap(counts.MasterUserRecordPerDomainCounts)
+	cpy.SpacesPerClusterCounts = copyCountsMap(counts.SpacesPerClusterCounts)
+	cpy.UserSignupsPerActivationAndDomainCounts = copyCountsMap(counts.UserSignupsPerActivationAndDomainCounts)
+	return cpy, nil
+}
+
+// GetSpaceCountPerClusterSnapshot is a specialization of the GetCountsSnapshot function that retrieves just the map
+// of the space counts per cluster.
+func GetSpaceCountPerClusterSnapshot() (map[string]int, error) {
+	cachedCounts.RLock()
+	defer cachedCounts.RUnlock()
+	if !cachedCounts.initialized {
+		return nil, fmt.Errorf("counter is not initialized")
+	}
+	return copyCountsMap(cachedCounts.SpacesPerClusterCounts), nil
+}
+
+func copyCountsMap(in map[string]int) map[string]int {
+	cpy := make(map[string]int, len(in))
+	for k, v := range in {
+		cpy[k] = v
+	}
+	return cpy
 }
 
 // Synchronize synchronizes the content of the ToolchainStatus with the cached counter
