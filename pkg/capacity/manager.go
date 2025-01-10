@@ -46,7 +46,7 @@ func hasEnoughMemoryCapacity(status *toolchainv1alpha1.ToolchainStatus) spacePro
 func hasMemberEnoughMemoryCapacity(memberStatus toolchainv1alpha1.Member, threshold uint) bool {
 	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
 		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-			//We do not expect this value to be negative and it won't overflow, hence its okay to ignore the overflow linter error
+			// the memory utilization threshold should be max 100, so it's fine to cast it to int without worrying about the overflow error, thus ignoring the linter here
 			if usagePerNode >= int(threshold) { // nolint:gosec
 				return false
 			}
