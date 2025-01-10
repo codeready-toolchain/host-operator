@@ -204,7 +204,7 @@ func determineMemoryUtilizationReadyState(spc *toolchainv1alpha1.SpaceProvisione
 
 	// the memory utilitzation is ok if it is below the threshold in all node types
 	for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
-		//the value of this is not going be less 0 or negative and it won't overflow, hence its okay to ignore the overflow linter error
+		// the MaxMemoryUtilizationPercent won't go over 100, so it's safe to cast it to int and to not worry about overflow error, thus ignoring the linter
 		if val >= int(spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent) { // nolint:gosec
 			return corev1.ConditionFalse
 		}
