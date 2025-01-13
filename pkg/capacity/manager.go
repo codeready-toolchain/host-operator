@@ -21,7 +21,8 @@ type (
 
 func hasNotReachedMaxNumberOfSpacesThreshold(counts counter.Counts) spaceProvisionerConfigPredicate {
 	return func(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
-		numberOfSpaces := uint(counts.SpacesPerClusterCounts[spc.Spec.ToolchainCluster])
+		// the numbers of Spaces per cluster shouldn't be negative, so it's fine to cast it to uint without worrying about the overflow error, and thus also ignore the linter
+		numberOfSpaces := uint(counts.SpacesPerClusterCounts[spc.Spec.ToolchainCluster]) // nolint:gosec
 		threshold := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
 		return threshold == 0 || numberOfSpaces < threshold
 	}
@@ -45,7 +46,8 @@ func hasEnoughMemoryCapacity(status *toolchainv1alpha1.ToolchainStatus) spacePro
 func hasMemberEnoughMemoryCapacity(memberStatus toolchainv1alpha1.Member, threshold uint) bool {
 	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
 		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-			if uint(usagePerNode) >= threshold {
+			// the memory utilization threshold should be max 100, so it's fine to cast it to int without worrying about the overflow error, thus ignoring the linter here
+			if usagePerNode >= int(threshold) { // nolint:gosec
 				return false
 			}
 		}
