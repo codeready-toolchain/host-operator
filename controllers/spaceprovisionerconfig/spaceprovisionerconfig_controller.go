@@ -184,7 +184,8 @@ func (r *Reconciler) determineCapacityReadyState(spc *toolchainv1alpha1.SpacePro
 // It always knows this fact so returning a bool is ok, in contrast to determinMemoryUtilizationReadyState.
 func determineSpaceCountReadyState(spc *toolchainv1alpha1.SpaceProvisionerConfig) bool {
 	max := spc.Spec.CapacityThresholds.MaxNumberOfSpaces
-	return max == 0 || max > uint(spc.Status.ConsumedCapacity.SpaceCount)
+	// we don't expect that the max number of spaces would ever go above the max size of int, so we don't have to worry about the overflow error, hence its okay to ignore the linter here
+	return max == 0 || int(max) > spc.Status.ConsumedCapacity.SpaceCount // nolint:gosec
 }
 
 // determineMemoryUtilizationReadyState checks that the cluster has enough free memory. It may not be able to tell the fact
@@ -203,7 +204,8 @@ func determineMemoryUtilizationReadyState(spc *toolchainv1alpha1.SpaceProvisione
 
 	// the memory utilitzation is ok if it is below the threshold in all node types
 	for _, val := range spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole {
-		if uint(val) >= spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent {
+		// the MaxMemoryUtilizationPercent won't go over 100, so it's safe to cast it to int and to not worry about overflow error, thus ignoring the linter
+		if val >= int(spc.Spec.CapacityThresholds.MaxMemoryUtilizationPercent) { // nolint:gosec
 			return corev1.ConditionFalse
 		}
 	}
