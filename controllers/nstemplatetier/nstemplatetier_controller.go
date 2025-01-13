@@ -211,9 +211,9 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	newTTRName := fmt.Sprintf("%s-%s-", tierName, tierTemplateName)
 	// we have to cut it down to the max allowed length
 	// 6 = 5 is generateName suffix length + 1 the "-" char
-	mexNameLength := validation.DNS1123LabelMaxLength + 6
-	if len(newTTRName) > mexNameLength {
-		newTTRName = newTTRName[0:mexNameLength]
+	maxNameLength := validation.DNS1123LabelMaxLength - 6
+	if len(newTTRName) > maxNameLength {
+		newTTRName = newTTRName[0:maxNameLength]
 	}
 	ttr := &toolchainv1alpha1.TierTemplateRevision{
 		ObjectMeta: metav1.ObjectMeta{
