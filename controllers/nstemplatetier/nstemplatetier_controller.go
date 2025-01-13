@@ -141,11 +141,7 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 				logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
 				// let's create one
 				ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-				if err != nil {
-					return false, "", err
-				}
-				// new ttr created
-				return true, ttrName, nil
+				return true, ttrName, err
 			} else {
 				// something wrong happened
 				return false, "", err
