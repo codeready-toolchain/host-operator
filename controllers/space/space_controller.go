@@ -254,7 +254,7 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 
 		return norequeue, r.setStatusProvisioned(ctx, space)
 	default:
-		return norequeue, r.setStatusProvisioningFailed(ctx, space, fmt.Errorf(nsTmplSetReady.Message))
+		return norequeue, r.setStatusProvisioningFailed(ctx, space, fmt.Errorf("%s", nsTmplSetReady.Message))
 	}
 }
 
