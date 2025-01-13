@@ -31,6 +31,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.15.0
 )
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20250113085950-89e60ca3a9f0
+
 require (
 	cloud.google.com/go/auth v0.3.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
