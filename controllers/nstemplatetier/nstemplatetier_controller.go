@@ -152,11 +152,7 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 	} else {
 		// no revision was set for this TierTemplate CR, let's create a TTR for it
 		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-		if err != nil {
-			return false, ttrName, err
-		}
-		// new ttr created
-		return true, ttrName, nil
+		return true, ttrName, err
 	}
 	// nothing changed
 	return false, "", nil
