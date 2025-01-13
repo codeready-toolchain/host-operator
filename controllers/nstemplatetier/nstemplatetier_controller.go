@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, fmt.Errorf("unable to create new TierTemplateRevision after NSTemplateTier changed: %w", err)
 	} else if created {
 		logger.Info("Requeue after creating a new TTR")
-		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
 	}
 
 	return reconcile.Result{}, nil
