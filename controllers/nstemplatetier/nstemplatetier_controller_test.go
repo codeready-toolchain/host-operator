@@ -89,15 +89,6 @@ func TestReconcile(t *testing.T) {
 			// the tiertemplate revision CR should have a copy of those parameters
 			tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 		)
-		tierHash, err := hash.ComputeHashForNSTemplateTier(base1nsTier)
-		require.NoError(t, err)
-		// let's set the update so that we can skip the first reconciliation loop when this is updated
-		base1nsTier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
-			{
-				StartTime: metav1.Now(),
-				Hash:      tierHash,
-			},
-		}
 		tierTemplatesRefs := []string{
 			"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
 		}
