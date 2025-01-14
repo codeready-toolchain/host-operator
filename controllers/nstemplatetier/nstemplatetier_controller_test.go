@@ -262,15 +262,6 @@ func TestReconcile(t *testing.T) {
 				tierWithVeryLongName := tiertest.Tier(t, veryLongTierName, tiertest.NSTemplateTierSpecWithTierName(veryLongTierName),
 					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 				)
-				tierHash, err := hash.ComputeHashForNSTemplateTier(tierWithVeryLongName)
-				require.NoError(t, err)
-				// let's set the update so that we can skip the first reconciliation loop when this is updated
-				tierWithVeryLongName.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
-					{
-						StartTime: metav1.Now(),
-						Hash:      tierHash,
-					},
-				}
 				tierTemplatesWithLongNames := initTierTemplates(t, withTemplateObjects(crq), tierWithVeryLongName.Name)
 				r, req, cl := prepareReconcile(t, tierWithVeryLongName.Name, append(tierTemplatesWithLongNames, tierWithVeryLongName)...)
 				// when
