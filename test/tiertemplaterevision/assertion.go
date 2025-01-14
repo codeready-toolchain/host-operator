@@ -12,17 +12,15 @@ import (
 
 // Assertion an assertion helper for an TierTemplateRevision
 type Assertion struct {
-	ttrs      []toolchainv1alpha1.TierTemplateRevision
 	client    runtimeclient.Client
 	namespace string
 	t         test.T
 }
 
-func (a *Assertion) loadResources(labels map[string]string) error {
+func (a *Assertion) loadResources(labels map[string]string) ([]toolchainv1alpha1.TierTemplateRevision, error) {
 	ttrs := &toolchainv1alpha1.TierTemplateRevisionList{}
 	err := a.client.List(context.TODO(), ttrs, runtimeclient.InNamespace(a.namespace), runtimeclient.MatchingLabels(labels))
-	a.ttrs = ttrs.Items
-	return err
+	return ttrs.Items, err
 }
 
 // AssertThatTTRs helper func to begin with the assertions on an TierTemplateRevisions
@@ -36,9 +34,9 @@ func AssertThatTTRs(t test.T, client runtimeclient.Client, namespace string) *As
 
 // DoNotExist verifies that there is no TTR in the given namespace
 func (a *Assertion) DoNotExist() *Assertion {
-	err := a.loadResources(nil)
+	ttrs, err := a.loadResources(nil)
 	require.NoError(a.t, err)
-	require.Empty(a.t, a.ttrs)
+	require.Empty(a.t, ttrs)
 	return a
 }
 
@@ -49,16 +47,25 @@ func (a *Assertion) ExistsFor(tierName string, tierTemplateRef ...string) *Asser
 			toolchainv1alpha1.TierLabelKey:        tierName,
 			toolchainv1alpha1.TemplateRefLabelKey: templateRef,
 		}
-		err := a.loadResources(labels)
+		ttrs, err := a.loadResources(labels)
 		require.NoError(a.t, err)
-		require.Len(a.t, a.ttrs, 1)
+		require.Len(a.t, ttrs, 1)
 	}
 	return a
 }
 
 func (a *Assertion) ForEach(assertionFunc func(ttr *toolchainv1alpha1.TierTemplateRevision)) *Assertion {
-	for i := range a.ttrs {
-		assertionFunc(&a.ttrs[i])
+	ttrs, err := a.loadResources(nil)
+	require.NoError(a.t, err)
+	for i := range ttrs {
+		assertionFunc(&ttrs[i])
 	}
+	return a
+}
+
+func (a *Assertion) NumberOfPresentCRs(expected int) *Assertion {
+	ttrs, err := a.loadResources(nil)
+	require.NoError(a.t, err)
+	require.Equal(a.t, len(ttrs), expected)
 	return a
 }

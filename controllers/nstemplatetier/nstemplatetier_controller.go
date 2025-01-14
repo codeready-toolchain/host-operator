@@ -8,7 +8,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -209,12 +208,6 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	}
 
 	newTTRName := fmt.Sprintf("%s-%s-", tierName, tierTemplateName)
-	// we have to cut it down to the max allowed length
-	// 6 = 5 is generateName suffix length + 1 the "-" char
-	maxNameLength := validation.DNS1123LabelMaxLength - 6
-	if len(newTTRName) > maxNameLength {
-		newTTRName = newTTRName[0:maxNameLength]
-	}
 	ttr := &toolchainv1alpha1.TierTemplateRevision{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    tierTmpl.GetNamespace(),

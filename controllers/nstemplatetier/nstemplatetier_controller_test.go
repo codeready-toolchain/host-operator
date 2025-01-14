@@ -13,7 +13,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
-	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
@@ -227,7 +226,7 @@ func TestReconcile(t *testing.T) {
 				// but the TierTemplateRevision CRs are missing
 				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
 				base1nsTierWithRevisions := base1nsTier
-				base1nsTierWithRevisions.Status.Revisions = map[string]string{
+				initialRevisions := map[string]string{
 					"base1ns-admin-123456new":            "base1ns-admin-123456new-abcd",
 					"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd",
 					"base1ns-code-123456new":             "base1ns-code-123456new-abcd",
@@ -236,22 +235,24 @@ func TestReconcile(t *testing.T) {
 					"base1ns-stage-123456new":            "base1ns-stage-123456new-abcd",
 					"base1ns-viewer-123456new":           "base1ns-viewer-123456new-abcd",
 				}
+				base1nsTierWithRevisions.Status.Revisions = initialRevisions
 				r, req, cl := prepareReconcile(t, base1nsTierWithRevisions.Name, append(tierTemplates, base1nsTierWithRevisions)...)
 				// when
 				// check no TTR is present before reconciling
 				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTierWithRevisions.GetNamespace()).DoNotExist()
-				_, err = r.Reconcile(context.TODO(), req)
+				_, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				// check that revisions field was populated
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were created
-				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTierWithRevisions.GetNamespace()))
-				require.NoError(t, err)
-				require.Len(t, ttrs.Items, len(tierTemplatesRefs))
-
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTierWithRevisions.GetNamespace()).
+					NumberOfPresentCRs(len(tierTemplatesRefs)). // there should be the same amount of TTRs
+					ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
+						// but their name should differ from the ones initially set in the revisions field
+						assert.NotEqual(t, initialRevisions[ttr.GetLabels()[toolchainv1alpha1.TemplateRefLabelKey]], ttr.GetName())
+					})
 			})
 
 			t.Run("TTR name should stay within 63 chars, so that they can be used as labels", func(t *testing.T) {
@@ -267,7 +268,7 @@ func TestReconcile(t *testing.T) {
 				// when
 				// check no TTR is present before reconciling
 				tiertemplaterevision.AssertThatTTRs(t, cl, tierWithVeryLongName.GetNamespace()).DoNotExist()
-				_, err = r.Reconcile(context.TODO(), req)
+				_, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				// check that expected TierTemplateRevision CRs were created
@@ -275,11 +276,11 @@ func TestReconcile(t *testing.T) {
 				ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
 				err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(tierWithVeryLongName.GetNamespace()))
 				require.NoError(t, err)
-				require.Len(t, ttrs.Items, 7)
-				for _, ttr := range ttrs.Items {
-					assert.Empty(t, validation.IsDNS1123Label(ttr.GetName()))
-				}
-
+				tiertemplaterevision.AssertThatTTRs(t, cl, tierWithVeryLongName.GetNamespace()).
+					NumberOfPresentCRs(7).
+					ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
+						assert.Empty(t, validation.IsDNS1123Label(ttr.GetName()))
+					})
 			})
 
 			t.Run("errors", func(t *testing.T) {
@@ -290,7 +291,7 @@ func TestReconcile(t *testing.T) {
 					base1nsTier.Status.Revisions = nil
 					r, req, cl := prepareReconcile(t, base1nsTier.Name, base1nsTier)
 					// when
-					_, err = r.Reconcile(context.TODO(), req)
+					_, err := r.Reconcile(context.TODO(), req)
 					// then
 					// we expect an error caused by the absence of the tiertemplate for the `code` namespace CR
 					require.ErrorContains(t, err, "tiertemplates.toolchain.dev.openshift.com \"base1ns-code-123456new\" not found")
