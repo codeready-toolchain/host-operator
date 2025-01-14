@@ -164,7 +164,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
+				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
