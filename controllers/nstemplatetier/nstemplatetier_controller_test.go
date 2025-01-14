@@ -228,7 +228,14 @@ func TestReconcile(t *testing.T) {
 				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
 				base1nsTierWithRevisions := base1nsTier
 				base1nsTierWithRevisions.Status.Revisions = map[string]string{
-					"base1ns-admin-123456new": "base1ns-admin-123456new-abcd", "base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd", "base1ns-code-123456new": "base1ns-code-123456new-abcd", "base1ns-dev-123456new": "base1ns-dev-123456new-abcd", "base1ns-edit-123456new": "`base1ns-edit-123456new-abcd", "base1ns-stage-123456new": "base1ns-stage-123456new-abcd", "base1ns-viewer-123456new": "base1ns-viewer-123456new-abcd"}
+					"base1ns-admin-123456new":            "base1ns-admin-123456new-abcd",
+					"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd",
+					"base1ns-code-123456new":             "base1ns-code-123456new-abcd",
+					"base1ns-dev-123456new":              "base1ns-dev-123456new-abcd",
+					"base1ns-edit-123456new":             "`base1ns-edit-123456new-abcd",
+					"base1ns-stage-123456new":            "base1ns-stage-123456new-abcd",
+					"base1ns-viewer-123456new":           "base1ns-viewer-123456new-abcd",
+				}
 				r, req, cl := prepareReconcile(t, base1nsTierWithRevisions.Name, append(tierTemplates, base1nsTierWithRevisions)...)
 				// when
 				// check no TTR is present before reconciling
