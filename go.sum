@@ -38,8 +38,6 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/api v0.0.0-20241119094246-f6581d52dc80 h1:OpZkP3OGAdrDHOb1TtHVnLSVuevEiQhOH//plnpVL/c=
-github.com/codeready-toolchain/api v0.0.0-20241119094246-f6581d52dc80/go.mod h1:DUq1ffy9Mbersdgji48i/cm9Y+6NMwAdAQJNlfOrPRo=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20241128143121-e2e3546a35e9 h1:urMWj0TK944x2zZhVEvcNklLzPbarWBaxLGhyeXdLi0=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20241128143121-e2e3546a35e9/go.mod h1:4MD8PrbljFH7qSF44EjzAs2HVdr1R/vrsii2eO8Im+4=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
@@ -65,6 +63,8 @@ github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 h1:JWuenKqqX8nojt
 github.com/facebookgo/stack v0.0.0-20160209184415-751773369052/go.mod h1:UbMTZqLaRiH3MsBH8va0n7s1pQYcu3uTb8G4tygF4Zg=
 github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 h1:E2s37DuLxFhQDg5gKsWoLBOB0n+ZW8s599zru8FJ2/Y=
 github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+neXqOorC30/tWg0LCSkrqj/AR6gu8yY8/fpw1q0=
+github.com/fbm3307/toolchainapi v0.0.0-20250115070050-0c12eaa82d4a h1:3rECyXMbbxpJbKNjhukoXOguKLitrdr4QbP7LshE3uM=
+github.com/fbm3307/toolchainapi v0.0.0-20250115070050-0c12eaa82d4a/go.mod h1:2KYfJlFwZtiKfa5QDhQfXTFh6RyALilURWBXyfKmKso=
 github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
