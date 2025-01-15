@@ -66,6 +66,6 @@ func (a *Assertion) ForEach(assertionFunc func(ttr *toolchainv1alpha1.TierTempla
 func (a *Assertion) NumberOfPresentCRs(expected int) *Assertion {
 	ttrs, err := a.loadResources(nil)
 	require.NoError(a.t, err)
-	require.Equal(a.t, len(ttrs), expected)
+	require.Equal(a.t, expected, len(ttrs))
 	return a
 }
