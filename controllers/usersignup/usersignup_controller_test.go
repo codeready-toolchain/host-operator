@@ -4083,7 +4083,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 			Client: fakeClient,
 		},
 		Scheme:         s,
-		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, runtimeclient.Client(fakeClient)),
+		ClusterManager: capacity.NewClusterManager(test.HostOperatorNs, fakeClient),
 		SegmentClient:  segment.NewClient(segmenttest.NewClient()),
 	}
 	return r, newReconcileRequest(name), fakeClient

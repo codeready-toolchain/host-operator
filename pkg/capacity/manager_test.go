@@ -89,7 +89,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				status := test.NewToolchainStatus()
 				test.InitializeCounters(t, status)
 				fakeClient := commontest.NewFakeClient(t, spc1, spc2, status)
-				cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+				cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 				// when
 				clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -110,7 +110,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		status := test.NewToolchainStatus()
 		fakeClient := commontest.NewFakeClient(t, spaceProvisionerConfig, status)
 		test.InitializeCounters(t, status)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -129,7 +129,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		test.InitializeCounters(t, status)
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -148,7 +148,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		test.InitializeCounters(t, status)
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -166,7 +166,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 		test.InitializeCounters(t, status)
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, status)
-		cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
 		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -192,7 +192,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				}
 				return fakeClient.Client.List(ctx, list, opts...)
 			}
-			cm := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 			// when
 			clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
@@ -231,7 +231,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 					status := test.NewToolchainStatus()
 					test.InitializeCounters(t, status)
 					fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
-					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, runtimeclient.Client(fakeClient))
+					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
 					member2CurrentCount := numberOfSpaces
