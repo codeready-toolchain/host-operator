@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/test"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func TestGetOptimalTargetCluster(t *testing.T) {
@@ -86,9 +88,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				// given
 				spc1 := buildSpaceProvisionerConfig("member1", m1_valid, m1_has_role)
 				spc2 := buildSpaceProvisionerConfig("member2", m2_valid, m2_has_role)
-				status := test.NewToolchainStatus()
-				test.InitializeCounters(t, status)
-				fakeClient := commontest.NewFakeClient(t, spc1, spc2, status)
+				test.InitializeCountersWith(t) // no space counts necessary for this test
+				fakeClient := commontest.NewFakeClient(t, spc1, spc2)
 				cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 				// when
@@ -107,9 +108,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
 		spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
-		status := test.NewToolchainStatus()
-		fakeClient := commontest.NewFakeClient(t, spaceProvisionerConfig, status)
-		test.InitializeCounters(t, status)
+		fakeClient := commontest.NewFakeClient(t, spaceProvisionerConfig)
+		test.InitializeCountersWith(t)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -122,13 +122,14 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three eligible clusters it returns the one with the most capacity (the first one)", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10000), spc.WithConsumedSpaceCount(700))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
-		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(200))
-		status := test.NewToolchainStatus()
-
-		test.InitializeCounters(t, status)
-		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10000))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000))
+		test.InitializeCountersWith(t,
+			test.ClusterCount("member1", 700),
+			test.ClusterCount("member2", 700),
+			test.ClusterCount("member3", 200))
+		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -141,13 +142,17 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("with three eligible clusters it returns the one with the most capacity (the third one)", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
-		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(200))
-		status := test.NewToolchainStatus()
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
+		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000))
 
-		test.InitializeCounters(t, status)
-		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
+		test.InitializeCountersWith(t,
+			test.ClusterCount("member1", 700),
+			test.ClusterCount("member2", 700),
+			test.ClusterCount("member3", 200))
+
+		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
+
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -160,12 +165,12 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 	t.Run("choose one of the configured clusters because the preferred one is missing the SPC", func(t *testing.T) {
 		// given
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(700))
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000), spc.WithConsumedSpaceCount(500))
-		status := test.NewToolchainStatus()
-
-		test.InitializeCounters(t, status)
-		fakeClient := commontest.NewFakeClient(t, spc1, spc2, status)
+		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000))
+		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
+		test.InitializeCountersWith(t,
+			test.ClusterCount("member1", 700),
+			test.ClusterCount("member2", 500))
+		fakeClient := commontest.NewFakeClient(t, spc1, spc2)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -182,10 +187,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		t.Run("unable to list SpaceProvisionerConfigs", func(t *testing.T) {
 			// given
-			status := test.NewToolchainStatus()
-
-			test.InitializeCounters(t, status)
-			fakeClient := commontest.NewFakeClient(t, status)
+			test.InitializeCountersWith(t)
+			fakeClient := commontest.NewFakeClient(t)
 			fakeClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
 					return errors.New("some error")
@@ -213,24 +216,18 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 				t.Run(fmt.Sprintf("when there is a number of spaces at the very beginning %d", numberOfSpaces), func(t *testing.T) {
 					// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
 					spc1 := hspc.NewEnabledValidTenantSPC("member1",
-						spc.MaxNumberOfSpaces(1000),
-						spc.WithConsumedSpaceCount(1000),
-						spc.WithConsumedMemoryUsagePercentInNode("worker", 68),
-						spc.WithConsumedMemoryUsagePercentInNode("master", 65))
+						spc.MaxNumberOfSpaces(1000))
 					spc2 := hspc.NewEnabledValidTenantSPC("member2",
-						spc.MaxNumberOfSpaces(limit),
-						spc.WithConsumedSpaceCount(numberOfSpaces),
-						spc.WithConsumedMemoryUsagePercentInNode("worker", 55),
-						spc.WithConsumedMemoryUsagePercentInNode("master", 60))
+						spc.MaxNumberOfSpaces(limit))
 					spc3 := hspc.NewEnabledValidTenantSPC("member3",
-						spc.MaxNumberOfSpaces(limit),
-						spc.WithConsumedSpaceCount(numberOfSpaces),
-						spc.WithConsumedMemoryUsagePercentInNode("worker", 55),
-						spc.WithConsumedMemoryUsagePercentInNode("master", 50))
+						spc.MaxNumberOfSpaces(limit))
 
-					status := test.NewToolchainStatus()
-					test.InitializeCounters(t, status)
-					fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3, status)
+					test.InitializeCountersWith(t,
+						test.ClusterCount("member1", 1000),
+						test.ClusterCount("member2", numberOfSpaces),
+						test.ClusterCount("member3", numberOfSpaces))
+
+					fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
 					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
@@ -246,7 +243,8 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								// even when the counter of the other member is decremented, it should still use the last used one
 								// but we can decrement it only in the second cycle when the member3 has at least 50 Spaces
 								if i == 2 && cycle > 1 {
-									member3CurrentCount = decrementSpaceCount(t, fakeClient, "member3Spc")
+									counter.DecrementSpaceCount(log.Log, "member3")
+									member3CurrentCount--
 								}
 
 								// when
@@ -256,7 +254,8 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, "member2", clusterName)
 
-								member2CurrentCount = incrementSpaceCount(t, fakeClient, "member2Spc")
+								counter.IncrementSpaceCount(log.Log, "member2")
+								member2CurrentCount++
 
 								// and when calling it with the other cluster as preferred
 								clusterName, err = clusterBalancer.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -271,7 +270,8 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 						// reset the decremented counter back
 						if member2MissingTo50 > 2 && cycle > 1 {
-							member3CurrentCount = incrementSpaceCount(t, fakeClient, "member3Spc")
+							counter.IncrementSpaceCount(log.Log, "member3")
+							member3CurrentCount++
 						}
 
 						member3MissingTo50 := 50 - member3CurrentCount%50
@@ -288,7 +288,8 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, "member3", clusterName)
 
-								member3CurrentCount = incrementSpaceCount(t, fakeClient, "member3Spc")
+								counter.IncrementSpaceCount(log.Log, "member3")
+								member3CurrentCount++
 
 								// and when calling it with the other cluster as preferred
 								clusterName, err = clusterBalancer.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
@@ -314,26 +315,4 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 			}
 		})
 	}
-}
-
-func incrementSpaceCount(t *testing.T, client runtimeclient.Client, spcName string) int {
-	tc := &toolchainv1alpha1.SpaceProvisionerConfig{}
-	require.NoError(t, client.Get(context.TODO(), runtimeclient.ObjectKey{Name: spcName, Namespace: commontest.HostOperatorNs}, tc))
-	if tc.Status.ConsumedCapacity == nil {
-		tc.Status.ConsumedCapacity = &toolchainv1alpha1.ConsumedCapacity{}
-	}
-	tc.Status.ConsumedCapacity.SpaceCount += 1
-	require.NoError(t, client.Status().Update(context.TODO(), tc))
-	return tc.Status.ConsumedCapacity.SpaceCount
-}
-
-func decrementSpaceCount(t *testing.T, client runtimeclient.Client, spcName string) int {
-	tc := &toolchainv1alpha1.SpaceProvisionerConfig{}
-	require.NoError(t, client.Get(context.TODO(), runtimeclient.ObjectKey{Name: spcName, Namespace: commontest.HostOperatorNs}, tc))
-	if tc.Status.ConsumedCapacity == nil {
-		tc.Status.ConsumedCapacity = &toolchainv1alpha1.ConsumedCapacity{}
-	}
-	tc.Status.ConsumedCapacity.SpaceCount -= 1
-	require.NoError(t, client.Status().Update(context.TODO(), tc))
-	return tc.Status.ConsumedCapacity.SpaceCount
 }

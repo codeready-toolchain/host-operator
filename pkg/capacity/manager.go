@@ -22,7 +22,7 @@ type (
 		placementRoles      []string
 	}
 
-	provisionerPredicate func(*provisionerCandidate) bool
+	provisionerPredicate func(provisionerCandidate) bool
 )
 
 // Even though the readiness status of the SpaceProvisionerConfig is based (in part) on the space count
@@ -31,7 +31,7 @@ type (
 // The returned predicate assumes that the incoming SPC has already been updated with the fresh value
 // from the counts cache.
 func checkHasNotReachedSpaceCountThreshold() provisionerPredicate {
-	return func(candidate *provisionerCandidate) bool {
+	return func(candidate provisionerCandidate) bool {
 		spaceCount := candidate.spaceCount
 		threshold := candidate.spaceCountThreshold
 
@@ -40,13 +40,13 @@ func checkHasNotReachedSpaceCountThreshold() provisionerPredicate {
 }
 
 func isReady() provisionerPredicate {
-	return func(candidate *provisionerCandidate) bool {
+	return func(candidate provisionerCandidate) bool {
 		return candidate.isReady
 	}
 }
 
 func hasPlacementRoles(placementRoles []string) provisionerPredicate {
-	return func(candidate *provisionerCandidate) bool {
+	return func(candidate provisionerCandidate) bool {
 		if len(placementRoles) == 0 {
 			// by default it should pick the `tenant` placement role, if no specific placement role was provided
 			placementRoles = []string{cluster.RoleLabel(cluster.Tenant)}
@@ -179,7 +179,7 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 	return b.lastUsed, nil
 }
 
-func matches(candidate *provisionerCandidate, predicates []provisionerPredicate) bool {
+func matches(candidate provisionerCandidate, predicates []provisionerPredicate) bool {
 	for _, p := range predicates {
 		if !p(candidate) {
 			return false
@@ -206,7 +206,7 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 	for _, spc := range list.Items {
 		spc := spc // to prevent the memory aliasing in a for-loop
 		candidate := provisionerCandidateFromSPC(&spc, counts)
-		if matches(&candidate, predicates) {
+		if matches(candidate, predicates) {
 			matching = append(matching, candidate)
 		}
 	}
@@ -229,18 +229,9 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 }
 
 func provisionerCandidateFromSPC(spc *toolchainv1alpha1.SpaceProvisionerConfig, counts map[string]int) provisionerCandidate {
-	var spaceCount int
-	if c, ok := counts[spc.Spec.ToolchainCluster]; ok {
-		spaceCount = c
-	} else if spc.Status.ConsumedCapacity != nil {
-		spaceCount = spc.Status.ConsumedCapacity.SpaceCount
-	} else {
-		spaceCount = 0
-	}
-
 	return provisionerCandidate{
 		clusterName:         spc.Spec.ToolchainCluster,
-		spaceCount:          spaceCount,
+		spaceCount:          counts[spc.Spec.ToolchainCluster],
 		spaceCountThreshold: int(spc.Spec.CapacityThresholds.MaxNumberOfSpaces), //nolint:gosec // this just doesn't overflow there's no way of having > 2*10^9 namespaces in a cluster
 		isReady:             condition.IsTrue(spc.Status.Conditions, toolchainv1alpha1.ConditionReady),
 		placementRoles:      spc.Spec.PlacementRoles,
