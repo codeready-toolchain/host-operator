@@ -189,7 +189,7 @@ func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string 
 
 func (r *Reconciler) createTTR(ctx context.Context, ttr *toolchainv1alpha1.TierTemplateRevision, tmplTier *toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.TierTemplateRevision, error) {
 	err := r.Client.Create(ctx, ttr)
-	if err != nil && !errors.IsAlreadyExists(err) {
+	if err != nil {
 		return nil, fmt.Errorf("unable to create TierTemplateRevision: %w", err)
 	}
 
