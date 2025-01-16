@@ -63,7 +63,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManuallyAgo(fiveYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			commonsignup.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
+			commonsignup.DeactivatedAgo(5*time.Minute),
 			commonsignup.CreatedBefore(fiveYears),
 		)
 
@@ -85,7 +85,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.ApprovedManuallyAgo(fiveYears),
-			commonsignup.DeactivatedWithLastTransitionTime(fiveYears),
+			commonsignup.DeactivatedAgo(fiveYears),
 			commonsignup.CreatedBefore(fiveYears),
 		)
 
@@ -111,7 +111,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(days(8)),
-			commonsignup.VerificationRequired(days(8)),
+			commonsignup.VerificationRequiredAgo(days(8)),
 			commonsignup.WithActivations("0"),
 		)
 
@@ -142,7 +142,7 @@ func TestUserCleanup(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(days(8)),
-			commonsignup.VerificationRequired(days(8)),
+			commonsignup.VerificationRequiredAgo(days(8)),
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when
@@ -167,7 +167,7 @@ func TestUserCleanup(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(days(8)),
-			commonsignup.VerificationRequired(days(8)),
+			commonsignup.VerificationRequiredAgo(days(8)),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -194,7 +194,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedManuallyAgo(days(40)),
-			commonsignup.VerificationRequired(days(10)),
+			commonsignup.VerificationRequiredAgo(days(10)),
 			commonsignup.WithActivations("1"),
 		)
 
@@ -216,7 +216,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedManuallyAgo(days(730+21)),
-			commonsignup.VerificationRequired(days(730+1)),
+			commonsignup.VerificationRequiredAgo(days(730+1)),
 			commonsignup.WithActivations("2"),
 		)
 
@@ -266,35 +266,35 @@ func TestUserCleanup(t *testing.T) {
 		}{
 			"test that a UserSignup older than 2 years, with 1 activation and not banned, is deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("1")),
 				expectedError:       "",
 				expectedToBeDeleted: true,
 			},
 			"test that a UserSignup older than 2 years, with indeterminate activations and not banned, is deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("unknown")),
 				expectedError:       "",
 				expectedToBeDeleted: true,
 			},
 			"test that a UserSignup 1 year old, with 1 activation and not banned, is not deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(oneYear),
+					commonsignup.DeactivatedAgo(oneYear),
 					commonsignup.WithActivations("1")),
 				expectedError:       "",
 				expectedToBeDeleted: false,
 			},
 			"test that a UserSignup older than 2 years, with 2 activations and not banned, is not deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("2")),
 				expectedError:       "",
 				expectedToBeDeleted: false,
 			},
 			"test that a UserSignup older than 2 years, with 1 activation but has been banned, is not deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("1")),
 				banned:              true,
 				expectedError:       "",
@@ -302,7 +302,7 @@ func TestUserCleanup(t *testing.T) {
 			},
 			"test that a banned UserSignup with an invalid email hash returns an error and is not deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("1"),
 					commonsignup.WithName("invalid-email-user"),
 					commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "INVALID")),
@@ -312,7 +312,7 @@ func TestUserCleanup(t *testing.T) {
 			},
 			"test that a UserSignup without an email address returns an error and is not deleted": {
 				userSignup: commonsignup.NewUserSignup(
-					commonsignup.DeactivatedWithLastTransitionTime(twoYears),
+					commonsignup.DeactivatedAgo(twoYears),
 					commonsignup.WithActivations("1"),
 					commonsignup.WithName("without-email-user"),
 					commonsignup.WithEmail("")),
@@ -371,7 +371,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test propagation policy", func(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
-			commonsignup.VerificationRequired(days(8)),
+			commonsignup.VerificationRequiredAgo(days(8)),
 		)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
