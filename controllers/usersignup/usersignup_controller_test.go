@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	. "github.com/codeready-toolchain/host-operator/pkg/space"
 
@@ -3135,7 +3136,7 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.VerificationRequired(0))
+	userSignup := commonsignup.NewUserSignup(commonsignup.VerificationRequired())
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
