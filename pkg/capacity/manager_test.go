@@ -20,89 +20,102 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func TestGetOptimalTargetCluster(t *testing.T) {
-	// given
-	ctx := context.TODO()
-	buildSpaceProvisionerConfig := func(name string, valid, has_role bool) *toolchainv1alpha1.SpaceProvisionerConfig {
-		opts := []spc.CreateOption{spc.ReferencingToolchainCluster(name)}
-		if valid {
-			opts = append(opts, spc.WithReadyConditionValid())
-		}
-		if has_role {
-			opts = append(opts, spc.WithPlacementRoles(spc.PlacementRole("tenant")))
-		}
+type memberConfig struct {
+	clusterName string
+	valid       bool
+	hasRole     bool
+	preferred   bool
+}
 
-		return spc.NewSpaceProvisionerConfig(name, commontest.HostOperatorNs, opts...)
+func (m memberConfig) isCandidate() bool {
+	return m.valid && m.hasRole
+}
+
+func (m memberConfig) buildSpaceProvisionerConfig() *toolchainv1alpha1.SpaceProvisionerConfig {
+	opts := []spc.CreateOption{spc.ReferencingToolchainCluster(m.clusterName)}
+	if m.valid {
+		opts = append(opts, spc.WithReadyConditionValid())
+	}
+	if m.hasRole {
+		opts = append(opts, spc.WithPlacementRoles(spc.PlacementRole("tenant")))
 	}
 
-	// preferred == 0 => no cluster preferred
-	//           == 1 => m1 preferred
-	//           == 2 => m2 preferred
-	for preferred := 0; preferred < 3; preferred++ {
-		// 16 because we have 4 flags that we need to produce combinations of
-		for i := 0; i < 16; i++ {
-			// the flags tell whether the m1 and m2 are valid and have the appropriate placement role
-			m1_valid := i&1 > 0
-			m1_has_role := i&2 > 0
-			m2_valid := i&4 > 0
-			m2_has_role := i&8 > 0
+	return spc.NewSpaceProvisionerConfig(m.clusterName, commontest.HostOperatorNs, opts...)
+}
 
-			// "helper" variables that will help us define the expected test outcome
-
-			m1_preferred := preferred == 1
-			m2_preferred := preferred == 2
-
-			m1_eligible := m1_valid && m1_has_role
-			m2_eligible := m2_valid && m2_has_role
-
-			var chosenMember string
-			var preferredMember string
-			if m1_preferred {
-				preferredMember = "member1"
-			} else if m2_preferred {
-				preferredMember = "member2"
-			} else {
-				preferredMember = ""
-			}
-
-			// here we define the expected test result, i.e. which member the algorithm should choose
-			if m1_eligible {
-				if m2_eligible {
-					if m1_preferred {
-						chosenMember = "member1"
-					} else if m2_preferred {
-						chosenMember = "member2"
-					} else {
-						chosenMember = "member1"
-					}
-				} else {
-					chosenMember = "member1"
-				}
-			} else if m2_eligible {
-				chosenMember = "member2"
-			} else {
-				chosenMember = ""
-			}
-
-			t.Run(fmt.Sprintf("choosing between member1(valid=%v,has_role=%v,preferred=%v) and member2(valid=%v,has_role=%v,preferred=%v) should yield %s", m1_valid, m1_has_role, m1_preferred, m2_valid, m2_has_role, m2_preferred, chosenMember), func(t *testing.T) {
-				// given
-				spc1 := buildSpaceProvisionerConfig("member1", m1_valid, m1_has_role)
-				spc2 := buildSpaceProvisionerConfig("member2", m2_valid, m2_has_role)
-				test.InitializeCountersWith(t) // no space counts necessary for this test
-				fakeClient := commontest.NewFakeClient(t, spc1, spc2)
-				cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
-
-				// when
-				clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
-					ClusterRoles:     []string{spc.PlacementRole("tenant")},
-					PreferredCluster: preferredMember,
-				})
-
-				// then
-				require.NoError(t, err)
-				assert.Equal(t, chosenMember, clusterName)
-			})
+func generateMemberConfigCombinations(name string, preferred bool) []memberConfig {
+	var combinations []memberConfig
+	for _, valid := range []bool{false, true} {
+		for _, hasRole := range []bool{false, true} {
+			combinations = append(combinations, memberConfig{clusterName: name, valid: valid, hasRole: hasRole, preferred: preferred})
 		}
+	}
+	return combinations
+}
+
+type getOptimalTargetClusterTestCase struct {
+	member1 memberConfig
+	member2 memberConfig
+}
+
+func (tc *getOptimalTargetClusterTestCase) getSelectedMemberName() string {
+	var selected string
+	if tc.member1.isCandidate() {
+		selected = tc.member1.clusterName
+		if tc.member2.isCandidate() && tc.member2.preferred {
+			selected = tc.member2.clusterName
+		}
+	} else if tc.member2.isCandidate() {
+		selected = tc.member2.clusterName
+	}
+	return selected
+}
+
+func (tc *getOptimalTargetClusterTestCase) getPreferredCluster() string {
+	if tc.member1.preferred {
+		return tc.member1.clusterName
+	} else if tc.member2.preferred {
+		return tc.member2.clusterName
+	}
+	return ""
+}
+
+func TestGetOptimalTargetCluster(t *testing.T) {
+	var testCases []getOptimalTargetClusterTestCase
+
+	// preferred == 0: no preferered cluster
+	// preferred == 1: member1 preferred
+	// preferred == 2: member2 preferred
+	for preferred := 0; preferred < 3; preferred++ {
+		member1s := generateMemberConfigCombinations("member1", preferred == 1)
+		member2s := generateMemberConfigCombinations("member2", preferred == 2)
+
+		for _, member1 := range member1s {
+			for _, member2 := range member2s {
+				testCases = append(testCases, getOptimalTargetClusterTestCase{member1: member1, member2: member2})
+			}
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("selecting between member1(%+v) and member2(%+v) should yield %s", tc.member1, tc.member2, tc.getSelectedMemberName()), func(t *testing.T) {
+			// given
+			spc1 := tc.member1.buildSpaceProvisionerConfig()
+			spc2 := tc.member2.buildSpaceProvisionerConfig()
+			test.InitializeCountersWith(t) // no space counts necessary for this test
+			fakeClient := commontest.NewFakeClient(t, spc1, spc2)
+			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
+
+			// when
+			clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{
+				ClusterRoles:     []string{spc.PlacementRole("tenant")},
+				PreferredCluster: tc.getPreferredCluster(),
+			})
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, tc.getSelectedMemberName(), clusterName)
+		})
 	}
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
@@ -113,7 +126,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
-		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
+		clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
 
 		// then
 		require.NoError(t, err)
@@ -133,7 +146,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
-		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
+		clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
 
 		// then
 		require.NoError(t, err)
@@ -156,7 +169,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
-		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
+		clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
 
 		// then
 		require.NoError(t, err)
@@ -174,7 +187,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
-		clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
+		clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{
 			PreferredCluster: "member3",                             // request specifically this member eve if it doesn't match the cluster-roles from below
 			ClusterRoles:     []string{spc.PlacementRole("tenant")}, // set
 		})
@@ -198,7 +211,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 			// when
-			clusterName, err := cm.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{})
+			clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{})
 
 			// then
 			require.EqualError(t, err, "failed to find the optimal space provisioner config: some error")
