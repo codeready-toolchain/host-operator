@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"strconv"
+
 	recaptcha "cloud.google.com/go/recaptchaenterprise/v2/apiv1"
 	recaptchapb "cloud.google.com/go/recaptchaenterprise/v2/apiv1/recaptchaenterprisepb"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -36,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strconv"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -610,7 +611,7 @@ func (r *Reconciler) generateCompliantUsername(
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
+			return "", fmt.Errorf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up", mur.Name, instance.Name)
 		}
 
 		if len(transformed) > maxlengthWithSuffix {
@@ -620,7 +621,7 @@ func (r *Reconciler) generateCompliantUsername(
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername))
+	return "", fmt.Errorf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername)
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
