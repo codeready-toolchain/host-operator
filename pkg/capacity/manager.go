@@ -25,11 +25,6 @@ type (
 	provisionerPredicate func(provisionerCandidate) bool
 )
 
-// Even though the readiness status of the SpaceProvisionerConfig is based (in part) on the space count
-// we do another check here using the fresh data from the counts cache. This is to ensure we don't
-// overcommit spaces to the clusters.
-// The returned predicate assumes that the incoming SPC has already been updated with the fresh value
-// from the counts cache.
 func checkHasNotReachedSpaceCountThreshold() provisionerPredicate {
 	return func(candidate provisionerCandidate) bool {
 		spaceCount := candidate.spaceCount
@@ -45,18 +40,18 @@ func isReady() provisionerPredicate {
 	}
 }
 
-func hasPlacementRoles(placementRoles []string) provisionerPredicate {
-	return func(candidate provisionerCandidate) bool {
-		if len(placementRoles) == 0 {
-			// by default it should pick the `tenant` placement role, if no specific placement role was provided
-			placementRoles = []string{cluster.RoleLabel(cluster.Tenant)}
-		}
+func hasPlacementRoles(requiredPlacementRoles []string) provisionerPredicate {
+	if len(requiredPlacementRoles) == 0 {
+		// by default it should pick the `tenant` placement role, if no specific placement role was provided
+		requiredPlacementRoles = []string{cluster.RoleLabel(cluster.Tenant)}
+	}
 
+	return func(candidate provisionerCandidate) bool {
 		// filter member cluster having the required placement role
 	placementCheck:
-		for _, placement := range placementRoles {
-			for _, requiredPlacement := range candidate.placementRoles {
-				if requiredPlacement == placement {
+		for _, requiredPlacement := range requiredPlacementRoles {
+			for _, placement := range candidate.placementRoles {
+				if placement == requiredPlacement {
 					continue placementCheck
 				}
 			}
