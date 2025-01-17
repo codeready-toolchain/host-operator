@@ -107,7 +107,7 @@ func TestCreateSpace(t *testing.T) {
 					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 						nstemplatetsettest.Provisioning(),
 					}
-					err := member1.Client.Update(context.TODO(), nsTmplSet)
+					err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 					require.NoError(t, err)
 					ctrl := newReconciler(hostClient, member1, member2)
 
@@ -555,7 +555,7 @@ func TestCreateSpace(t *testing.T) {
 					Name: "john-stage",
 				},
 			}
-			err := member1.Client.Update(context.TODO(), nsTmplSet)
+			err := member1.Client.Status().Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
 			ctrl := newReconciler(hostClient, member1)
 
