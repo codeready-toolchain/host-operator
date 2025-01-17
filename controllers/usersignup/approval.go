@@ -102,9 +102,8 @@ func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSign
 	clusterRoles := []string{cluster.RoleLabel(cluster.Tenant)}
 
 	clusterName, err := clusterManager.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
-		PreferredCluster:         preferredCluster,
-		ToolchainStatusNamespace: userSignup.Namespace,
-		ClusterRoles:             clusterRoles,
+		PreferredCluster: preferredCluster,
+		ClusterRoles:     clusterRoles,
 	})
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
