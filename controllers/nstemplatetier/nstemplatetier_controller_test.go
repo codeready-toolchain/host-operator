@@ -102,11 +102,8 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
+				require.Equal(t, reconcile.Result{RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
-				tierTemplatesRefs := []string{
-					"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
-				}
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were NOT created when using TierTemplates as revisions
@@ -163,13 +160,13 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
+				require.Equal(t, reconcile.Result{RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
 				// check that revisions field was populated
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were created
 				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).
-					ExistsFor("base1ns", tierTemplatesRefs...).ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
+					ExistFor("base1ns", tierTemplatesRefs...).ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
 					// verify the content of the TierTemplate matches the one of the TTR
 					templateRef, ok := ttr.GetLabels()[toolchainv1alpha1.TemplateRefLabelKey]
 					assert.True(t, ok)
@@ -225,7 +222,10 @@ func TestReconcile(t *testing.T) {
 				// the NSTemplateTier has already the status.revisions field populated
 				// but the TierTemplateRevision CRs are missing
 				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
-				base1nsTierWithRevisions := base1nsTier
+				base1nsTierWithRevisions := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+					// the tiertemplate revision CR should have a copy of those parameters
+					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
+				)
 				initialRevisions := map[string]string{
 					"base1ns-admin-123456new":            "base1ns-admin-123456new-abcd",
 					"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-abcd",

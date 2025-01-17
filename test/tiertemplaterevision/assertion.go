@@ -40,8 +40,8 @@ func (a *Assertion) DoNotExist() *Assertion {
 	return a
 }
 
-// ExistsFor verifies that there are TTRs with given labels
-func (a *Assertion) ExistsFor(tierName string, tierTemplateRef ...string) *Assertion {
+// ExistFor verifies that there are TTRs with given labels
+func (a *Assertion) ExistFor(tierName string, tierTemplateRef ...string) *Assertion {
 	for _, templateRef := range tierTemplateRef {
 		labels := map[string]string{
 			toolchainv1alpha1.TierLabelKey:        tierName,
