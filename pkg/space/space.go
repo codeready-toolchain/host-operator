@@ -46,7 +46,8 @@ func NewSpaceWithFeatureToggles(userSignup *toolchainv1alpha1.UserSignup, target
 func addFeatureToggles(space *toolchainv1alpha1.Space, toggles []toolchainconfig.FeatureToggle) {
 	var winners []string
 	for _, t := range toggles {
-		weight := int(t.Weight())
+		//the value of weight is not expected to go beyond 100, it won't overflow, hence its okay to ignore the overflow linter error
+		weight := int(t.Weight()) // nolint:gosec
 		// We generate a random number between 0 and 100. If the number is equal to or lower than the weight
 		// then the feature wins.
 		// We don't use recommended crypto/rand here because we don't need crypto grade random generator

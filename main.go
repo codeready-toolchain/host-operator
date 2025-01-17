@@ -471,10 +471,10 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 			}
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create member cluster definition for "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to create member cluster definition for '%s': %w", memberConfig.Name, err)
 		}
 		if err := mgr.Add(memberCluster); err != nil {
-			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to add member cluster to the manager for '%s' : %w", memberConfig.Name, err)
 		}
 		// These fields need to be set when using the REST client
 		memberConfig.RestConfig.ContentConfig = rest.ContentConfig{
@@ -483,7 +483,7 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 		}
 		restClient, err := rest.RESTClientFor(memberConfig.RestConfig)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create member cluster rest client "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to create member cluster rest client '%s' : %w", memberConfig.Name, err)
 		}
 		memberClusters[memberConfig.Name] = cluster.Cluster{
 			Config:     memberConfig,
