@@ -1,12 +1,12 @@
 FROM registry.access.redhat.com/ubi8/ubi:latest as build-tools
 
-LABEL maintainer "Developer Sandbox <devsandbox@redhat.com>"
-LABEL author "Developer Sandbox <devsandbox@redhat.com>"
+LABEL maintainer "KubeSaw <devsandbox@redhat.com>"
+LABEL author "KubeSaw <devsandbox@redhat.com>"
 
 ENV LANG=en_US.utf8 \
     GOPATH=/tmp/go \
     GOCACHE=/tmp/.cache \
-    GIT_COMMITTER_NAME="Developer Sandbox" \
+    GIT_COMMITTER_NAME="KubeSaw" \
     GIT_COMMITTER_EMAIL=devsandbox@redhat.com \
     GOLANG_VERSION=go1.20.11 \
     GOLANG_SHA256=ef79a11aa095a08772d2a69e4f152f897c4e96ee297b0dc20264b7dec2961abe

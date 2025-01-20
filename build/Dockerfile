@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-LABEL maintainer "Developer Sandbox <devsandbox@redhat.com>"
-LABEL author "Developer Sandbox <devsandbox@redhat.com>"
+LABEL maintainer "KubeSaw <devsandbox@redhat.com>"
+LABEL author "KubeSaw <devsandbox@redhat.com>"
 
 ENV OPERATOR=/usr/local/bin/host-operator \
     USER_UID=1001 \
