@@ -27,8 +27,13 @@ type CounterAssertion struct {
 	counts counter.Counts
 }
 
+type CountPerCluster struct {
+	clusterName string
+	count       int
+}
+
 func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCounts()
+	counts, err := counter.GetCountsSnapshot()
 	require.NoError(t, err)
 	return &CounterAssertion{
 		t:      t,
@@ -37,7 +42,7 @@ func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
 }
 
 func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCounts()
+	counts, err := counter.GetCountsSnapshot()
 	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
 	return &CounterAssertion{
 		t:      t,
@@ -109,8 +114,34 @@ func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1al
 	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
+// InitializeCountersWith initializes the count cache from the counts parameter.
+func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
+	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
+	counter.Reset()
+	t.Cleanup(counter.Reset)
+
+	// we need the metrics to be present in the toolchain status so that we force the initialization of the counters from the toolchain status.
+	// without the metrics, the counters would be intialized from MURs and user signups in the cluster (and because we're using a throw-away
+	// fake client with no objects in it, that wouldn't work).
+	options := []ToolchainStatusOption{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
+	}
+
+	for _, count := range counts {
+		options = append(options, WithMember(count.clusterName, WithSpaceCount(count.count)))
+	}
+
+	toolchainStatus := NewToolchainStatus(options...)
+	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+}
+
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
 	err := counter.Synchronize(context.TODO(), cl, toolchainStatus)
 	require.NoError(t, err)
+}
+
+func ClusterCount(clusterName string, count int) CountPerCluster {
+	return CountPerCluster{clusterName: clusterName, count: count}
 }
