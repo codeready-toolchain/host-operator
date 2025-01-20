@@ -3,12 +3,13 @@ package deactivation
 import (
 	"context"
 	"fmt"
-	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
-	"github.com/pkg/errors"
 	"os"
 	"testing"
 	"time"
+
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+	"github.com/pkg/errors"
 
 	"github.com/gofrs/uuid"
 
@@ -763,7 +764,7 @@ func TestReconcile(t *testing.T) {
 	})
 }
 
-func TestAutomaticDeactivation(t *testing.T) {
+func TestAutomaticDeactivationWithoutDeactivating(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(0))
 
 	// UserTiers
@@ -788,21 +789,9 @@ func TestAutomaticDeactivation(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 
-	// The user should be deactivating
-	reloaded := &toolchainv1alpha1.UserSignup{}
-	err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupMember1.Name, Namespace: operatorNamespace}, reloaded)
-	require.NoError(t, err)
-	require.True(t, states.Deactivating(reloaded))
-
-	// reconcile again
-	r, req, cl = prepareReconcile(t, mur.Name, userTier30, mur, reloaded, config)
-	_, err = r.Reconcile(context.TODO(), req)
-	require.NoError(t, err)
-
-	// Reload the usersignup, they should now be in a deactivated state
-	err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupMember1.Name, Namespace: operatorNamespace}, reloaded)
-	require.NoError(t, err)
-	require.True(t, states.Deactivated(reloaded))
+	// then
+	// the usersignup should be in a deactivated state
+	assertThatUserSignupStateIsDeactivated(t, cl, userSignupMember1.Name, true)
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (reconcile.Reconciler, reconcile.Request, *commontest.FakeClient) {

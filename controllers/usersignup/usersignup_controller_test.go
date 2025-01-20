@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	. "github.com/codeready-toolchain/host-operator/pkg/space"
 
@@ -1000,8 +1000,8 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
 
-	spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(60))
-	spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(60))
+	spc1 := hspc.NewEnabledTenantSPC("member1")
+	spc2 := hspc.NewEnabledTenantSPC("member2")
 	config := commonconfig.NewToolchainConfigObjWithReset(t,
 		testconfig.AutomaticApproval().Enabled(true))
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, config, baseNSTemplateTier)
@@ -2078,14 +2078,6 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup,
 		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
 		baseNSTemplateTier, deactivate30Tier)
-	InitializeCounters(t, NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,external": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}),
-	))
 
 	// when - The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(context.TODO(), req)
@@ -2960,11 +2952,6 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur,
 		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
-	InitializeCounters(t, NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}),
-	))
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -3135,7 +3122,7 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.VerificationRequired(0))
+	userSignup := commonsignup.NewUserSignup(commonsignup.VerificationRequired())
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
@@ -3499,14 +3486,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
-		InitializeCounters(t, NewToolchainStatus(
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.External): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,external": 1,
-			}),
-		))
 
 		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			switch obj.(type) {
@@ -3520,7 +3499,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
-
 	})
 }
 
@@ -3779,8 +3757,6 @@ func TestGenerateUniqueCompliantUsername(t *testing.T) {
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
 			r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, baseNSTemplateTier,
 				deactivate30Tier, params.conflictingObject, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-
-			InitializeCounters(t, NewToolchainStatus())
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -4077,7 +4053,6 @@ func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
-	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -4094,9 +4069,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 			"token": []byte("mycooltoken"),
 		},
 	}
-
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+
+	InitializeCounters(t, toolchainStatus)
 
 	initObjs = append(initObjs, secret, toolchainStatus)
 
@@ -4149,11 +4125,6 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", prefix, name)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, baseNSTemplateTier, deactivate30Tier)
-			InitializeCounters(t, NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.External): 1,
-				}),
-			))
 
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -4194,11 +4165,6 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			userSignup.Spec.IdentityClaims.PreferredUsername = fmt.Sprintf("%s%s", name, suffix)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, baseNSTemplateTier, deactivate30Tier)
-			InitializeCounters(t, NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.External): 1,
-				}),
-			))
 
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -4246,11 +4212,6 @@ func TestChangedCompliantUsername(t *testing.T) {
 	}
 	// create the initial resources
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, baseNSTemplateTier, deactivate30Tier)
-	InitializeCounters(t, NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}),
-	))
 
 	// 1st reconcile should provision a new MUR
 	res, err := r.Reconcile(context.TODO(), req)
@@ -4329,7 +4290,6 @@ func TestMigrateMur(t *testing.T) {
 	t.Run("mur should be migrated", func(t *testing.T) {
 		// given
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, baseNSTemplateTier, oldMur, deactivate30Tier)
-		InitializeCounters(t, NewToolchainStatus())
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -4542,7 +4502,6 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, baseNSTemplateTier, deactivate30Tier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-		InitializeCounters(t, NewToolchainStatus())
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4557,15 +4516,13 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			HasTargetCluster("member1")
 	})
 
-	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
+	t.Run("last target cluster annotation is set but cluster is not ready", func(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup()
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
-		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxMemoryUtilizationPercent(70))
-		// member2 cluster lacks capacity because the prepareReconcile only sets up the resource consumption for member1 so member2 is automatically excluded
-		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxMemoryUtilizationPercent(75))
+		spc1 := hspc.NewEnabledValidTenantSPC("member1")
+		spc2 := hspc.NewEnabledTenantSPC("member2")
 		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, baseNSTemplateTier, deactivate30Tier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-		InitializeCounters(t, NewToolchainStatus())
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4578,22 +4535,19 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTargetCluster("member1")
 	})
 
-	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
+	t.Run("last target cluster annotation is set and cluster is ready", func(t *testing.T) {
 		// given
 		userSignup := commonsignup.NewUserSignup()
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, baseNSTemplateTier, deactivate30Tier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-		InitializeCounters(t, NewToolchainStatus())
 
-		// set acceptable capacity for member2 cluster
-		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: toolchainconfig.ToolchainStatusName, Namespace: req.Namespace}, toolchainStatus)
-		require.NoError(t, err)
-		WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65))(toolchainStatus)
-		err = r.Client.Status().Update(context.TODO(), toolchainStatus)
-		require.NoError(t, err)
+		// make the member2 SPC valid so that we simulate that it now has enough capacity
+		member2Spc := &toolchainv1alpha1.SpaceProvisionerConfig{}
+		require.NoError(t, r.Client.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc2), member2Spc))
+		spc.ModifySpaceProvisionerConfig(member2Spc, spc.WithReadyConditionValid())
+		require.NoError(t, r.Client.Status().Update(context.TODO(), member2Spc))
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4614,7 +4568,6 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, baseNSTemplateTier, deactivate30Tier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-		InitializeCounters(t, NewToolchainStatus())
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -4649,7 +4602,6 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			}
 			return nil
 		}
-		InitializeCounters(t, NewToolchainStatus())
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)

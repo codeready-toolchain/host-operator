@@ -178,29 +178,6 @@ func WithoutClusterResources() TierOption {
 	}
 }
 
-// WithPreviousUpdates adds the given entries in the `status.updates`
-func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) TierOption {
-	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		tier.Status.Updates = entries
-	}
-}
-
-// WithCurrentUpdate appends an entry in the `status.updates` for the current tier
-func WithCurrentUpdate() TierOption {
-	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		hash, _ := hash.ComputeHashForNSTemplateTier(tier)
-		if tier.Status.Updates == nil {
-			tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{}
-		}
-		tier.Status.Updates = append(tier.Status.Updates,
-			toolchainv1alpha1.NSTemplateTierHistory{
-				StartTime: metav1.Now(),
-				Hash:      hash,
-			},
-		)
-	}
-}
-
 // OtherTier returns an "other" NSTemplateTier
 func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 	return &toolchainv1alpha1.NSTemplateTier{
