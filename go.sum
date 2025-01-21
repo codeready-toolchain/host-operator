@@ -36,10 +36,6 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/api v0.0.0-20250116110936-14cd9cc79fc6 h1:vr7dQouJ7J5MzAIemBVRVDHHFGM67+fMQSQxFSXIw+4=
-github.com/codeready-toolchain/api v0.0.0-20250116110936-14cd9cc79fc6/go.mod h1:2KYfJlFwZtiKfa5QDhQfXTFh6RyALilURWBXyfKmKso=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250113092648-1078d683961b h1:zlLUDN9ddogCX8hzuPrIdS/YpAF8siucA5b56zGUz00=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250113092648-1078d683961b/go.mod h1:wLXGFyEan+RJHZEEMmvTxNa2BrlizIA+4+Lsi1cyuAk=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -202,8 +198,8 @@ github.com/onsi/ginkgo/v2 v2.14.0 h1:vSmGj2Z5YPb9JwCWT6z6ihcUvDhuXLc3sJiqd3jMKAY
 github.com/onsi/ginkgo/v2 v2.14.0/go.mod h1:JkUdW7JkN0V6rFvsHcJ478egV3XH9NxpD27Hal/PhZw=
 github.com/onsi/gomega v1.30.0 h1:hvMK7xYz4D3HapigLTeGdId/NcfQx1VHMJc60ew99+8=
 github.com/onsi/gomega v1.30.0/go.mod h1:9sxs+SwGrKI0+PWe4Fxa9tFQQBG5xSsSbMXOI8PPpoQ=
-github.com/openshift/api v0.0.0-20241031180523-b1c90a6cf9a3 h1:QXptzhiO7WovLZSaXb4ig4Cd+ROctyyIJ2Tuw/Du4VI=
-github.com/openshift/api v0.0.0-20241031180523-b1c90a6cf9a3/go.mod h1:yimSGmjsI+XF1mr+AKBs2//fSXIOhhetHGbMlBEfXbs=
+github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094 h1:J1wuGhVxpsHykZBa6Beb1gQ96Ptej9AE/BvwCBiRj1E=
+github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094/go.mod h1:CxgbWAlvu2iQB0UmKTtRu1YfepRg1/vJ64n2DlIEVz4=
 github.com/openshift/library-go v0.0.0-20240711192904-190fec8c3f09 h1:2Ed1mxJTRFpbHIynxkuIyADeWdtyQ6NEZkTaf0wG39M=
 github.com/openshift/library-go v0.0.0-20240711192904-190fec8c3f09/go.mod h1:lFwyRj0XjUf25Da3Q00y+KuaxCWTJ6YzYPDX1+96nco=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -220,6 +216,10 @@ github.com/prometheus/common v0.45.0 h1:2BGz0eBc2hdMDLnO/8n0jeB3oPrt2D08CekT0lne
 github.com/prometheus/common v0.45.0/go.mod h1:YJmSTw9BoKxJplESWWxlbyttQR4uaEcGyv9MZjVOJsY=
 github.com/prometheus/procfs v0.12.0 h1:jluTpSng7V9hY0O2R9DzzJHYb2xULk9VTR1V1R/k6Bo=
 github.com/prometheus/procfs v0.12.0/go.mod h1:pcuDEFsWDnvcgNzo4EEweacyhjeA9Zk3cnaOZAZEfOo=
+github.com/ranakan19/api v0.0.0-20250121091246-7a7d250373e5 h1:zzuJ6HcgmPUGahwI/AWSYsZrC/acAR2JRKNgOUiWSjQ=
+github.com/ranakan19/api v0.0.0-20250121091246-7a7d250373e5/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
+github.com/ranakan19/toolchain-common v0.0.0-20250121092422-5fff10b563f5 h1:/ik6peBZbpqRIlbPUgZ1mFUqjAYEb8L0oxnXGErYjZI=
+github.com/ranakan19/toolchain-common v0.0.0-20250121092422-5fff10b563f5/go.mod h1:kuy1KDDPRpYJTYCoJTz3LdBo3mrmNR5CGYq5pYCbQdE=
 github.com/redhat-cop/operator-utils v1.3.8 h1:xhoMBg2snSzNdcxT53lSBr7PRXxrzP1cDi51NPBLaT4=
 github.com/redhat-cop/operator-utils v1.3.8/go.mod h1:s4R0YY8lVlHkC78GLV20PPuZmywjSbTwZKCHwWUQ3P8=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=

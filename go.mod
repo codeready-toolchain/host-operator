@@ -10,7 +10,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/mailgun/mailgun-go/v4 v4.8.1
 	// using latest commit from 'github.com/openshift/api branch release-4.16'
-	github.com/openshift/api v0.0.0-20241031180523-b1c90a6cf9a3
+	github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094
 	// using latest commit from 'github.com/openshift/library-go branch release-4.16'
 	github.com/openshift/library-go v0.0.0-20240711192904-190fec8c3f09 // indirect
 	github.com/pkg/errors v0.9.1
@@ -130,6 +130,6 @@ require (
 go 1.21
 
 replace (
-	github.com/codeready-toolchain/api v0.0.0-20241119094246-f6581d52dc80 => github.com/ranakan19/api v0.0.0-20250107102252-82f0c9b9a4b9
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20241128143121-e2e3546a35e9 => github.com/ranakan19/toolchain-common v0.0.0-20250107103332-9c6116d21bd0
+	github.com/codeready-toolchain/api v0.0.0-20250116110936-14cd9cc79fc6 => github.com/ranakan19/api v0.0.0-20250121091246-7a7d250373e5
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20250113092648-1078d683961b => github.com/ranakan19/toolchain-common v0.0.0-20250121092422-5fff10b563f5
 )
