@@ -94,8 +94,7 @@ func (r *Reconciler) ensureFields(ctx context.Context, space *toolchainv1alpha1.
 
 	if space.Spec.TargetCluster == "" {
 		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster(ctx, capacity.OptimalTargetClusterFilter{
-			ToolchainStatusNamespace: space.Namespace,
-			ClusterRoles:             space.Spec.TargetClusterRoles,
+			ClusterRoles: space.Spec.TargetClusterRoles,
 		})
 		if err != nil {
 			return false, errs.Wrapf(err, "unable to get the optimal target cluster")
