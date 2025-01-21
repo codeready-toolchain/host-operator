@@ -111,8 +111,8 @@ ifeq ($(E2E_REPO_PATH),"")
 		@echo "branch ref of the user's fork: \"${REMOTE_E2E_BRANCH}\" - if empty then not found"
 		# check if the branch with the same name exists, if so then merge it with master and use the merge branch, if not then use master
 		if [[ -n "${REMOTE_E2E_BRANCH}" ]]; then \
-			git config --global user.email "devtools@redhat.com"; \
-			git config --global user.name "Devtools"; \
+			git config --global user.email "devsandbox@redhat.com"; \
+			git config --global user.name "KubeSaw"; \
 			# add the user's fork as remote repo \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} remote add external ${AUTHOR_LINK}/toolchain-e2e.git; \
 			# fetch the branch \
