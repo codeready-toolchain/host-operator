@@ -1,4 +1,4 @@
-OWNER_AND_BRANCH_LOCATION=codeready-toolchain/toolchain-cicd/master
+OWNER_AND_BRANCH_LOCATION=ranakan19/toolchain-cicd/openshift_4_16_cicd
 GH_SCRIPTS_URL=https://raw.githubusercontent.com/${OWNER_AND_BRANCH_LOCATION}
 
 .PHONY: run-cicd-script
