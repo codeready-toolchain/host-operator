@@ -305,6 +305,35 @@ func TestReconcile(t *testing.T) {
 			})
 
 		})
+
+		t.Run("if being deleted, then do nothign", func(t *testing.T) {
+			// given
+			tierBeingDeleted := base1nsTier.DeepCopy()
+			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			tierBeingDeleted.Finalizers = []string{"dummy"}
+			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
+			called := false
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+				if called {
+					return fmt.Errorf("should not call Get more than once")
+				}
+				called = true
+				return cl.Client.Get(ctx, key, obj, opts...)
+			}
+			cl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				return fmt.Errorf("should not call Create")
+			}
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
+				return fmt.Errorf("should not call StatusUpdate")
+			}
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			assert.Empty(t, res.Requeue)
+		})
 	})
 
 }
@@ -325,7 +354,7 @@ func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension,
 	return tierTemplates
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Object) (*nstemplatetier.Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
