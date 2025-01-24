@@ -3,6 +3,7 @@ package nstemplatetier
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -146,15 +147,25 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 				return false, "", err
 			}
 		}
-		// TODO compare TierTemplate content with TTR content
 		// if the TierTemplate has changes we need to create new TTR
+		// compare TierTemplate content with TTR content
+		if !reflect.DeepEqual(tierTemplate.Spec.TemplateObjects, tierTemplateRevision.Spec.TemplateObjects) {
+			ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+			return true, ttrName, err
+		}
+		// even when there are changes to the NSTemplateTiers parameters we need to create a new TTR
+		if !reflect.DeepEqual(nsTmplTier.Spec.Parameters, tierTemplateRevision.Spec.Parameters) {
+			ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+			return true, ttrName, err
+		}
+
+		// nothing changed
+		return false, tierTemplateRevisionName, nil
 	} else {
 		// no revision was set for this TierTemplate CR, let's create a TTR for it
 		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
 		return true, ttrName, err
 	}
-	// nothing changed
-	return false, "", nil
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {
