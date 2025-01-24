@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -54,6 +55,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, fmt.Errorf("unable to get the current NSTemplateTier: %w", err)
+	}
+	// if the NSTemplateTier is being deleted, then do nothing
+	if util.IsBeingDeleted(tier) {
+		return reconcile.Result{}, nil
 	}
 
 	_, err := toolchainconfig.GetToolchainConfig(r.Client)
@@ -222,7 +227,7 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	ttr := &toolchainv1alpha1.TierTemplateRevision{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    tierTmpl.GetNamespace(),
-			GenerateName: newTTRName + "-",
+			GenerateName: newTTRName,
 			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{
