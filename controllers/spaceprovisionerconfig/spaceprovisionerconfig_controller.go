@@ -28,7 +28,7 @@ type Reconciler struct {
 
 var _ reconcile.Reconciler = (*Reconciler)(nil)
 
-func GetToolchainClusterConditions(obj runtimeclient.Object) []toolchainv1alpha1.Condition {
+func getToolchainClusterConditions(obj runtimeclient.Object) []toolchainv1alpha1.Condition {
 	tc, ok := obj.(*toolchainv1alpha1.ToolchainCluster)
 	if !ok {
 		return nil
@@ -42,18 +42,18 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&toolchainv1alpha1.ToolchainCluster{},
 			handler.EnqueueRequestsFromMapFunc(mapToolchainClusterToSpaceProvisionerConfigs(r.Client)),
-			builder.WithPredicates(predicate.Or(
+			builder.WithPredicates(
 				// NOTE: this is ignoring the changes in the Spec as well as the Status.OperatorNamespace or Status.APIEndpoint
 				//
 				// The spec of the TC contains just the reference to the secret with the connection information. We're not actually
-				// interested in that change here because the SPC is not interested HOW we connect to the cluster rather IF
+				// interested in that change here because the SPC is not interested in HOW we connect to the cluster but rather IF
 				// we're connected to the cluster.
 				//
 				// For the same reason we're not actually interested in the values of the Status.OperatorNamespace or Status.APIEndpoint.
 				//
 				// So in another words, we're only interested in the change of the ready condition of the TC.
-				&toolchainpredicate.ToolchainConditionChanged{GetConditions: GetToolchainClusterConditions, Type: toolchainv1alpha1.ConditionReady},
-			)),
+				&toolchainpredicate.ToolchainConditionChanged{GetConditions: getToolchainClusterConditions, Type: toolchainv1alpha1.ConditionReady},
+			),
 		).
 		// we use the same information as the ToolchainStatus specific for the SPCs. Because memory consumption is
 		// read directly out of the member clusters using remote connections, let's look for it only once
