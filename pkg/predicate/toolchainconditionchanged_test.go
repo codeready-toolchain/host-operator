@@ -60,11 +60,37 @@ func TestToolchainConditionChangedPredicate(t *testing.T) {
 			ObjectNew: tcNew,
 		}
 
-		// when
-		result := predicate.Update(ev)
+		t.Run("update", func(t *testing.T) {
+			// when
+			result := predicate.Update(ev)
 
-		// then
-		assert.Equal(t, expectedResult, result)
+			// then
+			assert.Equal(t, expectedResult, result)
+		})
+
+		t.Run("create", func(t *testing.T) {
+			// when
+			result := predicate.Create(event.CreateEvent{Object: tcNew})
+
+			// then
+			assert.True(t, result)
+		})
+
+		t.Run("delete", func(t *testing.T) {
+			// when
+			result := predicate.Delete(event.DeleteEvent{Object: tcNew})
+
+			// then
+			assert.True(t, result)
+		})
+
+		t.Run("generic", func(t *testing.T) {
+			// when
+			result := predicate.Generic(event.GenericEvent{Object: tcNew})
+
+			// then
+			assert.True(t, result)
+		})
 	}
 
 	t.Run("ignores no change", func(t *testing.T) {
@@ -114,7 +140,12 @@ func TestToolchainConditionChangedPredicate(t *testing.T) {
 			old.Status.Conditions = nil
 		})
 	})
-
+	t.Run("ignores missing conditions", func(t *testing.T) {
+		test(t, false, func(old, new *toolchainv1alpha1.ToolchainCluster) {
+			new.Status.Conditions = nil
+			old.Status.Conditions = nil
+		})
+	})
 	t.Run("detects change when condition disappears", func(t *testing.T) {
 		test(t, true, func(old, new *toolchainv1alpha1.ToolchainCluster) {
 			new.Status.Conditions = nil

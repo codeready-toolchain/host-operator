@@ -58,9 +58,5 @@ func (t *ToolchainConditionChanged) Update(evt event.UpdateEvent) bool {
 
 	// we're intentionally ignoring changes to *Time fields of the conditions. If nothing else changed, those do not represent a factual
 	// change in the condition.
-	if oldCond.Status != newCond.Status || oldCond.Reason != newCond.Reason || oldCond.Message != newCond.Message {
-		return true
-	}
-
-	return false
+	return oldCond.Status != newCond.Status || oldCond.Reason != newCond.Reason || oldCond.Message != newCond.Message
 }
