@@ -153,19 +153,19 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 			}
 		}
 		// if the TierTemplate has changes we need to create new TTR
-		// compare TierTemplate content with TTR content
-		if !reflect.DeepEqual(tierTemplate.Spec.TemplateObjects, tierTemplateRevision.Spec.TemplateObjects) {
-			ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-			return true, ttrName, err
+		// if the TierTemplate objects are the same as they are in the TTR
+		// and the parameters are the same, too, we don't have to create 
+		// a new revision.
+		if reflect.DeepEqual(tierTemplate.Spec.TemplateObjects, tierTemplateRevision.Spec.TemplateObjects) && reflect.DeepEqual(nsTmplTier.Spec.Parameters, tierTemplateRevision.Spec.Parameters) {
+			return false, tierTemplateRevisionName, nil
 		}
-		// even when there are changes to the NSTemplateTiers parameters we need to create a new TTR
-		if !reflect.DeepEqual(nsTmplTier.Spec.Parameters, tierTemplateRevision.Spec.Parameters) {
-			ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-			return true, ttrName, err
+		
+		// there are some changes, a new TTR is needed
+		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+		if err != nil {
+			return false, "", err
 		}
-
-		// nothing changed
-		return false, tierTemplateRevisionName, nil
+		return true, ttrName, nil
 	} else {
 		// no revision was set for this TierTemplate CR, let's create a TTR for it
 		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
