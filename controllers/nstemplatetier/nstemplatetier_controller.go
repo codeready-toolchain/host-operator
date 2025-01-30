@@ -137,40 +137,42 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		return false, "", nil
 	}
 
-	if tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]; found {
-		logger.Info("TTR set in the status.revisions for tiertemplate", "tierTemplate.Name", tierTemplate.GetName(), "ttr.Name", tierTemplateRevisionName)
-		var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
-			if errors.IsNotFound(err) {
-				// no tierTemplateRevision CR was found,
-				logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
-				// let's create one
-				ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-				return true, ttrName, err
-			} else {
-				// something wrong happened
-				return false, "", err
-			}
-		}
-		// if the TierTemplate has changes we need to create new TTR
-		// if the TierTemplate objects are the same as they are in the TTR
-		// and the parameters are the same, too, we don't have to create 
-		// a new revision.
-		if reflect.DeepEqual(tierTemplate.Spec.TemplateObjects, tierTemplateRevision.Spec.TemplateObjects) && reflect.DeepEqual(nsTmplTier.Spec.Parameters, tierTemplateRevision.Spec.Parameters) {
-			return false, tierTemplateRevisionName, nil
-		}
-		
-		// there are some changes, a new TTR is needed
-		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
-		if err != nil {
-			return false, "", err
-		}
-		return true, ttrName, nil
-	} else {
+	tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]
+	if !found {
 		// no revision was set for this TierTemplate CR, let's create a TTR for it
 		ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
 		return true, ttrName, err
 	}
+
+	logger.Info("TTR set in the status.revisions for tiertemplate", "tierTemplate.Name", tierTemplate.GetName(), "ttr.Name", tierTemplateRevisionName)
+	var tierTemplateRevision toolchainv1alpha1.TierTemplateRevision
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: nsTmplTier.GetNamespace(), Name: tierTemplateRevisionName}, &tierTemplateRevision); err != nil {
+		if errors.IsNotFound(err) {
+			// no tierTemplateRevision CR was found,
+			logger.Info("TTR CR not found", "tierTemplateRevision.Name", tierTemplateRevisionName)
+			// let's create one
+			ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+			return true, ttrName, err
+		} else {
+			// something wrong happened
+			return false, "", err
+		}
+	}
+	// if the TierTemplate has changes we need to create new TTR
+	// if the TierTemplate objects are the same as they are in the TTR
+	// and the parameters are the same, too, we don't have to create
+	// a new revision.
+	if reflect.DeepEqual(tierTemplate.Spec.TemplateObjects, tierTemplateRevision.Spec.TemplateObjects) && reflect.DeepEqual(nsTmplTier.Spec.Parameters, tierTemplateRevision.Spec.Parameters) {
+		return false, tierTemplateRevisionName, nil
+	}
+
+	// there are some changes, a new TTR is needed
+	ttrName, err := r.createNewTierTemplateRevision(ctx, nsTmplTier, tierTemplate)
+	if err != nil {
+		return false, "", err
+	}
+	return true, ttrName, nil
+
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {
