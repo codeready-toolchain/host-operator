@@ -11,7 +11,10 @@ spec:
     - path: /metrics
       port: https
       scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      authorization:
+        credentials:
+          key: token
+          name: metrics-reader
       tlsConfig:
         insecureSkipVerify: true
   selector:
