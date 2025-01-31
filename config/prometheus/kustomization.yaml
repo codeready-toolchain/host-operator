@@ -1,4 +1,0 @@
-resources:
-- monitor.yaml
-- rbac.yaml
-- serviceaccount.yaml
