@@ -73,7 +73,7 @@ objects:
     scopes:
     - NotTerminating
     hard:
-      limits.cpu: 20000m
+      limits.cpu: 30000m
       limits.memory: ${MEMORY_LIMIT}
       requests.cpu: 3000m
       requests.memory: ${MEMORY_REQUEST}
