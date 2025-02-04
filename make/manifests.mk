@@ -19,7 +19,10 @@ generate-cd-release-manifests:
 ifneq (${OTHER_REPO_PATH},"")
 	$(eval OTHER_REPO_PATH_PARAM = -orp ${OTHER_REPO_PATH})
 endif
-	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/generate-cd-release-manifests.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -td ${TMP_DIR} -fr ${FIRST_RELEASE} -ch ${CHANNEL} -il ${IMAGE} ${OTHER_REPO_PATH_PARAM}"
+ifneq (${REPLACE_OPERATOR_VERSION},"")
+	$(eval REPLACE_OPERATOR_VERSION_PARAM = -rv ${REPLACE_OPERATOR_VERSION})
+endif
+	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/generate-cd-release-manifests.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -td ${TMP_DIR} -fr ${FIRST_RELEASE} -ch ${CHANNEL} -il ${IMAGE} ${OTHER_REPO_PATH_PARAM} ${REPLACE_OPERATOR_VERSION_PARAM}"
 
 .PHONY: push-bundle-and-index-image
 ## Pushes generated manifests as a bundle image to quay and adds is to the image index
