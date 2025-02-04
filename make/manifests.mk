@@ -8,6 +8,7 @@ INDEX_IMAGE_TAG=latest
 NEXT_VERSION=0.0.1
 OTHER_REPO_PATH=""
 BUNDLE_TAG=""
+REPLACE_OPERATOR_VERSION=""
 
 .PHONY: push-to-quay-staging
 ## Creates a new version of operator bundle, adds it into an index and pushes it to quay
