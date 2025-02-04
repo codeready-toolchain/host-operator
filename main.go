@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"time"
 
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
@@ -198,15 +200,17 @@ func main() { // nolint:gocyclo
 			}
 		}()
 	}
-
+	// Webhook server will be created with default values (port 9443) as per doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/manager/manager.go#L244-L247
+	// Cache Options design doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/designs/cache_options.md
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "dc07038f.toolchain.host.operator",
-		Namespace:              namespace,
+		Cache:                  cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -460,7 +464,7 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 			// for some resources like SpaceRequest/SpaceBindingRequest we need the cache to be clustered scoped
 			// because those resources are in user namespaces and not member operator namespace.
 			if namespacedCache {
-				options.Cache.Namespaces = []string{memberConfig.OperatorNamespace}
+				options.Cache.DefaultNamespaces = map[string]cache.Config{memberConfig.OperatorNamespace: {}}
 			}
 		})
 		if err != nil {
