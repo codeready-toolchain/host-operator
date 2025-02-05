@@ -41,15 +41,7 @@ func TestCreateSpace(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	t.Run("success", func(t *testing.T) {
 		type testRun struct {
 			name           string
@@ -587,15 +579,7 @@ func TestDeleteSpace(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	t.Run("after space was successfully provisioned", func(t *testing.T) {
 
 		// given a space that is being deleted
@@ -917,32 +901,12 @@ func TestUpdateSpaceTier(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	// get an older base1ns tier (with outdated references)
 	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates)
-	olderbase1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456old":             "base1ns-code-123456old",
-		"base1ns-dev-123456old":              "base1ns-dev-123456old",
-		"base1ns-stage-123456old":            "base1ns-stage-123456old",
-		"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
-		"base1ns-admin-123456old":            "base1ns-admin-123456old",
-		"base1ns-viewer-123456old":           "base1ns-viewer-123456old",
-	}
+	olderbase1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	otherTier := tiertest.OtherTier()
-	otherTier.Status.Revisions = map[string]string{
-		"other-code-123456a":             "other-code-123456a",
-		"other-dev-123456a":              "other-dev-123456a",
-		"other-stage-123456a":            "other-stage-123456a",
-		"other-clusterresources-123456a": "other-clusterresources-123456a",
-	}
+	otherTier.Status.Revisions = tiertest.OtherTierRevision
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
 		// given that Space is promoted from `base1ns` to `other` tier and corresponding NSTemplateSet is not up-to-date
@@ -1562,15 +1526,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	adminMUR := murtest.NewMasterUserRecord(t, "jack")
 	viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 	johnMUR := murtest.NewMasterUserRecord(t, "john")
@@ -1820,15 +1776,7 @@ func TestRetargetSpace(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	t.Run("to empty target cluster", func(t *testing.T) {
 		// given
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -2027,15 +1975,7 @@ func TestSubSpace(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = map[string]string{
-		"base1ns-code-123456new":             "base1ns-code-123456new",
-		"base1ns-dev-123456new":              "base1ns-dev-123456new",
-		"base1ns-stage-123456new":            "base1ns-stage-123456new",
-		"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-		"base1ns-admin-123456new":            "base1ns-admin-123456new",
-		"base1ns-edit-123456new":             "base1ns-edit-123456new",
-		"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
-	}
+	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	// test SpaceBindings of a parentSpace are created/updated/deleted ,
 	// and how this should affect the subSpace and its NSTemplateSet
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
@@ -2285,13 +2225,7 @@ func TestNewNSTemplateSetSpec(t *testing.T) {
 
 	// given
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
-	nsTemplateTier.Status.Revisions = map[string]string{
-		"advanced-dev-123abc1":              "advanced-dev-123abc1",
-		"advanced-stage-123abc2":            "advanced-stage-123abc2",
-		"advanced-clusterresources-654321b": "advanced-clusterresources-654321b",
-		"advanced-admin-123abc1":            "advanced-admin-123abc1",
-		"advanced-viewer-123abc2":           "advanced-viewer-123abc2",
-	}
+	nsTemplateTier.Status.Revisions = tiertest.NSTemplateTierRevision
 	s := spacetest.NewSpace(test.HostOperatorNs, "spacejohn",
 		spacetest.WithTierName(nsTemplateTier.Name),
 		spacetest.WithSpecTargetCluster("member-1"))

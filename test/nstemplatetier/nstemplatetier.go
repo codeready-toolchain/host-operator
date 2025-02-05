@@ -160,6 +160,31 @@ func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, option
 	return Tier(t, "base1ns", spec, options...)
 }
 
+var Base1nsRevision = map[string]string{
+	"base1ns-code-123456new":             "base1ns-code-123456new",
+	"base1ns-dev-123456new":              "base1ns-dev-123456new",
+	"base1ns-stage-123456new":            "base1ns-stage-123456new",
+	"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
+	"base1ns-admin-123456new":            "base1ns-admin-123456new",
+	"base1ns-edit-123456new":             "base1ns-edit-123456new",
+	"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
+}
+
+var NSTemplateTierRevision = map[string]string{
+	"advanced-dev-123abc1":              "advanced-dev-123abc1",
+	"advanced-stage-123abc2":            "advanced-stage-123abc2",
+	"advanced-clusterresources-654321b": "advanced-clusterresources-654321b",
+	"advanced-admin-123abc1":            "advanced-admin-123abc1",
+	"advanced-viewer-123abc2":           "advanced-viewer-123abc2",
+}
+
+var OtherTierRevision = map[string]string{
+	"other-code-123456a":             "other-code-123456a",
+	"other-dev-123456a":              "other-dev-123456a",
+	"other-stage-123456a":            "other-stage-123456a",
+	"other-clusterresources-123456a": "other-clusterresources-123456a",
+}
+
 // AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
 func AppStudioEnvTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	return Tier(t, "appstudio-env", spec, options...)
