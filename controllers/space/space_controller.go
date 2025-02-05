@@ -422,13 +422,15 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	}
 	if tmplTier.Spec.ClusterResources != nil {
 		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			TemplateRef: tmplTier.Spec.ClusterResources.TemplateRef,
+			TemplateRef: tmplTier.Status.Revisions[tmplTier.Spec.ClusterResources.TemplateRef],
 		}
 	}
 	if len(tmplTier.Spec.Namespaces) > 0 {
 		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
 		for i, ns := range tmplTier.Spec.Namespaces {
-			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+				TemplateRef: tmplTier.Status.Revisions[ns.TemplateRef],
+			}
 		}
 	}
 	// space roles
@@ -446,7 +448,7 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 			// no need to add an entry in space roles if there is no associated user
 			if len(usernames) > 0 {
 				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
-					TemplateRef: sr.TemplateRef,
+					TemplateRef: tmplTier.Status.Revisions[sr.TemplateRef],
 					Usernames:   usernames,
 				})
 			}

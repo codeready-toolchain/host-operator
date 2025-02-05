@@ -33,6 +33,13 @@ func TestComputeHash(t *testing.T) {
 					},
 				},
 			},
+			Status: toolchainv1alpha1.NSTemplateTierStatus{
+				Revisions: map[string]string{
+					"base1ns-code-123456old":  "base1ns-code-123456old",
+					"base1ns-dev-123456old":   "base1ns-dev-123456old",
+					"base1ns-stage-123456old": "base1ns-stage-123456old",
+				},
+			},
 		}
 		nsTemplateSet := toolchainv1alpha1.NSTemplateSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -84,6 +91,14 @@ func TestComputeHash(t *testing.T) {
 				},
 				ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 					TemplateRef: "base1ns-clusterresources-123456a",
+				},
+			},
+			Status: toolchainv1alpha1.NSTemplateTierStatus{
+				Revisions: map[string]string{
+					"base1ns-code-123456old":           "base1ns-code-123456old",
+					"base1ns-dev-123456old":            "base1ns-dev-123456old",
+					"base1ns-stage-123456old":          "base1ns-stage-123456old",
+					"base1ns-clusterresources-123456a": "base1ns-clusterresources-123456a",
 				},
 			},
 		}
