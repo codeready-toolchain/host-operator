@@ -58,6 +58,8 @@ func TestMapTierTemplateToNSTemplateTier(t *testing.T) {
 		// both tiers are without revisions
 		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 		otherTier := tiertest.AppStudioEnvTier(t, tiertest.AppStudioEnvTemplates)
+		prepareTierWithRevisions(otherTier)
+		delete(otherTier.Status.Revisions, "base1ns-clusterresources-123456new")
 		cl := test.NewFakeClient(t, base1nsTier, otherTier)
 
 		// when
