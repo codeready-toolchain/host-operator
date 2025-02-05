@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,8 +36,6 @@ const (
 
 func TestReconcile(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-
 	t.Run("failures", func(t *testing.T) {
 
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
@@ -317,7 +313,6 @@ func TestReconcile(t *testing.T) {
 }
 
 func TestUpdateNSTemplateTier(t *testing.T) {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	// given
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
 		// the tiertemplate revision CR should have a copy of those parameters
