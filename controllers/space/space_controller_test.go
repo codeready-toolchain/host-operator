@@ -904,7 +904,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
 	// get an older base1ns tier (with outdated references)
 	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates)
-	olderbase1nsTier.Status.Revisions = tiertest.Base1nsRevision
+	olderbase1nsTier.Status.Revisions = tiertest.OldTierRevision
 	otherTier := tiertest.OtherTier()
 	otherTier.Status.Revisions = tiertest.OtherTierRevision
 
