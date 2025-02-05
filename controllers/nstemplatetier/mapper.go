@@ -35,18 +35,15 @@ func MapTierTemplateToNSTemplateTier(cl runtimeclient.Client) func(ctx context.C
 				// this tier doesn't use the template
 				continue
 			}
-			_, inUse := item.Status.Revisions[obj.GetName()]
-			if !inUse {
-				// this tier doesn't use the template
-				continue
+			if _, inUse := item.Status.Revisions[obj.GetName()]; inUse {
+				// the tier uses this template
+				req = append(req, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: item.Namespace,
+						Name:      item.Name,
+					},
+				})
 			}
-			// the tier uses this template
-			req = append(req, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: item.Namespace,
-					Name:      item.Name,
-				},
-			})
 		}
 		return req
 	}
