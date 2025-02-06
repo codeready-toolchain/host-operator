@@ -161,13 +161,13 @@ func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, option
 }
 
 var Base1nsRevision = map[string]string{
-	"base1ns-code-123456new":             "base1ns-code-123456new",
-	"base1ns-dev-123456new":              "base1ns-dev-123456new",
-	"base1ns-stage-123456new":            "base1ns-stage-123456new",
-	"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new",
-	"base1ns-admin-123456new":            "base1ns-admin-123456new",
-	"base1ns-edit-123456new":             "base1ns-edit-123456new",
-	"base1ns-viewer-123456new":           "base1ns-viewer-123456new",
+	CurrentBase1nsTemplates.Namespaces[0].TemplateRef:        CurrentBase1nsTemplates.Namespaces[0].TemplateRef,
+	CurrentBase1nsTemplates.Namespaces[1].TemplateRef:        CurrentBase1nsTemplates.Namespaces[1].TemplateRef,
+	CurrentBase1nsTemplates.Namespaces[2].TemplateRef:        CurrentBase1nsTemplates.Namespaces[2].TemplateRef,
+	CurrentBase1nsTemplates.ClusterResources.TemplateRef:     CurrentBase1nsTemplates.ClusterResources.TemplateRef,
+	CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
+	CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef:   CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef,
+	CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
 }
 
 var NSTemplateTierRevision = map[string]string{
@@ -179,19 +179,19 @@ var NSTemplateTierRevision = map[string]string{
 }
 
 var OtherTierRevision = map[string]string{
-	"other-code-123456a":             "other-code-123456a",
-	"other-dev-123456a":              "other-dev-123456a",
-	"other-stage-123456a":            "other-stage-123456a",
-	"other-clusterresources-123456a": "other-clusterresources-123456a",
+	OtherTier().Spec.Namespaces[0].TemplateRef:    OtherTier().Spec.Namespaces[0].TemplateRef,
+	OtherTier().Spec.Namespaces[1].TemplateRef:    OtherTier().Spec.Namespaces[1].TemplateRef,
+	OtherTier().Spec.Namespaces[2].TemplateRef:    OtherTier().Spec.Namespaces[2].TemplateRef,
+	OtherTier().Spec.ClusterResources.TemplateRef: OtherTier().Spec.ClusterResources.TemplateRef,
 }
 
 var OldTierRevision = map[string]string{
-	"base1ns-code-123456old":             "base1ns-code-123456old",
-	"base1ns-dev-123456old":              "base1ns-dev-123456old",
-	"base1ns-stage-123456old":            "base1ns-stage-123456old",
-	"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
-	"base1ns-admin-123456old":            "base1ns-admin-123456old",
-	"base1ns-viewer-123456old":           "base1ns-viewer-123456old",
+	PreviousBase1nsTemplates.Namespaces[0].TemplateRef:        PreviousBase1nsTemplates.Namespaces[0].TemplateRef,
+	PreviousBase1nsTemplates.Namespaces[1].TemplateRef:        PreviousBase1nsTemplates.Namespaces[1].TemplateRef,
+	PreviousBase1nsTemplates.Namespaces[2].TemplateRef:        PreviousBase1nsTemplates.Namespaces[2].TemplateRef,
+	PreviousBase1nsTemplates.ClusterResources.TemplateRef:     PreviousBase1nsTemplates.ClusterResources.TemplateRef,
+	PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
+	PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
 }
 
 // AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
