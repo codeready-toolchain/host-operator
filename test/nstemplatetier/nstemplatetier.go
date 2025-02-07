@@ -191,7 +191,7 @@ var OldTierRevision = map[string]string{
 	PreviousBase1nsTemplates.Namespaces[2].TemplateRef:        PreviousBase1nsTemplates.Namespaces[2].TemplateRef,
 	PreviousBase1nsTemplates.ClusterResources.TemplateRef:     PreviousBase1nsTemplates.ClusterResources.TemplateRef,
 	PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
-	PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
+	PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
 }
 
 // AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
