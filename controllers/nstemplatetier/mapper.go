@@ -13,7 +13,7 @@ import (
 
 var mapperLog = ctrl.Log.WithName("MapTierTemplateToNSTemplateTier")
 
-// MapTierTemplateToNSTemplateTier maps the TierTemplate to all the NSTemplateTiers that are referecing it.
+// MapTierTemplateToNSTemplateTier maps the TierTemplate to all the NSTemplateTiers that are referencing it.
 func MapTierTemplateToNSTemplateTier(cl runtimeclient.Client) func(ctx context.Context, object runtimeclient.Object) []reconcile.Request {
 	return func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
