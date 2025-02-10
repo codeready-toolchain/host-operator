@@ -19,6 +19,10 @@ type Assertion struct {
 	t              test.T
 }
 
+func (a *Assertion) Tier() *toolchainv1alpha1.NSTemplateTier {
+	return a.tier
+}
+
 func (a *Assertion) loadResource() error {
 	tier := &toolchainv1alpha1.NSTemplateTier{}
 	err := a.client.Get(context.TODO(), a.namespacedName, tier)
@@ -42,8 +46,9 @@ func (a *Assertion) HasStatusTierTemplateRevisions(revisions []string) *Assertio
 	// check that each TierTemplate REF has a TierTemplateRevision set
 	for _, tierTemplateRef := range revisions {
 		require.NotNil(a.t, a.tier.Status.Revisions)
-		_, ok := a.tier.Status.Revisions[tierTemplateRef]
+		value, ok := a.tier.Status.Revisions[tierTemplateRef]
 		require.True(a.t, ok)
+		require.NotEmpty(a.t, value)
 	}
 	return a
 }
