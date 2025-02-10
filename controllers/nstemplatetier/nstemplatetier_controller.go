@@ -109,21 +109,46 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		}
 		nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttrName
 	}
-	// TODO handle removal of TierTemplate from NSTemplateTier
+	// handle removal of TierTemplate from NSTemplateTier
 	// scenario:
 	// 		a. TierTemplate is removed/replaced from NSTemplateTier.Spec
 	//		b. NSTemplateTier.Status.Revisions must be cleaned up
-	// Thus here we should iterate over the Status.Revisions field
-	// and check if there is any reference to a TierTemplate that is not in the Spec anymore
-	if ttrCreated {
+	tierRemoved := false
+	for tierTempalateKey, _ := range nsTmplTier.Status.Revisions {
+		if !checkIfTierTemplateIsStillUsed(nsTmplTier, tierTempalateKey) {
+			// remove old tiermtemplate from revisions
+			delete(nsTmplTier.Status.Revisions, tierTempalateKey)
+			tierRemoved = true
+		}
+	}
+
+	if ttrCreated || tierRemoved {
 		// we need to update the status.revisions with the new ttrs
-		logger.Info("ttr created updating status")
+		logger.Info("ttr created or tier removed, updating status")
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
 			return ttrCreated, err
 		}
 	}
 
 	return ttrCreated, nil
+}
+
+func checkIfTierTemplateIsStillUsed(nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplateRef string) bool {
+	if nsTmplTier.Spec.ClusterResources != nil && tierTemplateRef == nsTmplTier.Spec.ClusterResources.TemplateRef {
+		return true
+	}
+	for _, nsTemplate := range nsTmplTier.Spec.Namespaces {
+		if nsTemplate.TemplateRef == tierTemplateRef {
+			return true
+		}
+	}
+	for _, nsTemplate := range nsTmplTier.Spec.SpaceRoles {
+		if nsTemplate.TemplateRef == tierTemplateRef {
+			return true
+		}
+	}
+	// not found
+	return false
 }
 
 func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (bool, string, error) {
