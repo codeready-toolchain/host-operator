@@ -114,7 +114,7 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	// 		a. TierTemplate is removed/replaced from NSTemplateTier.Spec
 	//		b. NSTemplateTier.Status.Revisions must be cleaned up
 	tierRemoved := false
-	for tierTempalateKey, _ := range nsTmplTier.Status.Revisions {
+	for tierTempalateKey := range nsTmplTier.Status.Revisions {
 		if !checkIfTierTemplateIsStillUsed(nsTmplTier, tierTempalateKey) {
 			// remove old tiermtemplate from revisions
 			delete(nsTmplTier.Status.Revisions, tierTempalateKey)
