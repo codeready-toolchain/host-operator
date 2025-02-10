@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,8 +36,6 @@ const (
 
 func TestReconcile(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-
 	t.Run("failures", func(t *testing.T) {
 
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
@@ -129,29 +125,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("using TTR as revisions", func(t *testing.T) {
 			// initialize tier templates with templateObjects field populated
 			// for simplicity we initialize all of them with the same objects
-			var crq = unstructured.Unstructured{Object: map[string]interface{}{
-				"kind": "ClusterResourceQuota",
-				"metadata": map[string]interface{}{
-					"name": "for-{{.SPACE_NAME}}-deployments",
-				},
-				"spec": map[string]interface{}{
-					"quota": map[string]interface{}{
-						"hard": map[string]interface{}{
-							"count/deploymentconfigs.apps": "{{.DEPLOYMENT_QUOTA}}",
-							"count/deployments.apps":       "{{.DEPLOYMENT_QUOTA}}",
-							"count/pods":                   "600",
-						},
-					},
-					"selector": map[string]interface{}{
-						"annotations": map[string]interface{}{},
-						"labels": map[string]interface{}{
-							"matchLabels": map[string]interface{}{
-								"toolchain.dev.openshift.com/space": "'{{.SPACE_NAME}}'",
-							},
-						},
-					},
-				},
-			}}
+			crq := newTestCRQ("600")
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
 				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
@@ -336,6 +310,118 @@ func TestReconcile(t *testing.T) {
 		})
 	})
 
+}
+
+func TestUpdateNSTemplateTier(t *testing.T) {
+	// given
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+		// the tiertemplate revision CR should have a copy of those parameters
+		tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
+	)
+	tierTemplatesRefs := []string{
+		"base1ns-admin-123456new", "base1ns-clusterresources-123456new", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+	}
+
+	// initialize tier templates with templateObjects field populated
+	// for simplicity we initialize all of them with the same objects
+	crq := newTestCRQ("600")
+	// given
+	tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+	r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
+	// when
+	res, err := r.Reconcile(context.TODO(), req)
+	// then
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{RequeueAfter: time.Second}, res) // explicit requeue after the adding revisions in `status.revisions`
+	// check that revisions field was populated
+	oldNSTemplateTier := tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+		HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+
+	t.Run("revision field is set but TierTemplate content has changed, new ttr should be created", func(t *testing.T) {
+		// given
+		// the NSTemplateTier already has the revisions from parent test,
+		// we update the cluster resource tier template content by setting a higher number of pods
+		tierTemplate := &toolchainv1alpha1.TierTemplate{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: "base1ns-clusterresources-123456new"}, tierTemplate)
+		require.NoError(t, err)
+		updatedCRQ := newTestCRQ("700")
+		tierTemplate.Spec.TemplateObjects = withTemplateObjects(updatedCRQ)
+		err = cl.Update(context.TODO(), tierTemplate)
+		require.NoError(t, err)
+
+		// when
+		res, err = r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		// revisions values should be different compared to the previous ones
+		newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+			HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+		require.NotEqual(t, oldNSTemplateTier.Status.Revisions, newNSTmplTier.Status.Revisions)
+		// there should be one new ttr created by the change in the TierTemplate
+		tiertemplaterevision.AssertThatTTRs(t, cl, newNSTmplTier.GetNamespace()).
+			NumberOfPresentCRs(len(tierTemplatesRefs) + 1)
+
+		t.Run("new ttr should be created also when parameters are changed in the NSTemplateTier", func(t *testing.T) {
+			// given
+			// the NSTemplateTier already has the revisions from previous test,
+			// but we update the parameters in the NSTemplateTier
+			// let's increase the quota parameter
+			newNSTmplTier.Spec.Parameters = []toolchainv1alpha1.Parameter{{Name: "DEPLOYMENT_QUOTA", Value: "100"}}
+			err = cl.Update(context.TODO(), newNSTmplTier)
+			require.NoError(t, err)
+
+			// when
+			res, err = r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			// revisions values should be different compared to the previous ones
+			// ensure the old revisions are not there anymore
+			newNSTmplTier = tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+			require.NotEqual(t, oldNSTemplateTier.Status.Revisions, newNSTmplTier.Status.Revisions)
+			// check if the change was propagated to the ttrs
+			tiertemplaterevision.AssertThatTTRs(t, cl, newNSTmplTier.GetNamespace()).
+				// a new set of TTRs should be created due the parameter change in the NSTemplateTier
+				// thus we now have double the initial ttrs plus the one created in the parent test.
+				NumberOfPresentCRs((len(tierTemplatesRefs) * 2) + 1).
+				// check that the NSTemplateTier parameter was propagated to all the TTRs from the NSTemplateTier
+				ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
+					// if the ttr is being used by the NSTemplateTier we compare the parameters
+					if ttrInUse, found := newNSTmplTier.Status.Revisions[ttr.GetLabels()[toolchainv1alpha1.TemplateRefLabelKey]]; found && ttrInUse == ttr.GetName() {
+						assert.Equal(t, newNSTmplTier.Spec.Parameters, ttr.Spec.Parameters)
+					}
+				})
+		})
+	})
+}
+
+func newTestCRQ(podsCount string) unstructured.Unstructured {
+	var crq = unstructured.Unstructured{Object: map[string]interface{}{
+		"kind": "ClusterResourceQuota",
+		"metadata": map[string]interface{}{
+			"name": "for-{{.SPACE_NAME}}-deployments",
+		},
+		"spec": map[string]interface{}{
+			"quota": map[string]interface{}{
+				"hard": map[string]interface{}{
+					"count/deploymentconfigs.apps": "{{.DEPLOYMENT_QUOTA}}",
+					"count/deployments.apps":       "{{.DEPLOYMENT_QUOTA}}",
+					"count/pods":                   podsCount,
+				},
+			},
+			"selector": map[string]interface{}{
+				"annotations": map[string]interface{}{},
+				"labels": map[string]interface{}{
+					"matchLabels": map[string]interface{}{
+						"toolchain.dev.openshift.com/space": "'{{.SPACE_NAME}}'",
+					},
+				},
+			},
+		},
+	}}
+	return crq
 }
 
 // initTierTemplates creates the TierTemplates objects for the base1ns tier
