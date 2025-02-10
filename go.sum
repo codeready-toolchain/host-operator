@@ -60,8 +60,8 @@ github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 h1:JWuenKqqX8nojt
 github.com/facebookgo/stack v0.0.0-20160209184415-751773369052/go.mod h1:UbMTZqLaRiH3MsBH8va0n7s1pQYcu3uTb8G4tygF4Zg=
 github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 h1:E2s37DuLxFhQDg5gKsWoLBOB0n+ZW8s599zru8FJ2/Y=
 github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+neXqOorC30/tWg0LCSkrqj/AR6gu8yY8/fpw1q0=
-github.com/fbm3307/toolchain-common v0.0.0-20250207061421-f27914eef71d h1:/qkmS/0KJrowFfMHCqgZjeiY5aErTuyp7ut2Qi+Sdpo=
-github.com/fbm3307/toolchain-common v0.0.0-20250207061421-f27914eef71d/go.mod h1:/PeschEEyTZIAsXQxIf83Fl8kOpSOHDfR5yyanz+bSA=
+github.com/fbm3307/toolchain-common v0.0.0-20250210091950-b4f865b966e8 h1:7TZ8mMJ8cJp9XiYoI1F6LS+1WWcaZbvdIsi/iT231q0=
+github.com/fbm3307/toolchain-common v0.0.0-20250210091950-b4f865b966e8/go.mod h1:/PeschEEyTZIAsXQxIf83Fl8kOpSOHDfR5yyanz+bSA=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
