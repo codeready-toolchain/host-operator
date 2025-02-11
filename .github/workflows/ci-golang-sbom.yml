@@ -19,7 +19,7 @@ jobs:
 
     - name: Send Github API Request to get PR data
       id: request
-      uses: octokit/request-action@main
+      uses: octokit/request-action@v2.4.0
       if: ${{ github.event.pull_request == '' }}
       with:
         route: ${{ github.event.issue.pull_request.url }}
