@@ -162,7 +162,7 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 			return true, tierTemplate.GetName(), nil
 		}
 		// nothing to update
-		return false, "", nil
+		return false, tierTemplate.GetName(), nil
 	}
 
 	tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]

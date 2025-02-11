@@ -411,13 +411,38 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		// revisions values should be different compared to the previous ones
-		// ensure the old revisions are not there anymore, and instead the update one is in the lsit
+		// ensure the old revisions are not there anymore, and instead the update one is in the list
 		tierTemplatesRefs := []string{
 			"base1ns-admin-123456new", "base1nsupdate-clusterresources-123456updated", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
 		}
 		newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
 			HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
 		require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
+
+		// TODO remove this test as soon as we start relying on TTRs in the revisions field
+		t.Run("when not using TTRs", func(t *testing.T) {
+			// given
+			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", nil, tierBeingUpdated.Name, "123456nottr")
+			tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplateNoTTR.GetName()
+			// existing tiertemplates have no TTRs associated
+			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
+			r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplateNoTTR)...)
+
+			// when
+			res, err = r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			// revisions values should be different compared to the previous ones
+			// ensure the old revisions are not there anymore, and instead the update one is in the list
+			tierTemplatesRefs := []string{
+				"base1ns-admin-123456new", "base1nsupdate-clusterresources-123456nottr", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+			}
+			newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
+				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+			require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
+		})
+
 	})
 
 }
