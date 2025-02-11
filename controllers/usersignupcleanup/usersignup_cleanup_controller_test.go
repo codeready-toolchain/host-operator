@@ -39,7 +39,6 @@ func TestUserCleanup(t *testing.T) {
 	oneYear := time.Duration(time.Hour * 24 * 365 * 1)
 
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
@@ -59,7 +58,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.ApprovedManuallyAgo(fiveYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
@@ -81,7 +79,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.ApprovedManuallyAgo(fiveYears),
@@ -108,7 +105,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(days(8)),
 			commonsignup.VerificationRequiredAgo(days(8)),
@@ -190,7 +186,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedManuallyAgo(days(40)),
@@ -212,7 +207,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that reactivated, unverified UserSignup long time ago is reset", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedManuallyAgo(days(730+21)),
@@ -234,7 +228,6 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
-
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(fiveYears),
 		)

@@ -376,7 +376,6 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1, // unchanged
 		})
-
 }
 
 func TestWithMultipleMembersAndSpaces(t *testing.T) {

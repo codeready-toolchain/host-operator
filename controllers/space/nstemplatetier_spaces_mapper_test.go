@@ -23,7 +23,6 @@ import (
 )
 
 func TestMapNSTemplateTierToSpaces(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
@@ -103,7 +102,6 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("when listing NSTemplateTier", func(t *testing.T) {
 			// given
 			nsTmplTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)

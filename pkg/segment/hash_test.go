@@ -8,7 +8,6 @@ import (
 )
 
 func TestHashUsername(t *testing.T) {
-
 	// given
 	username := "test-username"
 	// when

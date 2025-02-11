@@ -63,7 +63,6 @@ func TestRegisterCustomMetrics(t *testing.T) {
 }
 
 func TestResetMetrics(t *testing.T) {
-
 	// when
 	UserSignupUniqueTotal.Inc()
 	SpaceGaugeVec.WithLabelValues("member-1").Set(20)

@@ -37,9 +37,7 @@ const (
 func TestReconcile(t *testing.T) {
 	// given
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
-
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
@@ -75,7 +73,6 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
-
 	})
 
 	t.Run("revisions management", func(t *testing.T) {
@@ -188,7 +185,6 @@ func TestReconcile(t *testing.T) {
 						require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					})
 				})
-
 			})
 
 			t.Run("revision field is set but TierTemplateRevision CRs are missing, they should be created", func(t *testing.T) {
@@ -258,7 +254,6 @@ func TestReconcile(t *testing.T) {
 			})
 
 			t.Run("errors", func(t *testing.T) {
-
 				t.Run("error when TierTemplate is missing ", func(t *testing.T) {
 					// given
 					// make sure revisions field is nill before starting the test
@@ -275,9 +270,7 @@ func TestReconcile(t *testing.T) {
 					// and the TierTemplateRevision CRs are not created
 					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
-
 			})
-
 		})
 
 		t.Run("if being deleted, then do nothign", func(t *testing.T) {
@@ -309,7 +302,6 @@ func TestReconcile(t *testing.T) {
 			assert.Empty(t, res.Requeue)
 		})
 	})
-
 }
 
 func TestUpdateNSTemplateTier(t *testing.T) {

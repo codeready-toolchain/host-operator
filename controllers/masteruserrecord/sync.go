@@ -34,7 +34,6 @@ type Synchronizer struct {
 
 // synchronizeSpec synchronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
 func (s *Synchronizer) synchronizeSpec(ctx context.Context) (bool, error) {
-
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs")
 		if err := updateStatusConditions(ctx, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
@@ -218,7 +217,6 @@ func alignReadiness(ctx context.Context, scheme *runtime.Scheme, hostClient runt
 		}
 		// if there is no existing notification with these labels
 		if len(notificationList.Items) == 0 {
-
 			config, err := toolchainconfig.GetToolchainConfig(hostClient)
 			if err != nil {
 				return false, errs.Wrapf(err, "unable to get ToolchainConfig")

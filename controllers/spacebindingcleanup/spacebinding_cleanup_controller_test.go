@@ -147,7 +147,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			})
 
 			t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
-
 				fakeClient := test.NewFakeClient(t, sbJoeRedhatView, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -182,7 +181,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			})
 
 			t.Run("no SpaceBinding removed when MUR and Space are present", func(t *testing.T) {
-
 				fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, redhatSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -198,7 +196,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			})
 
 			t.Run("fails while getting the bound resource", func(t *testing.T) {
-
 				for _, boundResourceName := range []string{"lara", "redhat"} {
 					fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace, laraMur, toolchainconfig)
 					reconciler := prepareReconciler(t, fakeClient)
@@ -219,7 +216,6 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			})
 
 			t.Run("fails while deleting the SpaceBinding", func(t *testing.T) {
-
 				fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, redhatSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 				fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {

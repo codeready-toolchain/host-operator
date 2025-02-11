@@ -52,7 +52,6 @@ func roles(_ string) []string {
 }
 
 func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
-
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -107,11 +106,9 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 		for role, templateRef := range expectedSpaceRoleTmplRefs[nstmplTier.Name] {
 			assert.Equal(t, nstmplTier.Spec.SpaceRoles[role].TemplateRef, templateRef)
 		}
-
 	}
 
 	t.Run("failures", func(t *testing.T) {
-
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 
 		t.Run("failed to read assets", func(t *testing.T) {
@@ -132,7 +129,6 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 		})
 
 		t.Run("nstemplatetiers", func(t *testing.T) {
-
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
@@ -177,7 +173,6 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 		})
 
 		t.Run("tiertemplates", func(t *testing.T) {
-
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)

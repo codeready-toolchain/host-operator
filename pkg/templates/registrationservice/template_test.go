@@ -48,7 +48,6 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 			deployment := fmt.Sprintf("%+v", toolchainObject)
 			assert.Contains(t, deployment, "replicas:10")
 			assert.Contains(t, deployment, "image:quay.io/cr-t/registration-service:123")
-
 		case corev1.SchemeGroupVersion.WithKind("ServiceAccount"):
 			saFound = true
 		case rbacv1.SchemeGroupVersion.WithKind("Role"):

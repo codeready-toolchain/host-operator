@@ -54,7 +54,6 @@ type MailgunOption interface {
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
 func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, templateLoader TemplateLoader,
 	opts ...MailgunOption) DeliveryService {
-
 	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())
 
 	for _, opt := range opts {
@@ -70,7 +69,6 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 }
 
 func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification, templateSetName string) error {
-
 	var subject, body string
 
 	if notification.Spec.Template != "" {

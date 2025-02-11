@@ -117,7 +117,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 		// If the "Complete" condition is found, and its Reason value is equal to "VerificationRequired" then proceed
 		if found && cond.Reason == toolchainv1alpha1.UserSignupVerificationRequiredReason {
-
 			// Use the same "unverified retention days" configuration parameter to determine whether the UserSignup should
 			// be returned to a deactivated state
 			unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
@@ -189,10 +188,8 @@ func (r *Reconciler) isUserBanned(ctx context.Context, userSignup *toolchainv1al
 	banned := false
 	// Lookup the user email
 	if userSignup.Spec.IdentityClaims.Email != "" {
-
 		// Lookup the email hash label
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
-
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
 			opts := runtimeclient.MatchingLabels(labels)
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}

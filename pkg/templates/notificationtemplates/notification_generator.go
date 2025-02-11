@@ -91,7 +91,6 @@ func loadTemplates(setName string) (map[string]NotificationTemplate, error) {
 }
 
 func getAllFilenames(notificationFS *embed.FS, root string, setName string) (files []string, err error) {
-
 	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil

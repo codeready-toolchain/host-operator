@@ -35,7 +35,6 @@ import (
 )
 
 func TestCreateSpace(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
@@ -186,7 +185,6 @@ func TestCreateSpace(t *testing.T) {
 								HaveSpacesForCluster("member-1", 1).
 								HaveSpacesForCluster("member-2", 0) // space counter unchanged
 						})
-
 					})
 				})
 
@@ -298,7 +296,6 @@ func TestCreateSpace(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-
 		t.Run("space not found", func(t *testing.T) {
 			// given
 			hostClient := test.NewFakeClient(t)
@@ -572,7 +569,6 @@ func TestCreateSpace(t *testing.T) {
 }
 
 func TestDeleteSpace(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
@@ -580,7 +576,6 @@ func TestDeleteSpace(t *testing.T) {
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
 
 	t.Run("after space was successfully provisioned", func(t *testing.T) {
-
 		// given a space that is being deleted
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithDeletionTimestamp(), // deletion was requested
@@ -741,7 +736,6 @@ func TestDeleteSpace(t *testing.T) {
 	})
 
 	t.Run("when space was not successfully provisioned", func(t *testing.T) {
-
 		t.Run("because of missing target member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -809,7 +803,6 @@ func TestDeleteSpace(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -894,7 +887,6 @@ func TestDeleteSpace(t *testing.T) {
 }
 
 func TestUpdateSpaceTier(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := scheme.Scheme
@@ -1039,7 +1031,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 					AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 1).
 						HaveSpacesForCluster("member-2", 0) // space counter is unchanged
-
 				})
 			})
 		})
@@ -1415,7 +1406,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("when updating space with new templatetierhash label", func(t *testing.T) {
 			// given that Space is promoted to `base1ns` tier and corresponding NSTemplateSet is already up-to-date and ready
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -1516,7 +1506,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 // TestUpdateSpaceRoles covers the cases where SpaceBindings are created/updated/deleted,
 // and how this should affect the Space and its NSTemplateSet
 func TestUpdateSpaceRoles(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := scheme.Scheme
@@ -1765,7 +1754,6 @@ func TestUpdateSpaceRoles(t *testing.T) {
 	})
 }
 func TestRetargetSpace(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := scheme.Scheme
@@ -1883,7 +1871,6 @@ func TestRetargetSpace(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("unable to delete NSTemplateSet", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -1957,14 +1944,12 @@ func TestRetargetSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 0). // counter is decremented according to the value in status
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
-
 	})
 }
 
 // TestSubSpace covers the cases where there is a relationship between a parentSpace and a subSpace
 // and all the consequences and expectations of this link between two different spaces.
 func TestSubSpace(t *testing.T) {
-
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := scheme.Scheme
@@ -1975,7 +1960,6 @@ func TestSubSpace(t *testing.T) {
 	// test SpaceBindings of a parentSpace are created/updated/deleted ,
 	// and how this should affect the subSpace and its NSTemplateSet
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
-
 		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
 			// given a parentSpace...
 			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
@@ -2150,7 +2134,6 @@ func TestSubSpace(t *testing.T) {
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
-
 	})
 }
 
@@ -2218,7 +2201,6 @@ func requestFor(s *toolchainv1alpha1.Space) reconcile.Request {
 }
 
 func TestNewNSTemplateSetSpec(t *testing.T) {
-
 	// given
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
 	s := spacetest.NewSpace(test.HostOperatorNs, "spacejohn",

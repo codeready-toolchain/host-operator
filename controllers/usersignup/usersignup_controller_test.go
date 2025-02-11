@@ -4140,7 +4140,6 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
 		}
-
 	}
 }
 
@@ -4180,7 +4179,6 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
 		}
-
 	}
 }
 

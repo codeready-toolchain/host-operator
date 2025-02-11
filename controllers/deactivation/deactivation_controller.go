@@ -194,7 +194,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If the usersignup state hasn't been set to deactivating, then set it now
 	if !states.Deactivating(usersignup) && deactivatingNotificationDays > 0 {
-
 		// Before we update the UserSignup in order to set the deactivating state, we should reset the scheduled
 		// deactivation time if required just in case the current value is nil or has somehow changed.  Since the UserSignup
 		// controller is going to be reconciling immediately after setting the deactivating state then it will be

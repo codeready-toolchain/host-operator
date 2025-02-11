@@ -26,7 +26,6 @@ import (
 )
 
 func TestReconcileSocialEvent(t *testing.T) {
-
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
@@ -86,7 +85,6 @@ func TestReconcileSocialEvent(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("unable to get user tier", func(t *testing.T) {
 			// given
 			event := socialeventtest.NewSocialEvent("notfound", "base1ns")

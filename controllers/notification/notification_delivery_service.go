@@ -61,7 +61,6 @@ type BaseNotificationDeliveryService struct {
 
 func (s *BaseNotificationDeliveryService) GenerateContent(context map[string]string,
 	templateDefinition string) (string, error) {
-
 	tmpl, err := template.New("template").Parse(templateDefinition)
 	if err != nil {
 		return "", err

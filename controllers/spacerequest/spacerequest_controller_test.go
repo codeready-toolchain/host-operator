@@ -1475,7 +1475,6 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to delete subspace: mock error")
 		})
-
 	})
 }
 

@@ -84,5 +84,4 @@ func TestUpdateHomeSpaceStatus(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, " \"\" is invalid: metadata.name: Required value: name is required", err.Error())
 	})
-
 }

@@ -55,7 +55,6 @@ func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, re
 		},
 		Service: MockNotificationDeliveryServiceConfig{service: service},
 	}
-
 }
 
 type MockTemplateLoader struct {
@@ -98,7 +97,6 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	})
 
 	t.Run("factory configured with invalid delivery service", func(t *testing.T) {
-
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
 			NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",

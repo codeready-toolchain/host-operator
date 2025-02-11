@@ -235,7 +235,6 @@ func TestNotificationDelivery(t *testing.T) {
 	})
 
 	t.Run("test notification with environment e2e", func(t *testing.T) {
-
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{

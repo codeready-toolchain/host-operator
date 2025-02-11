@@ -247,7 +247,6 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 					member2CurrentCount := numberOfSpaces
 					member3CurrentCount := numberOfSpaces
 					for cycle := 0; cycle < 4; cycle++ {
-
 						member2MissingTo50 := 50 - member2CurrentCount%50
 						// this 50 users should go into member2 - it will be always 50
 						for i := 0; i < member2MissingTo50; i++ {
@@ -314,7 +313,6 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								assert.Equal(t, "member2", clusterName)
 							})
 						}
-
 					}
 
 					// when

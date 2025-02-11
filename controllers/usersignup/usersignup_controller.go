@@ -153,7 +153,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if states.Deactivating(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
-
 		if err := r.sendDeactivatingNotification(ctx, config, userSignup); err != nil {
 			logger.Error(err, "Failed to create user deactivating notification")
 
@@ -242,10 +241,8 @@ func (r *Reconciler) isUserBanned(
 	banned := false
 	// Lookup the user email
 	if userSignup.Spec.IdentityClaims.Email != "" {
-
 		// Lookup the email hash label
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
-
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
 			opts := runtimeclient.MatchingLabels(labels)
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}
@@ -812,7 +809,6 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 		}
 		logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
 	}()
-
 }
 
 // getCaptchaAssessmentAnnotation returns the captcha assessment annotation type depending on the UserSignup's state
@@ -901,7 +897,6 @@ func (r *Reconciler) sendDeactivatingNotification(ctx context.Context, config to
 
 	// if there is no existing notification with these labels
 	if len(notificationList.Items) == 0 {
-
 		keysAndVals := map[string]string{
 			toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
 		}

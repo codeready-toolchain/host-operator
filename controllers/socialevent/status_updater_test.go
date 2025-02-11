@@ -15,7 +15,6 @@ import (
 )
 
 func TestUpdateStatusCondition(t *testing.T) {
-
 	t.Run("status condition created", func(t *testing.T) {
 		// given
 		event := socialeventtest.NewSocialEvent("base", "base") // with no pre-existing status condition

@@ -36,7 +36,6 @@ var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-
 	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")

@@ -196,7 +196,6 @@ func (r *Reconciler) setStatusNotificationSent(ctx context.Context, notification
 
 func (r *Reconciler) updateStatus(ctx context.Context, notification *toolchainv1alpha1.Notification,
 	statusUpdater statusUpdater) error {
-
 	if err := statusUpdater(ctx, notification, ""); err != nil {
 		log.FromContext(ctx).Error(err, "status update failed")
 		return err
