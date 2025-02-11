@@ -17,6 +17,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Send Github API Request to get PR data
+      id: request
+      uses: octokit/request-action@main
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        route: ${{ github.event.issue.pull_request.url }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Install Go
       uses: actions/setup-go@v5
       with:
