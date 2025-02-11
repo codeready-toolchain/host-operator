@@ -93,6 +93,7 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	}
 	// check for TierTemplates and TierTemplateRevisions associated with the NSTemplateTier
 	ttrCreated := false
+	revisions := map[string]string{}
 	for _, tierTemplateRef := range refs {
 		// get the TierTemplate
 		var tierTemplate toolchainv1alpha1.TierTemplate
@@ -107,23 +108,13 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		if err != nil {
 			return false, err
 		}
-		nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttrName
-	}
-	// handle removal of TierTemplate from NSTemplateTier
-	// scenario:
-	// 		a. TierTemplate is removed/replaced from NSTemplateTier.Spec
-	//		b. NSTemplateTier.Status.Revisions must be cleaned up
-	tierRemoved := false
-	for tierTempalateKey := range nsTmplTier.Status.Revisions {
-		if !checkIfTierTemplateIsStillUsed(nsTmplTier, tierTempalateKey) {
-			// remove old tiermtemplate from revisions
-			delete(nsTmplTier.Status.Revisions, tierTempalateKey)
-			tierRemoved = true
-		}
+		revisions[tierTemplate.GetName()] = ttrName
 	}
 
-	if ttrCreated || tierRemoved {
-		// we need to update the status.revisions with the new ttrs
+	// if ttr was created or entries were removed from revisions list
+	// we need to update the status.revisions
+	if ttrCreated || !reflect.DeepEqual(revisions, nsTmplTier.Status.Revisions) {
+		nsTmplTier.Status.Revisions = revisions
 		logger.Info("ttr created or tier removed, updating status")
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
 			return ttrCreated, err
@@ -131,24 +122,6 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	}
 
 	return ttrCreated, nil
-}
-
-func checkIfTierTemplateIsStillUsed(nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplateRef string) bool {
-	if nsTmplTier.Spec.ClusterResources != nil && tierTemplateRef == nsTmplTier.Spec.ClusterResources.TemplateRef {
-		return true
-	}
-	for _, nsTemplate := range nsTmplTier.Spec.Namespaces {
-		if nsTemplate.TemplateRef == tierTemplateRef {
-			return true
-		}
-	}
-	for _, nsTemplate := range nsTmplTier.Spec.SpaceRoles {
-		if nsTemplate.TemplateRef == tierTemplateRef {
-			return true
-		}
-	}
-	// not found
-	return false
 }
 
 func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (bool, string, error) {
