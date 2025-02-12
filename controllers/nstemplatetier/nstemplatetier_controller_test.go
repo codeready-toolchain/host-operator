@@ -401,7 +401,8 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		tierBeingUpdated := oldNSTemplateTier.DeepCopy()
 		tierBeingUpdated.Name = "base1nsupdate"
 		// we update the reference of one tierTemplate
-		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects(crq), tierBeingUpdated.Name, "123456updated")
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects(crq), tierBeingUpdated.Name)
+		clusterResourceTierTemplate.Name = "clusterresource-template-updated"
 		tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplate.GetName()
 		r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplate)...)
 
@@ -413,7 +414,7 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		// revisions values should be different compared to the previous ones
 		// ensure the old revisions are not there anymore, and instead the update one is in the list
 		tierTemplatesRefs := []string{
-			"base1ns-admin-123456new", "base1nsupdate-clusterresources-123456updated", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+			"base1ns-admin-123456new", "clusterresource-template-updated", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
 		}
 		newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
 			HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
@@ -422,7 +423,8 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		// TODO remove this test as soon as we start relying on TTRs in the revisions field
 		t.Run("when not using TTRs", func(t *testing.T) {
 			// given
-			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", nil, tierBeingUpdated.Name, "123456nottr")
+			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", nil, tierBeingUpdated.Name)
+			clusterResourceTierTemplateNoTTR.Name = "clusterresource-template-nottr"
 			tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplateNoTTR.GetName()
 			// existing tiertemplates have no TTRs associated
 			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
@@ -436,7 +438,7 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 			// revisions values should be different compared to the previous ones
 			// ensure the old revisions are not there anymore, and instead the update one is in the list
 			tierTemplatesRefs := []string{
-				"base1ns-admin-123456new", "base1nsupdate-clusterresources-123456nottr", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+				"base1ns-admin-123456new", "clusterresource-template-nottr", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
 			}
 			newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
 				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
@@ -479,13 +481,13 @@ func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension,
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects, tierName, "123456new")
-	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects, tierName, "123456new")
-	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects, tierName, "123456new")
-	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects, tierName, "123456new")
-	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects, tierName, "123456new")
-	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects, tierName, "123456new")
-	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects, tierName, "123456new")
+	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects, tierName)
+	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects, tierName)
+	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects, tierName)
+	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects, tierName)
+	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects, tierName)
+	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects, tierName)
+	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects, tierName)
 	tierTemplates := []runtimeclient.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
 }
@@ -508,9 +510,9 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	}, cl
 }
 
-func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension, tierName, revision string) *toolchainv1alpha1.TierTemplate {
+func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension, tierName string) *toolchainv1alpha1.TierTemplate {
 	tmpl := testTierTemplate(t)
-	return newTierTemplate(tierName, typeName, revision, tmpl, withTemplateObjects)
+	return newTierTemplate(tierName, typeName, tmpl, withTemplateObjects)
 }
 
 func testTierTemplate(t *testing.T) templatev1.Template {
@@ -536,8 +538,9 @@ func testTierTemplate(t *testing.T) templatev1.Template {
 	return tmpl
 }
 
-func newTierTemplate(tierName string, typeName string, revision string, tmpl templatev1.Template, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
+func newTierTemplate(tierName, typeName string, tmpl templatev1.Template, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
 	// we can set the template field to something empty as it is not relevant for the tests
+	revision := "123456new"
 	tt := &toolchainv1alpha1.TierTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      strings.ToLower(fmt.Sprintf("%s-%s-%s", tierName, typeName, revision)),

@@ -113,7 +113,7 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 
 	// if ttr was created or entries were removed from revisions list
 	// we need to update the status.revisions
-	if ttrCreated || !reflect.DeepEqual(revisions, nsTmplTier.Status.Revisions) {
+	if !reflect.DeepEqual(revisions, nsTmplTier.Status.Revisions) {
 		nsTmplTier.Status.Revisions = revisions
 		logger.Info("ttr created or tier removed, updating status")
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
