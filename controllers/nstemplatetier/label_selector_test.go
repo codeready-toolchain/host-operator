@@ -23,28 +23,16 @@ func TestOutdatedTierSelecter(t *testing.T) {
 				Namespace: operatorNamespace,
 				Name:      "base1ns",
 			},
-			Spec: toolchainv1alpha1.NSTemplateTierSpec{
-				Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
-					{
-						TemplateRef: "base1ns-code-123456old",
-					},
-					{
-						TemplateRef: "base1ns-dev-123456old",
-					},
-					{
-						TemplateRef: "base1ns-stage-123456old",
-					},
-				},
-			},
 			Status: toolchainv1alpha1.NSTemplateTierStatus{
 				Revisions: map[string]string{
-					"base1ns-code-123456old":  "base1ns-code-123456old",
-					"base1ns-dev-123456old":   "base1ns-dev-123456old",
-					"base1ns-stage-123456old": "base1ns-stage-123456old",
+					"base1ns-code-123456old":             "base1ns-code-123456old",
+					"base1ns-dev-123456old":              "base1ns-dev-123456old",
+					"base1ns-stage-123456old":            "base1ns-stage-123456old",
+					"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
 				},
 			},
 		}
-		h := "78195005ba2e1f73a06d4cf6af823e40"
+		h := "d924b1b3a46689361e2f4b9f260cc2ad"
 		tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
 		templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
 		s := labels.NewSelector().Add(*tierLabel)
@@ -57,8 +45,37 @@ func TestOutdatedTierSelecter(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, expectedLabel, matchOutdated)
-		fmt.Println("matched:", matchOutdated)
-		fmt.Println("expected:", expectedLabel.Selector)
+
+	})
+
+	t.Run("OutdatedTierSelecter does not give a matching label", func(t *testing.T) {
+		//given
+		nsTTier := &toolchainv1alpha1.NSTemplateTier{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorNamespace,
+				Name:      "base1ns",
+			},
+			Status: toolchainv1alpha1.NSTemplateTierStatus{
+				Revisions: map[string]string{
+					"base1ns-code-123456new":  "base1ns-code-123456new",
+					"base1ns-dev-123456old":   "base1ns-dev-123456new",
+					"base1ns-stage-123456new": "base1ns-stage-123456new",
+				},
+			},
+		}
+		h := "d924b1b3a46689361e2f4b9f260cc2ad"
+		tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
+		templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
+		s := labels.NewSelector().Add(*tierLabel)
+		s = s.Add(*templateHashLabel)
+		expectedLabel := runtimeclient.MatchingLabelsSelector{
+			Selector: s,
+		}
+		//when
+		matchOutdated, err := nstemplatetier.OutdatedTierSelector(nsTTier)
+		fmt.Print("match", matchOutdated)
+		require.NoError(t, err)
+		require.NotEqual(t, expectedLabel, matchOutdated)
 
 	})
 }

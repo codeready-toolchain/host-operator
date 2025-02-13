@@ -307,6 +307,9 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 			if err := r.setStatusProvisioning(ctx, space); err != nil {
 				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(ctx, space, err)
 			}
+			if errValidating := validateRevisions(tmplTier); errValidating != nil {
+				return nsTmplSet, requeueDelay, errValidating
+			}
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings, tmplTier)
 			if err := memberCluster.Client.Create(ctx, nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
@@ -330,7 +333,9 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 		// just created, but there is no `Ready` condition yet
 		return nsTmplSet, requeueDelay, nil
 	}
-
+	if errValidating := validateRevisions(tmplTier); errValidating != nil {
+		return nsTmplSet, requeueDelay, errValidating
+	}
 	// update the NSTemplateSet if needed (including in case of missing space roles)
 	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
 	featureToggleAnnotationUpdated := ensureFeatureToggleAnnotation(space, nsTmplSet) // also check if the feature annotation was updated
@@ -457,6 +462,33 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	return s
 }
 
+func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
+	counter := 0
+	specTempRef := make(map[string]bool)
+	for _, ns := range tmplTier.Spec.Namespaces {
+		specTempRef[ns.TemplateRef] = true
+	}
+	specTempRef[tmplTier.Spec.ClusterResources.TemplateRef] = true
+	for _, sr := range tmplTier.Spec.SpaceRoles {
+		specTempRef[sr.TemplateRef] = true
+	}
+	for temp := range specTempRef {
+		for rev := range tmplTier.Status.Revisions {
+			if temp == rev {
+				specTempRef[temp] = false
+			}
+		}
+	}
+	for _, val := range specTempRef {
+		if val {
+			counter++
+		}
+	}
+	if counter > 0 {
+		return errs.Errorf("The nstemplatier status.revisions is still not updated")
+	}
+	return nil
+}
 func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []string {
 	usernames := map[string]interface{}{} // using a map to avoid duplicate entries
 	for _, b := range bindings {
