@@ -280,7 +280,7 @@ func TestReconcile(t *testing.T) {
 
 		})
 
-		t.Run("if being deleted, then do nothign", func(t *testing.T) {
+		t.Run("if being deleted, then do nothing", func(t *testing.T) {
 			// given
 			tierBeingDeleted := base1nsTier.DeepCopy()
 			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
@@ -395,6 +395,58 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 				})
 		})
 	})
+
+	t.Run("when updating one tiertemplate the revisions field should be cleaned up from old entries", func(t *testing.T) {
+		// given
+		tierBeingUpdated := oldNSTemplateTier.DeepCopy()
+		tierBeingUpdated.Name = "base1nsupdate"
+		// we update the reference of one tierTemplate
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects(crq), tierBeingUpdated.Name)
+		clusterResourceTierTemplate.Name = "clusterresource-template-updated"
+		tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplate.GetName()
+		r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplate)...)
+
+		// when
+		res, err = r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		// revisions values should be different compared to the previous ones
+		// ensure the old revisions are not there anymore, and instead the update one is in the list
+		tierTemplatesRefs := []string{
+			"base1ns-admin-123456new", "clusterresource-template-updated", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+		}
+		newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
+			HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+		require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
+
+		// TODO remove this test as soon as we start relying on TTRs in the revisions field
+		t.Run("when not using TTRs", func(t *testing.T) {
+			// given
+			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", nil, tierBeingUpdated.Name)
+			clusterResourceTierTemplateNoTTR.Name = "clusterresource-template-nottr"
+			tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplateNoTTR.GetName()
+			// existing tiertemplates have no TTRs associated
+			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
+			r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplateNoTTR)...)
+
+			// when
+			res, err = r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			// revisions values should be different compared to the previous ones
+			// ensure the old revisions are not there anymore, and instead the update one is in the list
+			tierTemplatesRefs := []string{
+				"base1ns-admin-123456new", "clusterresource-template-nottr", "base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-edit-123456new", "base1ns-stage-123456new", "base1ns-viewer-123456new",
+			}
+			newNSTmplTier := tiertest.AssertThatNSTemplateTier(t, tierBeingUpdated.Name, cl).
+				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
+			require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
+		})
+
+	})
+
 }
 
 func newTestCRQ(podsCount string) unstructured.Unstructured {
@@ -459,6 +511,11 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 }
 
 func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension, tierName string) *toolchainv1alpha1.TierTemplate {
+	tmpl := testTierTemplate(t)
+	return newTierTemplate(tierName, typeName, tmpl, withTemplateObjects)
+}
+
+func testTierTemplate(t *testing.T) templatev1.Template {
 	var (
 		ns test.TemplateObject = `
 - apiVersion: v1
@@ -478,9 +535,12 @@ func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []run
 	tmpl := templatev1.Template{}
 	_, _, err = decoder.Decode([]byte(test.CreateTemplate(test.WithObjects(ns), test.WithParams(spacename))), nil, &tmpl)
 	require.NoError(t, err)
+	return tmpl
+}
 
-	revision := "123456new"
+func newTierTemplate(tierName, typeName string, tmpl templatev1.Template, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
 	// we can set the template field to something empty as it is not relevant for the tests
+	revision := "123456new"
 	tt := &toolchainv1alpha1.TierTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      strings.ToLower(fmt.Sprintf("%s-%s-%s", tierName, typeName, revision)),
@@ -499,7 +559,6 @@ func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []run
 	if withTemplateObjects != nil {
 		tt.Spec.TemplateObjects = withTemplateObjects
 	}
-
 	return tt
 }
 
