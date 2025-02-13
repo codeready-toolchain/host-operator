@@ -93,6 +93,7 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 	}
 	// check for TierTemplates and TierTemplateRevisions associated with the NSTemplateTier
 	ttrCreated := false
+	revisions := map[string]string{}
 	for _, tierTemplateRef := range refs {
 		// get the TierTemplate
 		var tierTemplate toolchainv1alpha1.TierTemplate
@@ -107,17 +108,14 @@ func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1
 		if err != nil {
 			return false, err
 		}
-		nsTmplTier.Status.Revisions[tierTemplate.GetName()] = ttrName
+		revisions[tierTemplate.GetName()] = ttrName
 	}
-	// TODO handle removal of TierTemplate from NSTemplateTier
-	// scenario:
-	// 		a. TierTemplate is removed/replaced from NSTemplateTier.Spec
-	//		b. NSTemplateTier.Status.Revisions must be cleaned up
-	// Thus here we should iterate over the Status.Revisions field
-	// and check if there is any reference to a TierTemplate that is not in the Spec anymore
-	if ttrCreated {
-		// we need to update the status.revisions with the new ttrs
-		logger.Info("ttr created updating status")
+
+	// if ttr was created or entries were removed from revisions list
+	// we need to update the status.revisions
+	if !reflect.DeepEqual(revisions, nsTmplTier.Status.Revisions) {
+		nsTmplTier.Status.Revisions = revisions
+		logger.Info("ttr created or tier removed, updating status")
 		if err := r.Client.Status().Update(ctx, nsTmplTier); err != nil {
 			return ttrCreated, err
 		}
@@ -137,7 +135,7 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 			return true, tierTemplate.GetName(), nil
 		}
 		// nothing to update
-		return false, "", nil
+		return false, tierTemplate.GetName(), nil
 	}
 
 	tierTemplateRevisionName, found := nsTmplTier.Status.Revisions[tierTemplate.GetName()]
