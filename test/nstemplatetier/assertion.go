@@ -43,6 +43,7 @@ func AssertThatNSTemplateTier(t test.T, name string, client runtimeclient.Client
 func (a *Assertion) HasStatusTierTemplateRevisions(revisions []string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
+	require.Len(a.t, a.tier.Status.Revisions, len(revisions))
 	// check that each TierTemplate REF has a TierTemplateRevision set
 	for _, tierTemplateRef := range revisions {
 		require.NotNil(a.t, a.tier.Status.Revisions)
