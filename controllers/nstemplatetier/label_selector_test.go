@@ -1,7 +1,6 @@
 package nstemplatetier_test
 
 import (
-	"fmt"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -15,31 +14,32 @@ import (
 )
 
 func TestOutdatedTierSelecter(t *testing.T) {
-
+	nsTTier := &toolchainv1alpha1.NSTemplateTier{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: operatorNamespace,
+			Name:      "base1ns",
+		},
+	}
+	h := "d924b1b3a46689361e2f4b9f260cc2ad"
+	tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
+	templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
+	s := labels.NewSelector().Add(*tierLabel)
+	s = s.Add(*templateHashLabel)
+	expectedLabel := runtimeclient.MatchingLabelsSelector{
+		Selector: s,
+	}
 	t.Run("OutdatedTierSelecter gives a matching label", func(t *testing.T) {
 		//given
-		nsTTier := &toolchainv1alpha1.NSTemplateTier{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: operatorNamespace,
-				Name:      "base1ns",
-			},
-			Status: toolchainv1alpha1.NSTemplateTierStatus{
-				Revisions: map[string]string{
-					"base1ns-code-123456old":             "base1ns-code-123456old",
-					"base1ns-dev-123456old":              "base1ns-dev-123456old",
-					"base1ns-stage-123456old":            "base1ns-stage-123456old",
-					"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
-				},
+		Status := toolchainv1alpha1.NSTemplateTierStatus{
+			Revisions: map[string]string{
+				"base1ns-code-123456old":             "base1ns-code-123456old",
+				"base1ns-dev-123456old":              "base1ns-dev-123456old",
+				"base1ns-stage-123456old":            "base1ns-stage-123456old",
+				"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
 			},
 		}
-		h := "d924b1b3a46689361e2f4b9f260cc2ad"
-		tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
-		templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
-		s := labels.NewSelector().Add(*tierLabel)
-		s = s.Add(*templateHashLabel)
-		expectedLabel := runtimeclient.MatchingLabelsSelector{
-			Selector: s,
-		}
+		nsTTier.Status = Status
+
 		//when
 		matchOutdated, err := nstemplatetier.OutdatedTierSelector(nsTTier)
 
@@ -50,30 +50,16 @@ func TestOutdatedTierSelecter(t *testing.T) {
 
 	t.Run("OutdatedTierSelecter does not give a matching label", func(t *testing.T) {
 		//given
-		nsTTier := &toolchainv1alpha1.NSTemplateTier{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: operatorNamespace,
-				Name:      "base1ns",
-			},
-			Status: toolchainv1alpha1.NSTemplateTierStatus{
-				Revisions: map[string]string{
-					"base1ns-code-123456new":  "base1ns-code-123456new",
-					"base1ns-dev-123456old":   "base1ns-dev-123456new",
-					"base1ns-stage-123456new": "base1ns-stage-123456new",
-				},
+
+		statusout := toolchainv1alpha1.NSTemplateTierStatus{
+			Revisions: map[string]string{
+				"base1ns-code-123456new": "base1ns-code-123456new",
 			},
 		}
-		h := "d924b1b3a46689361e2f4b9f260cc2ad"
-		tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
-		templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
-		s := labels.NewSelector().Add(*tierLabel)
-		s = s.Add(*templateHashLabel)
-		expectedLabel := runtimeclient.MatchingLabelsSelector{
-			Selector: s,
-		}
+		nsTTier.Status = statusout
+
 		//when
 		matchOutdated, err := nstemplatetier.OutdatedTierSelector(nsTTier)
-		fmt.Print("match", matchOutdated)
 		require.NoError(t, err)
 		require.NotEqual(t, expectedLabel, matchOutdated)
 

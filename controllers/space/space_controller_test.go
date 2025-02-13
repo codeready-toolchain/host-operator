@@ -1511,56 +1511,46 @@ func TestUpdateSpaceTier(t *testing.T) {
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
-	})
-}
 
-func TestValidateRevisions(t *testing.T) {
-	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	s := scheme.Scheme
-	err := apis.AddToScheme(s)
-	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
-	base1nsTier.Status.Revisions = tiertest.Base1nsRevision
-	otherTier := tiertest.OtherTier()
+		t.Run("the templateref is not yet updated in status.revisions", func(t *testing.T) {
+			// given that Space is promoted from `base1ns` to `other` tier and corresponding NSTemplateSet is not up-to-date
+			otherTier := tiertest.OtherTier()
+			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
+				spacetest.WithTierName(otherTier.Name),      // tier changed to other tier
+				spacetest.WithTierHashLabelFor(base1nsTier), // still has the old tier hash label
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+				spacetest.WithFinalizer(),
+				spacetest.WithCondition(spacetest.Ready()))
+			hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+			ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
+			InitializeCounters(t,
+				NewToolchainStatus(
+					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+						"1,internal": 1,
+					}),
+					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+						string(metrics.Internal): 1,
+					}),
+					WithMember("member-1", WithSpaceCount(1)),
+				))
 
-	t.Run("the templateref is not yet updated in status.revisions", func(t *testing.T) {
-		// given that Space is promoted from `base1ns` to `other` tier and corresponding NSTemplateSet is not up-to-date
-		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
-			spacetest.WithTierName(otherTier.Name),      // tier changed to other tier
-			spacetest.WithTierHashLabelFor(base1nsTier), // still has the old tier hash label
-			spacetest.WithSpecTargetCluster("member-1"),
-			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-			spacetest.WithFinalizer(),
-			spacetest.WithCondition(spacetest.Ready()))
-		hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
-		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
-		member1Client := test.NewFakeClient(t, nstmplSet)
-		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-		ctrl := newReconciler(hostClient, member1, member2)
-		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
-		InitializeCounters(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
-		// when
-		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+			// then
+			require.Error(t, err, "The nstemplatier status.revisions is still not updated")
+			assert.Equal(t, reconcile.Result{
+				Requeue:      false,
+				RequeueAfter: 0,
+			}, res)
 
-		// then
-		require.Error(t, err, "The nstemplatier status.revisions is still not updated")
-		assert.Equal(t, reconcile.Result{
-			Requeue:      false,
-			RequeueAfter: 0,
-		}, res)
-
+		})
 	})
 }
 
