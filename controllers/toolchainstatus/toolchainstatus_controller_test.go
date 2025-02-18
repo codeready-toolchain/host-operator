@@ -1031,7 +1031,6 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
-
 	})
 }
 
@@ -1186,7 +1185,6 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
 
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
-
 				assertInvalidEmailReturnErr := func(email string) {
 					commonconfig.ResetCache() // clear the config cache so that this invalid config will be picked up
 					invalidConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
@@ -1287,7 +1285,6 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							require.Equal(t, email, notification.Spec.Recipient)
 
 							t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
-
 								// given
 								hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 									status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
@@ -1505,7 +1502,6 @@ func TestSynchronizationWithCounter(t *testing.T) {
 					memberCluster("member-2", ready(), spaceCount(2))).
 				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided")))
 		})
-
 	})
 
 	t.Run("initialize the cache using the ToolchainStatus resource", func(t *testing.T) {
@@ -1820,7 +1816,6 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		// then
 		require.Equal(t, "stone-stg-host.qc0p.p1.openshiftapps.com", domain)
 		require.NoError(t, err)
-
 	})
 
 	t.Run("test proxy url domain extraction incorrectURL", func(t *testing.T) {
@@ -1830,9 +1825,7 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		// then
 		require.Equal(t, "", domain)
 		require.Error(t, err)
-
 	})
-
 }
 
 func newDeploymentWithConditions(deploymentName string, deploymentConditions ...appsv1.DeploymentCondition) *appsv1.Deployment {

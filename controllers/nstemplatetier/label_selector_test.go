@@ -12,7 +12,6 @@ import (
 )
 
 func TestComputeHash(t *testing.T) {
-
 	t.Run("should match without cluster resources", func(t *testing.T) {
 		// given
 		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
@@ -224,5 +223,4 @@ func TestComputeHash(t *testing.T) {
 		require.NoError(t, err2)
 		assert.NotEqual(t, hash1, hash2)
 	})
-
 }

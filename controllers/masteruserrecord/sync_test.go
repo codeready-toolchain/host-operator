@@ -30,7 +30,6 @@ var readyToolchainStatus = NewToolchainStatus(
 	WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
 
 func TestIsSynchronized(t *testing.T) {
-
 	t.Run("synchronized", func(t *testing.T) {
 		// given
 		record, memberUserAcc := setupSynchronizerItems()
@@ -43,7 +42,6 @@ func TestIsSynchronized(t *testing.T) {
 	})
 
 	t.Run("not synchronized", func(t *testing.T) {
-
 		t.Run("missing label", func(t *testing.T) {
 			// given
 			record, memberUserAcc := setupSynchronizerItems()
@@ -548,7 +546,6 @@ func TestAlignReadiness(t *testing.T) {
 				HasContext("RegistrationURL", "https://registration.crt-placeholder.com"),
 				HasContext("DeactivationTimeoutDays", "30"))
 		}
-
 	})
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {

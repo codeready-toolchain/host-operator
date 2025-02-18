@@ -73,7 +73,6 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		})
 
 	for _, setName := range []string{notificationtemplates.SandboxTemplateSetName, notificationtemplates.AppstudioTemplateSetName} {
-
 		t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 			// when
 			mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
@@ -203,7 +202,6 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, "a message sent to info@foo.com", formValues.Get("html"))
-
 		})
 
 		t.Run("test mailgun notification delivery empty subject template", func(t *testing.T) {

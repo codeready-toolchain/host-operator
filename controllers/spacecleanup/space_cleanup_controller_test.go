@@ -23,7 +23,6 @@ import (
 )
 
 func TestCleanupSpace(t *testing.T) {
-
 	t.Run("without any SpaceBinding and created more than 30 seconds ago", func(t *testing.T) {
 		// given
 		space := spacetest.NewSpace(test.HostOperatorNs, "without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-31*time.Second)))
@@ -169,7 +168,6 @@ func TestCleanupSpace(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("when getting space fails", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "get-fails")

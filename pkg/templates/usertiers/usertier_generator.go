@@ -26,7 +26,6 @@ var log = logf.Log.WithName("usertiers")
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
-
 	// initialize tier generator, loads templates from assets
 	generator, err := newUserTierGenerator(s, client, namespace, assets)
 	if err != nil {
@@ -162,7 +161,6 @@ func setParams(parametersToSet []templatev1.Parameter, tmpl *templatev1.Template
 
 // initUserTiers generates all UserTier resources and adds them to the tier map
 func (t *tierGenerator) initUserTiers() error {
-
 	for tierName, tierData := range t.templatesByTier {
 		userTier := tierData.rawTemplates.userTier
 		sourceTierName := tierName

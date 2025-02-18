@@ -82,5 +82,4 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		// then
 		require.Empty(t, req)
 	})
-
 }

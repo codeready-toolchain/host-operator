@@ -51,7 +51,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 	defaultUserTier := commontier.NewUserTier(commontier.WithName("deactivate90"), commontier.WithDeactivationTimeoutDays(90))
 
 	t.Run("no update needed", func(t *testing.T) {
-
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
 			userSignup := commonsignup.NewUserSignup()
@@ -71,7 +70,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 	})
 
 	t.Run("update needed", func(t *testing.T) {
-
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup()
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "", "johny") // tierName not set
@@ -87,7 +85,5 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			expectedMUR.Spec.PropagatedClaims = userSignup.Spec.IdentityClaims.PropagatedClaims
 			assert.Equal(t, expectedMUR, mur)
 		})
-
 	})
-
 }

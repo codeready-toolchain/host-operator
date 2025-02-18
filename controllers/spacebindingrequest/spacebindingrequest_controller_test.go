@@ -44,7 +44,6 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 		sbrtestcommon.WithMUR("jane"),
 		sbrtestcommon.WithSpaceRole("admin"))
 	t.Run("success", func(t *testing.T) {
-
 		t.Run("spaceBinding doesn't exists it should be created", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr, sbrNamespace), "member-1", corev1.ConditionTrue)
@@ -526,7 +525,6 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, janeMur.Name, janeSpace.Name, hostClient).
 				Exists()
 		})
-
 	})
 }
 
@@ -540,7 +538,6 @@ func TestUpdateSpaceBindingRequest(t *testing.T) {
 	janeMur := masteruserrecord.NewMasterUserRecord(t, "jane")
 	sbrNamespace := spacerequesttest.NewNamespace("jane")
 	t.Run("success", func(t *testing.T) {
-
 		t.Run("update SpaceRole", func(t *testing.T) {
 			// given
 			sbr := sbrtestcommon.NewSpaceBindingRequest("jane", "jane-tenant",
@@ -645,7 +642,6 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).DoesNotExist() // spaceBindingRequest is gone
 			})
 		})
-
 	})
 
 	t.Run("failure", func(t *testing.T) {

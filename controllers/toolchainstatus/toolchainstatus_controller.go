@@ -357,7 +357,6 @@ func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
 // if the registration service is not ready
 func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-
 	s := regServiceSubstatusHandler{
 		controllerClient:    r.Client,
 		httpClientImpl:      r.HTTPClientImpl,
@@ -545,7 +544,6 @@ func (r *Reconciler) sendToolchainStatusNotification(ctx context.Context,
 }
 
 func ClusterURLs(logger logr.Logger, instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
-
 	if instance.Status.HostRoutes.ProxyURL != "" {
 		var domain string
 		var err error
@@ -832,7 +830,6 @@ func (r *Reconciler) setStatusToolchainStatusUnreadyNotificationCreated(
 
 func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
-
 	return r.updateStatusConditions(
 		ctx,
 		toolchainStatus,
@@ -846,7 +843,6 @@ func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(ctx context.Cont
 
 func (r *Reconciler) setStatusReadyNotificationCreationFailed(ctx context.Context,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
-
 	return r.updateStatusConditions(
 		ctx,
 		toolchainStatus,

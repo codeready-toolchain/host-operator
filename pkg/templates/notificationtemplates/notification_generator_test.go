@@ -55,7 +55,6 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account will be deactivated soon", template.Subject)
 			assert.Contains(t, template.Content, "Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be\n        deleted upon expiry.")
-
 		})
 
 		t.Run("get idlertriggered notification template", func(t *testing.T) {
@@ -67,7 +66,6 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.Equal(t, "Notice: Your running workload in namespace {{.Namespace}} has been idled", template.Subject)
 			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, your workload {{.AppType}} {{.AppName}} has been scaled down.")
-
 		})
 	})
 
@@ -131,7 +129,6 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.Error(t, err)
 			assert.Equal(t, "notification template test not found in sandbox", err.Error())
 			require.Empty(t, template)
-
 		})
 	})
 
@@ -149,7 +146,6 @@ func TestGetNotificationTemplate(t *testing.T) {
 }
 
 func TestTemplatesForAssets(t *testing.T) {
-
 	t.Run("failures", func(t *testing.T) {
 		t.Run("failed to get notification templates for a non existent environment", func(t *testing.T) {
 			// given

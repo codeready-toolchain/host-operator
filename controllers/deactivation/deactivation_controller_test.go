@@ -388,7 +388,6 @@ func TestReconcile(t *testing.T) {
 				require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
 
 				t.Run("usersignup requeued after deactivating notification created for user", func(t *testing.T) {
-
 					// Clear the scheduled deactivation time
 					userSignupFoobar.Status.ScheduledDeactivationTimestamp = nil
 

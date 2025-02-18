@@ -25,7 +25,6 @@ import (
 )
 
 func TestCreateOrUpdateResources(t *testing.T) {
-
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -34,7 +33,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	testassets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 
 	t.Run("ok", func(t *testing.T) {
-
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
@@ -106,7 +104,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 
 		t.Run("failed to read assets", func(t *testing.T) {
@@ -124,7 +121,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		})
 
 		t.Run("usertiers", func(t *testing.T) {
-
 			t.Run("failed to create usertiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)

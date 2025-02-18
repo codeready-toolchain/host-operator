@@ -25,7 +25,6 @@ func TestSyncMemberConfigs(t *testing.T) {
 	specificMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("sync success", func(t *testing.T) {
-
 		t.Run("no member clusters available - skip sync", func(t *testing.T) {
 			// given
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -62,7 +61,6 @@ func TestSyncMemberConfigs(t *testing.T) {
 	})
 
 	t.Run("sync fails", func(t *testing.T) {
-
 		t.Run("sync to a member failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
@@ -135,7 +133,6 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 func TestSyncMemberConfig(t *testing.T) {
 	t.Run("sync success", func(t *testing.T) {
-
 		t.Run("memberoperatorconfig created", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)

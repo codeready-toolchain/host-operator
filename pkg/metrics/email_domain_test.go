@@ -12,7 +12,6 @@ import (
 )
 
 func TestGetEmailDomain(t *testing.T) {
-
 	type testdata struct {
 		name           string
 		object         metrics.RuntimeObject

@@ -37,11 +37,9 @@ var expectedTestTiers = []string{
 }
 
 func TestLoadTemplatesByTiers(t *testing.T) {
-
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	t.Run("ok", func(t *testing.T) {
-
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
 			assets := assets.NewAssets(AssetNames, Asset)
@@ -85,7 +83,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 						default:
 							require.Fail(t, "found unexpected tier", "tier '%s' found but not handled", tier)
 						}
-
 					})
 				})
 			}
@@ -93,7 +90,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("missing asset", func(t *testing.T) {
 			// given
 			fakeAssets := func(name string) ([]byte, error) {
@@ -152,13 +148,11 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 }
 
 func TestNewUserTier(t *testing.T) {
-
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
 	t.Run("ok", func(t *testing.T) {
-
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]

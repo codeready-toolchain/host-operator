@@ -17,7 +17,6 @@ import (
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
-
 	// load templates from assets
 	metadataContent, err := assets.Asset("metadata.yaml")
 	if err != nil {
