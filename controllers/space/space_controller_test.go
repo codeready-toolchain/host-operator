@@ -1093,8 +1093,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasTierName(base1nsTier.Name).
 			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new").
 			HasNamespaceTemplateRefs("base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new").
+			HasSpaceRoles().
 			Get()
-		assert.Nil(t, nsTmplSet.Spec.SpaceRoles)
 		AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 
