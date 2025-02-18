@@ -9,6 +9,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	ns "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
@@ -463,29 +464,12 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 }
 
 func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
-	counter := 0
-	specTempRef := make(map[string]bool)
-	for _, ns := range tmplTier.Spec.Namespaces {
-		specTempRef[ns.TemplateRef] = true
-	}
-	specTempRef[tmplTier.Spec.ClusterResources.TemplateRef] = true
-	for _, sr := range tmplTier.Spec.SpaceRoles {
-		specTempRef[sr.TemplateRef] = true
-	}
-	for temp := range specTempRef {
-		for rev := range tmplTier.Status.Revisions {
-			if temp == rev {
-				specTempRef[temp] = false
-			}
+
+	specTempRef := ns.GetNSTemplateTierRefs(tmplTier)
+	for _, temp := range specTempRef {
+		if _, present := tmplTier.Status.Revisions[temp]; !present {
+			return errs.Errorf("The nstemplatier status.revisions is still not updated")
 		}
-	}
-	for _, val := range specTempRef {
-		if val {
-			counter++
-		}
-	}
-	if counter > 0 {
-		return errs.Errorf("The nstemplatier status.revisions is still not updated")
 	}
 	return nil
 }

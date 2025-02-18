@@ -160,38 +160,12 @@ func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, option
 	return Tier(t, "base1ns", spec, options...)
 }
 
-var Base1nsRevision = map[string]string{
-	CurrentBase1nsTemplates.Namespaces[0].TemplateRef:        CurrentBase1nsTemplates.Namespaces[0].TemplateRef,
-	CurrentBase1nsTemplates.Namespaces[1].TemplateRef:        CurrentBase1nsTemplates.Namespaces[1].TemplateRef,
-	CurrentBase1nsTemplates.Namespaces[2].TemplateRef:        CurrentBase1nsTemplates.Namespaces[2].TemplateRef,
-	CurrentBase1nsTemplates.ClusterResources.TemplateRef:     CurrentBase1nsTemplates.ClusterResources.TemplateRef,
-	CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
-	CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef:   CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef,
-	CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
-}
-
 var NSTemplateTierRevision = map[string]string{
 	"advanced-dev-123abc1":              "advanced-dev-123abc1",
 	"advanced-stage-123abc2":            "advanced-stage-123abc2",
 	"advanced-clusterresources-654321b": "advanced-clusterresources-654321b",
 	"advanced-admin-123abc1":            "advanced-admin-123abc1",
 	"advanced-viewer-123abc2":           "advanced-viewer-123abc2",
-}
-
-var OtherTierRevision = map[string]string{
-	OtherTier().Spec.Namespaces[0].TemplateRef:    OtherTier().Spec.Namespaces[0].TemplateRef,
-	OtherTier().Spec.Namespaces[1].TemplateRef:    OtherTier().Spec.Namespaces[1].TemplateRef,
-	OtherTier().Spec.Namespaces[2].TemplateRef:    OtherTier().Spec.Namespaces[2].TemplateRef,
-	OtherTier().Spec.ClusterResources.TemplateRef: OtherTier().Spec.ClusterResources.TemplateRef,
-}
-
-var OldTierRevision = map[string]string{
-	PreviousBase1nsTemplates.Namespaces[0].TemplateRef:        PreviousBase1nsTemplates.Namespaces[0].TemplateRef,
-	PreviousBase1nsTemplates.Namespaces[1].TemplateRef:        PreviousBase1nsTemplates.Namespaces[1].TemplateRef,
-	PreviousBase1nsTemplates.Namespaces[2].TemplateRef:        PreviousBase1nsTemplates.Namespaces[2].TemplateRef,
-	PreviousBase1nsTemplates.ClusterResources.TemplateRef:     PreviousBase1nsTemplates.ClusterResources.TemplateRef,
-	PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
-	PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
 }
 
 // AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
@@ -220,6 +194,44 @@ func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, 
 
 // TierOption an option to configure the NStemplateTier
 type TierOption func(*toolchainv1alpha1.NSTemplateTier)
+
+func WithStatusRevisionsBase1ns() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Status.Revisions = map[string]string{
+			CurrentBase1nsTemplates.Namespaces[0].TemplateRef:        CurrentBase1nsTemplates.Namespaces[0].TemplateRef,
+			CurrentBase1nsTemplates.Namespaces[1].TemplateRef:        CurrentBase1nsTemplates.Namespaces[1].TemplateRef,
+			CurrentBase1nsTemplates.Namespaces[2].TemplateRef:        CurrentBase1nsTemplates.Namespaces[2].TemplateRef,
+			CurrentBase1nsTemplates.ClusterResources.TemplateRef:     CurrentBase1nsTemplates.ClusterResources.TemplateRef,
+			CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
+			CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef:   CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef,
+			CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
+		}
+	}
+}
+
+func WithStatusRevisionsOlderTier() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Status.Revisions = map[string]string{
+			PreviousBase1nsTemplates.Namespaces[0].TemplateRef:        PreviousBase1nsTemplates.Namespaces[0].TemplateRef,
+			PreviousBase1nsTemplates.Namespaces[1].TemplateRef:        PreviousBase1nsTemplates.Namespaces[1].TemplateRef,
+			PreviousBase1nsTemplates.Namespaces[2].TemplateRef:        PreviousBase1nsTemplates.Namespaces[2].TemplateRef,
+			PreviousBase1nsTemplates.ClusterResources.TemplateRef:     PreviousBase1nsTemplates.ClusterResources.TemplateRef,
+			PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef,
+			PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef,
+		}
+	}
+}
+
+func WithStatusRevisionsOtherTier() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Status.Revisions = map[string]string{
+			OtherTier().Spec.Namespaces[0].TemplateRef:    OtherTier().Spec.Namespaces[0].TemplateRef,
+			OtherTier().Spec.Namespaces[1].TemplateRef:    OtherTier().Spec.Namespaces[1].TemplateRef,
+			OtherTier().Spec.Namespaces[2].TemplateRef:    OtherTier().Spec.Namespaces[2].TemplateRef,
+			OtherTier().Spec.ClusterResources.TemplateRef: OtherTier().Spec.ClusterResources.TemplateRef,
+		}
+	}
+}
 
 // WithoutCodeNamespace removes the `code` templates from the tier's specs.
 func WithoutCodeNamespace() TierOption {
@@ -259,6 +271,39 @@ func WithParameter(name, value string) TierOption {
 
 // OtherTier returns an "other" NSTemplateTier
 func OtherTier() *toolchainv1alpha1.NSTemplateTier {
+	return &toolchainv1alpha1.NSTemplateTier{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "toolchain-host-operator",
+			Name:      "other",
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+				{
+					TemplateRef: "other-code-123456a",
+				},
+				{
+					TemplateRef: "other-dev-123456a",
+				},
+				{
+					TemplateRef: "other-stage-123456a",
+				},
+			},
+			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+				TemplateRef: "other-clusterresources-123456a",
+			},
+		},
+		Status: toolchainv1alpha1.NSTemplateTierStatus{
+			Revisions: map[string]string{
+				"other-code-123456a":             "other-code-123456a",
+				"other-dev-123456a":              "other-dev-123456a",
+				"other-stage-123456a":            "other-stage-123456a",
+				"other-clusterresources-123456a": "other-clusterresources-123456a",
+			},
+		},
+	}
+}
+
+func OtherTierWithoutRevision() *toolchainv1alpha1.NSTemplateTier {
 	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "toolchain-host-operator",

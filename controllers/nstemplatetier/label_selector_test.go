@@ -13,7 +13,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestOutdatedTierSelecter(t *testing.T) {
+func TestOutdatedTierSelector(t *testing.T) {
 	nsTTier := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: operatorNamespace,
@@ -28,7 +28,7 @@ func TestOutdatedTierSelecter(t *testing.T) {
 	expectedLabel := runtimeclient.MatchingLabelsSelector{
 		Selector: s,
 	}
-	t.Run("OutdatedTierSelecter gives a matching label", func(t *testing.T) {
+	t.Run("OutdatedTierSelector gives a matching label", func(t *testing.T) {
 		//given
 		Status := toolchainv1alpha1.NSTemplateTierStatus{
 			Revisions: map[string]string{
@@ -48,7 +48,7 @@ func TestOutdatedTierSelecter(t *testing.T) {
 
 	})
 
-	t.Run("OutdatedTierSelecter does not give a matching label", func(t *testing.T) {
+	t.Run("OutdatedTierSelector does not give a matching label", func(t *testing.T) {
 		//given
 
 		statusout := toolchainv1alpha1.NSTemplateTierStatus{
