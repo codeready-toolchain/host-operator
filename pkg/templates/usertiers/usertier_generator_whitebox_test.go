@@ -125,7 +125,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			_, err := loadTemplatesByTiers(assets)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to load templates: invalid name format for file '.DS_Store'")
+			require.EqualError(t, err, "unable to load templates: invalid name format for file '.DS_Store'")
 		})
 
 		t.Run("invalid filename scope", func(t *testing.T) {

@@ -49,7 +49,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc, Is(Ready()), Has(ConsumedSpaceCount(3)), Has(ConsumedMemoryUsage(map[string]int{"worker": 50})))
 	})
 
@@ -74,7 +74,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigDisabledReason)),
 			Has(UnknownConsumedCapacity()))
@@ -91,7 +91,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)),
 			Has(UnknownConsumedCapacity()))
@@ -119,7 +119,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotFoundReason)),
 			Has(UnknownConsumedCapacity()))
@@ -147,7 +147,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigToolchainClusterNotReadyReason)),
 			Has(UnknownConsumedCapacity()))
@@ -172,7 +172,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
 			Has(ConsumedSpaceCount(5)),
@@ -199,7 +199,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
 			Has(ConsumedSpaceCount(3)),
@@ -227,7 +227,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(NotReadyWithReason(toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
 			Has(ConsumedSpaceCount(3)),
@@ -245,7 +245,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
 			Has(UnknownConsumedCapacity()))
@@ -268,7 +268,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Has(ReadyStatusAndReason(corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigInsufficientCapacityReason)),
 			Has(ConsumedSpaceCount(3)),
@@ -294,7 +294,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		AssertThat(t, spc,
 			Is(Ready()),
 			Has(ConsumedSpaceCount(3_000_000)),
@@ -318,7 +318,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
 
 		// then
-		assert.ErrorIs(t, reconcileErr, expectedErr)
+		require.ErrorIs(t, reconcileErr, expectedErr)
 	})
 	t.Run("re-enqueues and reports error in status on failure to get ToolchainCluster", func(t *testing.T) {
 		// given
@@ -356,7 +356,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
 
 		// then
-		assert.ErrorIs(t, reconcileErr, expectedErr)
+		require.ErrorIs(t, reconcileErr, expectedErr)
 	})
 	t.Run("doesn't re-enqueue when object not found", func(t *testing.T) {
 		// given
@@ -386,7 +386,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		assert.False(t, res.Requeue)
 		assert.Empty(t, spc.Status.Conditions)
 	})
@@ -406,7 +406,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
 
 		// then
-		assert.NoError(t, reconcileErr)
+		require.NoError(t, reconcileErr)
 		assert.False(t, res.Requeue)
 		assert.NotEmpty(t, spc.Status.Conditions)
 	})
