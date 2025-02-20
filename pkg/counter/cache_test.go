@@ -2,9 +2,10 @@ package counter_test
 
 import (
 	"context"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"testing"
+
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
