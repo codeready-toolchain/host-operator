@@ -20,7 +20,7 @@ func TestOutdatedTierSelector(t *testing.T) {
 			Name:      "base1ns",
 		},
 	}
-	h := "d924b1b3a46689361e2f4b9f260cc2ad"
+	h := "d7f6dae27c505a44c3b796b4ad22ed84"
 	tierLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.Exists, []string{})
 	templateHashLabel, _ := labels.NewRequirement(hash.TemplateTierHashLabelKey(nsTTier.Name), selection.NotEquals, []string{h})
 	s := labels.NewSelector().Add(*tierLabel)
@@ -32,10 +32,10 @@ func TestOutdatedTierSelector(t *testing.T) {
 		//given
 		Status := toolchainv1alpha1.NSTemplateTierStatus{
 			Revisions: map[string]string{
-				"base1ns-code-123456old":             "base1ns-code-123456old",
-				"base1ns-dev-123456old":              "base1ns-dev-123456old",
-				"base1ns-stage-123456old":            "base1ns-stage-123456old",
-				"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old",
+				"base1ns-code-123456old":             "base1ns-code-123456old-cr",
+				"base1ns-dev-123456old":              "base1ns-dev-123456old-cr",
+				"base1ns-stage-123456old":            "base1ns-stage-123456old-cr",
+				"base1ns-clusterresources-123456old": "base1ns-clusterresources-123456old-cr",
 			},
 		}
 		nsTTier.Status = Status
@@ -53,7 +53,7 @@ func TestOutdatedTierSelector(t *testing.T) {
 
 		statusout := toolchainv1alpha1.NSTemplateTierStatus{
 			Revisions: map[string]string{
-				"base1ns-code-123456new": "base1ns-code-123456new",
+				"base1ns-code-123456new": "base1ns-code-123456new-cr",
 			},
 		}
 		nsTTier.Status = statusout
