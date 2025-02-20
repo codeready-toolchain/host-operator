@@ -85,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // returns `true` if a new TierTemplateRevision CR was created, `err` if something wrong happened
 func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	logger := log.FromContext(ctx)
-	refs := getNSTemplateTierRefs(nsTmplTier)
+	refs := GetNSTemplateTierRefs(nsTmplTier)
 
 	// init revisions
 	if nsTmplTier.Status.Revisions == nil {
@@ -187,7 +187,7 @@ func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTi
 }
 
 // getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
-func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string {
+func GetNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string {
 	var refs []string
 	for _, ns := range tmplTier.Spec.Namespaces {
 		refs = append(refs, ns.TemplateRef)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	ns "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
@@ -49,8 +50,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&toolchainv1alpha1.NSTemplateTier{},
-			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client))).
 		Watches(&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToParentAndSubSpaces(r.Client)))
 	// watch NSTemplateSets in all the member clusters
@@ -307,6 +307,9 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 			if err := r.setStatusProvisioning(ctx, space); err != nil {
 				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(ctx, space, err)
 			}
+			if errValidating := validateRevisions(tmplTier); errValidating != nil {
+				return nsTmplSet, requeueDelay, errValidating
+			}
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings, tmplTier)
 			if err := memberCluster.Client.Create(ctx, nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
@@ -330,7 +333,9 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 		// just created, but there is no `Ready` condition yet
 		return nsTmplSet, requeueDelay, nil
 	}
-
+	if errValidating := validateRevisions(tmplTier); errValidating != nil {
+		return nsTmplSet, requeueDelay, errValidating
+	}
 	// update the NSTemplateSet if needed (including in case of missing space roles)
 	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
 	featureToggleAnnotationUpdated := ensureFeatureToggleAnnotation(space, nsTmplSet) // also check if the feature annotation was updated
@@ -422,13 +427,15 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	}
 	if tmplTier.Spec.ClusterResources != nil {
 		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			TemplateRef: tmplTier.Spec.ClusterResources.TemplateRef,
+			TemplateRef: tmplTier.Status.Revisions[tmplTier.Spec.ClusterResources.TemplateRef],
 		}
 	}
 	if len(tmplTier.Spec.Namespaces) > 0 {
 		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
 		for i, ns := range tmplTier.Spec.Namespaces {
-			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+				TemplateRef: tmplTier.Status.Revisions[ns.TemplateRef],
+			}
 		}
 	}
 	// space roles
@@ -446,7 +453,7 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 			// no need to add an entry in space roles if there is no associated user
 			if len(usernames) > 0 {
 				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
-					TemplateRef: sr.TemplateRef,
+					TemplateRef: tmplTier.Status.Revisions[sr.TemplateRef],
 					Usernames:   usernames,
 				})
 			}
@@ -455,6 +462,16 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	return s
 }
 
+func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
+
+	specTempRef := ns.GetNSTemplateTierRefs(tmplTier)
+	for _, temp := range specTempRef {
+		if _, present := tmplTier.Status.Revisions[temp]; !present {
+			return errs.Errorf("The nstemplatier status.revisions is still not updated")
+		}
+	}
+	return nil
+}
 func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []string {
 	usernames := map[string]interface{}{} // using a map to avoid duplicate entries
 	for _, b := range bindings {
