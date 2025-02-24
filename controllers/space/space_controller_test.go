@@ -40,7 +40,7 @@ func TestCreateSpace(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	t.Run("success", func(t *testing.T) {
 		type testRun struct {
 			name           string
@@ -577,7 +577,7 @@ func TestDeleteSpace(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	t.Run("after space was successfully provisioned", func(t *testing.T) {
 
 		// given a space that is being deleted
@@ -898,9 +898,9 @@ func TestUpdateSpaceTier(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	// get an older base1ns tier (with outdated references)
-	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisionsOlderTier())
+	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.PreviousBase1nsTemplates))
 	otherTier := tiertest.OtherTier()
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
@@ -1557,7 +1557,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	adminMUR := murtest.NewMasterUserRecord(t, "jack")
 	viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 	johnMUR := murtest.NewMasterUserRecord(t, "john")
@@ -1806,7 +1806,7 @@ func TestRetargetSpace(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	t.Run("to empty target cluster", func(t *testing.T) {
 		// given
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -2004,7 +2004,7 @@ func TestSubSpace(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisionsBase1ns())
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
 	// test SpaceBindings of a parentSpace are created/updated/deleted ,
 	// and how this should affect the subSpace and its NSTemplateSet
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
@@ -2254,7 +2254,6 @@ func TestNewNSTemplateSetSpec(t *testing.T) {
 
 	// given
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
-	nsTemplateTier.Status.Revisions = tiertest.NSTemplateTierRevision
 	s := spacetest.NewSpace(test.HostOperatorNs, "spacejohn",
 		spacetest.WithTierName(nsTemplateTier.Name),
 		spacetest.WithSpecTargetCluster("member-1"))

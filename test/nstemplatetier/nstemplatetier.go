@@ -41,6 +41,15 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 				},
 			},
 		},
+		Status: toolchainv1alpha1.NSTemplateTierStatus{
+			Revisions: map[string]string{
+				"advanced-dev-123abc1":              "advanced-dev-123abc1-cr",
+				"advanced-stage-123abc2":            "advanced-stage-123abc2-cr",
+				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-cr",
+				"advanced-admin-123abc1":            "advanced-admin-123abc1-cr",
+				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-cr",
+			},
+		},
 	}
 }
 
@@ -160,14 +169,6 @@ func Base1nsTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, option
 	return Tier(t, "base1ns", spec, options...)
 }
 
-var NSTemplateTierRevision = map[string]string{
-	"advanced-dev-123abc1":              "advanced-dev-123abc1-cr",
-	"advanced-stage-123abc2":            "advanced-stage-123abc2-cr",
-	"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-cr",
-	"advanced-admin-123abc1":            "advanced-admin-123abc1-cr",
-	"advanced-viewer-123abc2":           "advanced-viewer-123abc2-cr",
-}
-
 // AppStudioEnvTier returns an "appstudio-env" NSTemplateTier with template refs in the given spec
 func AppStudioEnvTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	return Tier(t, "appstudio-env", spec, options...)
@@ -195,29 +196,15 @@ func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, 
 // TierOption an option to configure the NStemplateTier
 type TierOption func(*toolchainv1alpha1.NSTemplateTier)
 
-func WithStatusRevisionsBase1ns() TierOption {
+func WithStatusRevisions(tierSpec toolchainv1alpha1.NSTemplateTierSpec) TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		tier.Status.Revisions = map[string]string{
-			CurrentBase1nsTemplates.Namespaces[0].TemplateRef:        "base1ns-code-123456new-cr",
-			CurrentBase1nsTemplates.Namespaces[1].TemplateRef:        "base1ns-dev-123456new-cr",
-			CurrentBase1nsTemplates.Namespaces[2].TemplateRef:        "base1ns-stage-123456new-cr",
-			CurrentBase1nsTemplates.ClusterResources.TemplateRef:     "base1ns-clusterresources-123456new-cr",
-			CurrentBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  "base1ns-admin-123456new-cr",
-			CurrentBase1nsTemplates.SpaceRoles["edit"].TemplateRef:   "base1ns-edit-123456new-cr",
-			CurrentBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: "base1ns-viewer-123456new-cr",
+		tier.Status.Revisions = make(map[string]string)
+		for _, ns := range tierSpec.Namespaces {
+			tier.Status.Revisions[ns.TemplateRef] = ns.TemplateRef + "-cr"
 		}
-	}
-}
-
-func WithStatusRevisionsOlderTier() TierOption {
-	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		tier.Status.Revisions = map[string]string{
-			PreviousBase1nsTemplates.Namespaces[0].TemplateRef:        "base1ns-code-123456old-cr",
-			PreviousBase1nsTemplates.Namespaces[1].TemplateRef:        "base1ns-dev-123456old-cr",
-			PreviousBase1nsTemplates.Namespaces[2].TemplateRef:        "base1ns-stage-123456old-cr",
-			PreviousBase1nsTemplates.ClusterResources.TemplateRef:     "base1ns-clusterresources-123456old-cr",
-			PreviousBase1nsTemplates.SpaceRoles["admin"].TemplateRef:  "base1ns-admin-123456old-cr",
-			PreviousBase1nsTemplates.SpaceRoles["viewer"].TemplateRef: "base1ns-viewer-123456old-cr",
+		tier.Status.Revisions[tierSpec.ClusterResources.TemplateRef] = tierSpec.ClusterResources.TemplateRef + "-cr"
+		for _, sp := range tierSpec.SpaceRoles {
+			tier.Status.Revisions[sp.TemplateRef] = sp.TemplateRef + "-cr"
 		}
 	}
 }

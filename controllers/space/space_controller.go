@@ -9,14 +9,13 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	ns "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
-
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -296,6 +295,10 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
 	}
+
+	if errValidating := validateRevisions(tmplTier); errValidating != nil {
+		return nil, requeueDelay, errValidating
+	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(ctx, types.NamespacedName{
@@ -306,9 +309,6 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 			logger.Info("creating NSTemplateSet on target member cluster")
 			if err := r.setStatusProvisioning(ctx, space); err != nil {
 				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(ctx, space, err)
-			}
-			if errValidating := validateRevisions(tmplTier); errValidating != nil {
-				return nsTmplSet, requeueDelay, errValidating
 			}
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings, tmplTier)
 			if err := memberCluster.Client.Create(ctx, nsTmplSet); err != nil {
@@ -333,9 +333,7 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 		// just created, but there is no `Ready` condition yet
 		return nsTmplSet, requeueDelay, nil
 	}
-	if errValidating := validateRevisions(tmplTier); errValidating != nil {
-		return nsTmplSet, requeueDelay, errValidating
-	}
+
 	// update the NSTemplateSet if needed (including in case of missing space roles)
 	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings, tmplTier)
 	featureToggleAnnotationUpdated := ensureFeatureToggleAnnotation(space, nsTmplSet) // also check if the feature annotation was updated
@@ -464,7 +462,7 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 
 func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
 
-	specTempRef := ns.GetNSTemplateTierRefs(tmplTier)
+	specTempRef := nstemplatetiers.GetNSTemplateTierRefs(tmplTier)
 	for _, temp := range specTempRef {
 		if _, present := tmplTier.Status.Revisions[temp]; !present {
 			return errs.Errorf("The nstemplatier status.revisions is still not updated")
