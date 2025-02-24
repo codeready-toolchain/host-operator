@@ -45,7 +45,7 @@ func TestGetTierRefs(t *testing.T) {
 	}
 	expectedRefs := []string{"base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new", "base1ns-clusterresources-123456new", "base1ns-admin-123456new", "base1ns-edit-123456new", "base1ns-viewer-123456new"}
 	if refs := GetNSTemplateTierRefs(Base1nsTemplates); refs != nil {
-		require.Equal(t, len(refs), 7)
+		require.Len(t, refs, 7)
 		require.Equal(t, expectedRefs, refs)
 	}
 }
