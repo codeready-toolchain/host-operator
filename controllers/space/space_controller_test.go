@@ -88,8 +88,8 @@ func TestCreateSpace(t *testing.T) {
 				nsTmplSetAssertion := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 					Exists().
 					HasTierName(base1nsTier.Name).
-					HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-					HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr")
+					HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+					HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr")
 				if testRun.featureToggles != "" {
 					nsTmplSetAssertion = nsTmplSetAssertion.
 						HasAnnotationWithValue(toolchainv1alpha1.FeatureToggleNameAnnotationKey, testRun.featureToggles)
@@ -125,8 +125,8 @@ func TestCreateSpace(t *testing.T) {
 						HasFinalizer()
 					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 						Exists().
-						HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-						HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr").
+						HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+						HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 						Get()
 					AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 1).
@@ -950,8 +950,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(otherTier.Name).
-			HasClusterResourcesTemplateRef("other-clusterresources-123456a-cr").
-			HasNamespaceTemplateRefs("other-code-123456a-cr", "other-dev-123456a-cr", "other-stage-123456a-cr").
+			HasClusterResourcesTemplateRef("other-clusterresources-123456a-ttr").
+			HasNamespaceTemplateRefs("other-code-123456a-ttr", "other-dev-123456a-ttr", "other-stage-123456a-ttr").
 			Get()
 		AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1).
@@ -1091,8 +1091,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(base1nsTier.Name).
-			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-			HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr").
+			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasSpaceRoles().
 			Get()
 		AssertThatCountersAndMetrics(t).
@@ -1173,8 +1173,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				HasTierName(base1nsTier.Name).
-				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456old-cr").
-				HasNamespaceTemplateRefs("base1ns-code-123456old-cr", "base1ns-dev-123456old-cr", "base1ns-stage-123456old-cr").
+				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456old-ttr").
+				HasNamespaceTemplateRefs("base1ns-code-123456old-ttr", "base1ns-dev-123456old-ttr", "base1ns-stage-123456old-ttr").
 				HasSpaceRoles().
 				Get()
 			AssertThatCountersAndMetrics(t).
@@ -1206,8 +1206,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				HasTierName(base1nsTier.Name).
-				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456old-cr").
-				HasNamespaceTemplateRefs("base1ns-code-123456old-cr", "base1ns-dev-123456old-cr", "base1ns-stage-123456old-cr").
+				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456old-ttr").
+				HasNamespaceTemplateRefs("base1ns-code-123456old-ttr", "base1ns-dev-123456old-ttr", "base1ns-stage-123456old-ttr").
 				HasSpaceRoles().
 				Get()
 			AssertThatCountersAndMetrics(t).
@@ -1370,8 +1370,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
 			HasConditions(spacetest.Updating())
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
-			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-			HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr").
+			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasConditions(nstemplatetsettest.Provisioned()) // status will be set to `Updating` by NSTemplateSet controller
 		AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
@@ -1411,8 +1411,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
 			HasConditions(spacetest.Updating()) // changed by controller
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
-			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-			HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr").
+			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasConditions(nstemplatetsettest.Updating()) // was already `Updating`
 		AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
@@ -1509,8 +1509,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				HasTierName(base1nsTier.Name).
-				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-cr").
-				HasNamespaceTemplateRefs("base1ns-code-123456new-cr", "base1ns-dev-123456new-cr", "base1ns-stage-123456new-cr")
+				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
+				HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr")
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
@@ -1613,8 +1613,8 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
 			HasSpaceRoles(
-				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", adminMUR.Name, johnMUR.Name), // entry added for user 'john' as admin
-				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", viewerMUR.Name),             // unchanged
+				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", adminMUR.Name, johnMUR.Name), // entry added for user 'john' as admin
+				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name),             // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 		AssertThatCountersAndMetrics(t).
@@ -1675,8 +1675,8 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
 			HasSpaceRoles(
-				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", adminMUR.Name),   // NO duplicate entry for `signupAdmin` user
-				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", viewerMUR.Name), // unchanged
+				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", adminMUR.Name),   // NO duplicate entry for `signupAdmin` user
+				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name), // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned())
 		AssertThatCountersAndMetrics(t).
@@ -1732,8 +1732,8 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
 			HasSpaceRoles(
-				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", adminMUR.Name),   // entry removed for user 'john'
-				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", viewerMUR.Name), // unchanged
+				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", adminMUR.Name),   // entry removed for user 'john'
+				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name), // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 		AssertThatCountersAndMetrics(t).
@@ -1791,8 +1791,8 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
 			HasSpaceRoles(
-				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", adminMUR.Name, johnMUR.Name), // entry added for user 'john'
-				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", viewerMUR.Name),             // entry removed for user 'john'
+				nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", adminMUR.Name, johnMUR.Name), // entry added for user 'john'
+				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name),             // entry removed for user 'john'
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 		AssertThatCountersAndMetrics(t).
@@ -2040,8 +2040,8 @@ func TestSubSpace(t *testing.T) {
 			// subNSTemplateSet should have same usernames and roles as parentNSTemplateSet
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", "parentSpaceAdmin"),
-					nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", "parentSpaceViewer"),
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", "parentSpaceAdmin"),
+					nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", "parentSpaceViewer"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
@@ -2082,8 +2082,8 @@ func TestSubSpace(t *testing.T) {
 			// subNSTemplateSet should have same merged roles and usernames
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", "parentSpaceAdmin"),
-					nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-cr", "subSpaceViewer"),
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", "parentSpaceAdmin"),
+					nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", "subSpaceViewer"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
@@ -2125,7 +2125,7 @@ func TestSubSpace(t *testing.T) {
 			// subNSTemplateSet should have both users as admin
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", "jane", "john"), // jane remains admin for subSpace
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", "jane", "john"), // jane remains admin for subSpace
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
@@ -2178,8 +2178,8 @@ func TestSubSpace(t *testing.T) {
 			// user is admin of the subSubSpace
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subSubNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-cr", "jane", "john", "lara"),
-					nstemplatetsettest.SpaceRole("base1ns-edit-123456new-cr", "bob"),
+					nstemplatetsettest.SpaceRole("base1ns-admin-123456new-ttr", "jane", "john", "lara"),
+					nstemplatetsettest.SpaceRole("base1ns-edit-123456new-ttr", "bob"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
 		})
@@ -2289,24 +2289,24 @@ func TestNewNSTemplateSetSpec(t *testing.T) {
 		TierName: "advanced",
 		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 			{
-				TemplateRef: "advanced-dev-123abc1-cr",
+				TemplateRef: "advanced-dev-123abc1-ttr",
 			},
 			{
-				TemplateRef: "advanced-stage-123abc2-cr",
+				TemplateRef: "advanced-stage-123abc2-ttr",
 			},
 		},
 		ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-			TemplateRef: "advanced-clusterresources-654321b-cr",
+			TemplateRef: "advanced-clusterresources-654321b-ttr",
 		},
 		SpaceRoles: []toolchainv1alpha1.NSTemplateSetSpaceRole{
 			{
-				TemplateRef: "advanced-admin-123abc1-cr",
+				TemplateRef: "advanced-admin-123abc1-ttr",
 				Usernames: []string{
 					"john",
 				},
 			},
 			{
-				TemplateRef: "advanced-viewer-123abc2-cr",
+				TemplateRef: "advanced-viewer-123abc2-ttr",
 				Usernames: []string{
 					"jack", "joe", // sorted
 				},

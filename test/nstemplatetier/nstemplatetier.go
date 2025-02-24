@@ -43,11 +43,11 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 		},
 		Status: toolchainv1alpha1.NSTemplateTierStatus{
 			Revisions: map[string]string{
-				"advanced-dev-123abc1":              "advanced-dev-123abc1-cr",
-				"advanced-stage-123abc2":            "advanced-stage-123abc2-cr",
-				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-cr",
-				"advanced-admin-123abc1":            "advanced-admin-123abc1-cr",
-				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-cr",
+				"advanced-dev-123abc1":              "advanced-dev-123abc1-ttr",
+				"advanced-stage-123abc2":            "advanced-stage-123abc2-ttr",
+				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-ttr",
+				"advanced-admin-123abc1":            "advanced-admin-123abc1-ttr",
+				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-ttr",
 			},
 		},
 	}
@@ -200,11 +200,11 @@ func WithStatusRevisions(tierSpec toolchainv1alpha1.NSTemplateTierSpec) TierOpti
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
 		tier.Status.Revisions = make(map[string]string)
 		for _, ns := range tierSpec.Namespaces {
-			tier.Status.Revisions[ns.TemplateRef] = ns.TemplateRef + "-cr"
+			tier.Status.Revisions[ns.TemplateRef] = ns.TemplateRef + "-ttr"
 		}
-		tier.Status.Revisions[tierSpec.ClusterResources.TemplateRef] = tierSpec.ClusterResources.TemplateRef + "-cr"
+		tier.Status.Revisions[tierSpec.ClusterResources.TemplateRef] = tierSpec.ClusterResources.TemplateRef + "-ttr"
 		for _, sp := range tierSpec.SpaceRoles {
-			tier.Status.Revisions[sp.TemplateRef] = sp.TemplateRef + "-cr"
+			tier.Status.Revisions[sp.TemplateRef] = sp.TemplateRef + "-ttr"
 		}
 	}
 }
@@ -270,10 +270,10 @@ func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 		},
 		Status: toolchainv1alpha1.NSTemplateTierStatus{
 			Revisions: map[string]string{
-				"other-code-123456a":             "other-code-123456a-cr",
-				"other-dev-123456a":              "other-dev-123456a-cr",
-				"other-stage-123456a":            "other-stage-123456a-cr",
-				"other-clusterresources-123456a": "other-clusterresources-123456a-cr",
+				"other-code-123456a":             "other-code-123456a-ttr",
+				"other-dev-123456a":              "other-dev-123456a-ttr",
+				"other-stage-123456a":            "other-stage-123456a-ttr",
+				"other-clusterresources-123456a": "other-clusterresources-123456a-ttr",
 			},
 		},
 	}

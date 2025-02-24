@@ -460,8 +460,10 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	return s
 }
 
+// In order for the NSTemplateTier to be considered ready, we must wait until the template refs
+// in the spec are actually processed and updated in the status.revisions field, hence we validate
+// here if the tenplate refs are all present in the status.revsions
 func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
-
 	specTempRef := nstemplatetiers.GetNSTemplateTierRefs(tmplTier)
 	for _, temp := range specTempRef {
 		if _, present := tmplTier.Status.Revisions[temp]; !present {
