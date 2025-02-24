@@ -40,7 +40,7 @@ func TestCreateSpace(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	t.Run("success", func(t *testing.T) {
 		type testRun struct {
 			name           string
@@ -577,7 +577,7 @@ func TestDeleteSpace(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	t.Run("after space was successfully provisioned", func(t *testing.T) {
 
 		// given a space that is being deleted
@@ -898,10 +898,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	// get an older base1ns tier (with outdated references)
-	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.PreviousBase1nsTemplates))
-	otherTier := tiertest.OtherTier()
+	olderbase1nsTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisions())
+	otherTier := tiertest.OtherTier(t, tiertest.WithStatusRevisions())
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
 		// given that Space is promoted from `base1ns` to `other` tier and corresponding NSTemplateSet is not up-to-date
@@ -1517,7 +1517,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 		t.Run("the templateref is not yet updated in status.revisions", func(t *testing.T) {
 			// given that Space is promoted from `base1ns` to `other` tier and corresponding NSTemplateSet is not up-to-date
-			otherTier := tiertest.OtherTierWithoutRevision()
+			otherTier := tiertest.OtherTier(t)
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName(otherTier.Name),      // tier changed to other tier
 				spacetest.WithTierHashLabelFor(base1nsTier), // still has the old tier hash label
@@ -1557,7 +1557,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	adminMUR := murtest.NewMasterUserRecord(t, "jack")
 	viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 	johnMUR := murtest.NewMasterUserRecord(t, "john")
@@ -1806,7 +1806,7 @@ func TestRetargetSpace(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	t.Run("to empty target cluster", func(t *testing.T) {
 		// given
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
@@ -2004,7 +2004,7 @@ func TestSubSpace(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions(tiertest.CurrentBase1nsTemplates))
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 	// test SpaceBindings of a parentSpace are created/updated/deleted ,
 	// and how this should affect the subSpace and its NSTemplateSet
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
