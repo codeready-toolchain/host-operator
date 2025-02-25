@@ -38,8 +38,8 @@ github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBS
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/codeready-toolchain/api v0.0.0-20250131222557-beba5463f429 h1:I7xzHRmstvzucH9NqF54xvsM/yYuWOp/G5+BUr5j4tY=
 github.com/codeready-toolchain/api v0.0.0-20250131222557-beba5463f429/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250131223755-a9c24d874b32 h1:mX8aMYw9yPCSZuRNeZwShOPQDl0aTKV9FcEfb1Sdhiw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250131223755-a9c24d874b32/go.mod h1:/PeschEEyTZIAsXQxIf83Fl8kOpSOHDfR5yyanz+bSA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20250225125153-139ef30bbd6d h1:iEUmJ9XB7Q6BUWG76ocuECZBPIY2wDxQhAXTAW3CM8g=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20250225125153-139ef30bbd6d/go.mod h1:/PeschEEyTZIAsXQxIf83Fl8kOpSOHDfR5yyanz+bSA=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
