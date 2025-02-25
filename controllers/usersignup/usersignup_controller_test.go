@@ -179,6 +179,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			default:
 				assert.Fail(t, "unknown testcase")
 			}
+			// UserSignup not marked as ready yet
+			metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 		})
 	}
 }
@@ -191,29 +193,34 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
+			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey),
+			commonsignup.WithRequestReceivedTimeAnnotation(time.Now())),
 		"with social event": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey),
 			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name),
+			commonsignup.WithRequestReceivedTimeAnnotation(time.Now()),
 		),
 		"with skip space creation annotation set to false": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "false")),
+			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "false"),
+			commonsignup.WithRequestReceivedTimeAnnotation(time.Now())),
 		"with skip space creation annotation set to true": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true")),
+			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true"),
+			commonsignup.WithRequestReceivedTimeAnnotation(time.Now())),
 		"with feature toggles": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
+			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey),
+			commonsignup.WithRequestReceivedTimeAnnotation(time.Now())),
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
@@ -311,6 +318,8 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 				default:
 					assert.Fail(t, "unknown testcase")
 				}
+				// UserSignup not marked as ready yet
+				metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 			})
 		})
 	}
@@ -325,7 +334,8 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		commonsignup.ApprovedManually(),
 		commonsignup.BeingDeleted(),
 		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
-		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"),
+		commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
 	controllerutil.AddFinalizer(userSignup, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
@@ -356,6 +366,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
 		})
+	metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 }
 
 func TestUserSignupVerificationRequiredMetric(t *testing.T) {
@@ -409,7 +420,7 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup()
+	userSignup := commonsignup.NewUserSignup(commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
@@ -544,6 +555,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	metricstest.AssertHistogramBucketEquals(t, 1, 1, metrics.UserSignupProvisionTimeHistogram) // could fail in debug mode
 	segmenttest.AssertMessageQueuedForProvisionedMur(t, r.SegmentClient, userSignup, mur.Name)
 }
 
@@ -1061,7 +1073,9 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManuallyAgo(time.Minute))
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManuallyAgo(time.Minute),
+		commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
@@ -1189,6 +1203,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				})
 		})
 	})
+
+	metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 }
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
@@ -4610,7 +4626,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
-			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
+			DoesNotHaveAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	})
 }
@@ -4833,6 +4849,96 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 			Status:  corev1.ConditionFalse,
 			Reason:  "UnableToCreateSpace",
 			Message: "cannot create space because it is currently being deleted",
+		})
+	})
+}
+
+func TestRecordProvisionTime(t *testing.T) {
+	t.Run("should be in histogram", func(t *testing.T) {
+		// given
+		t.Cleanup(metrics.Reset)
+		for i := 0; i < 100; i++ {
+			userSignup := commonsignup.NewUserSignup(
+				commonsignup.WithRequestReceivedTimeAnnotation(time.Now().Add(-time.Duration(i) * time.Second)))
+			client := test.NewFakeClient(t, userSignup)
+
+			// when
+			err := recordProvisionTime(context.TODO(), client, userSignup)
+
+			// then
+			require.NoError(t, err)
+			AssertThatUserSignup(t, test.HostOperatorNs, userSignup.Name, client).DoesNotHaveAnnotation(toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey)
+		}
+		for _, value := range []int{1, 2, 3, 5, 8, 13, 21, 34, 55, 89} {
+			metricstest.AssertHistogramBucketEquals(t, value, value, metrics.UserSignupProvisionTimeHistogram) // could fail when debugging
+		}
+	})
+
+	t.Run("should not be in histogram", func(t *testing.T) {
+		verify := func(userSignup *toolchainv1alpha1.UserSignup) {
+			// given
+			client := test.NewFakeClient(t, userSignup)
+
+			// when
+			err := recordProvisionTime(context.TODO(), client, userSignup)
+
+			// then
+			require.NoError(t, err)
+			AssertThatUserSignup(t, test.HostOperatorNs, userSignup.Name, client).DoesNotHaveAnnotation(toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey)
+			metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
+		}
+
+		t.Run("with manual approval", func(t *testing.T) {
+			t.Cleanup(metrics.Reset)
+			verify(commonsignup.NewUserSignup(
+				commonsignup.WithRequestReceivedTimeAnnotation(time.Now()),
+				commonsignup.ApprovedManually()))
+		})
+
+		t.Run("with passed phone verification", func(t *testing.T) {
+			t.Cleanup(metrics.Reset)
+			verify(commonsignup.NewUserSignup(
+				commonsignup.WithRequestReceivedTimeAnnotation(time.Now()),
+				commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "123")))
+		})
+
+		t.Run("request-received-time annotation is missing", func(t *testing.T) {
+			t.Cleanup(metrics.Reset)
+			verify(commonsignup.NewUserSignup())
+		})
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		t.Run("when annotation removal fails", func(t *testing.T) {
+			// given
+			t.Cleanup(metrics.Reset)
+			userSignup := commonsignup.NewUserSignup(commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
+			client := test.NewFakeClient(t, userSignup)
+			client.MockUpdate = func(_ context.Context, _ runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
+				return fmt.Errorf("some error")
+			}
+
+			// when
+			err := recordProvisionTime(context.TODO(), client, userSignup)
+
+			// then
+			require.EqualError(t, err, "some error")
+			metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
+		})
+
+		t.Run("when parsing annotation value fails", func(t *testing.T) {
+			// given
+			t.Cleanup(metrics.Reset)
+			userSignup := commonsignup.NewUserSignup(commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
+			userSignup.Annotations[toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey] = "broken"
+			client := test.NewFakeClient(t, userSignup)
+
+			// when
+			err := recordProvisionTime(context.TODO(), client, userSignup)
+
+			// then
+			require.NoError(t, err)
+			metricstest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 		})
 	})
 }

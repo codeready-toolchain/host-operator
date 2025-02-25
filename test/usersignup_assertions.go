@@ -79,7 +79,7 @@ func (a *UserSignupAssertion) HasAnnotation(key, value string) *UserSignupAssert
 	return a
 }
 
-func (a *UserSignupAssertion) HasNoAnnotation(key string) *UserSignupAssertion {
+func (a *UserSignupAssertion) DoesNotHaveAnnotation(key string) *UserSignupAssertion {
 	err := a.loadUserSignup()
 	require.NoError(a.t, err)
 	_, found := a.usersignup.Annotations[key]

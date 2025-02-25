@@ -177,6 +177,8 @@ github.com/mailgun/mailgun-go/v4 v4.8.1 h1:1+MdKakJuXnW2JJDbyPdO1ngAANOyHyVPxQvF
 github.com/mailgun/mailgun-go/v4 v4.8.1/go.mod h1:FJlF9rI5cQT+mrwujtJjPMbIVy3Ebor9bKTVsJ0QU40=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+github.com/matousjobanek/api v0.0.0-20250225114159-7e2aa7cf0ada/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
+github.com/matousjobanek/toolchain-common v0.0.0-20250225115436-1e9ef245b210/go.mod h1:I38hiluJQcUT/GKo6iLhNLSrueqvtw+W9huBLjwX3SE=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvlsiIGKtc+UG6U5vzxaoagmhXfyg=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
