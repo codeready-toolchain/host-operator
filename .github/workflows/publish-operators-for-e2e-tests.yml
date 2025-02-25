@@ -12,7 +12,7 @@ jobs:
   binary:
     name: Build & push operator bundles for e2e tests
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: ${{ github.event.comment == '' || contains(github.event.comment.body, '/retest') || contains(github.event.comment.body, '/test all') || contains(github.event.comment.body, '/test e2e') }}
     steps:
     # Checkout from PR event - in that case the comment field is empty
@@ -28,7 +28,7 @@ jobs:
     # Is executed only for comment events - in that case the pull_request field is empty
     - name: Send Github API Request to get PR data
       id: request
-      uses: octokit/request-action@v2.4.0
+      uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # workaround for https://github.com/octokit/request-action/issues/315 - use SHA instead of the tag v2.4.0
       if: ${{ github.event.pull_request == '' }}
       with:
         route: ${{ github.event.issue.pull_request.url }}
