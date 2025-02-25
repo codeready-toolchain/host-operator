@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
 	github.com/codeready-toolchain/api v0.0.0-20250131222557-beba5463f429
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20250131223755-a9c24d874b32
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20250225125153-139ef30bbd6d
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.4.1
