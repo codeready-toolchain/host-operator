@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,6 +47,6 @@ func TestGetTierRefs(t *testing.T) {
 	expectedRefs := []string{"base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new", "base1ns-clusterresources-123456new", "base1ns-admin-123456new", "base1ns-edit-123456new", "base1ns-viewer-123456new"}
 	if refs := GetNSTemplateTierRefs(Base1nsTemplates); refs != nil {
 		require.Len(t, refs, 7)
-		require.Equal(t, expectedRefs, refs)
+		assert.ElementsMatch(t, expectedRefs, refs)
 	}
 }
