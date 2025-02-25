@@ -8,7 +8,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -23,6 +25,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const UnableToEnsureRevisions = "UnableToEnsureRevisions"
+
+// NSTemplateTierProvisionedReason represents the reason for a successfully provisioned NSTemplateTier.
+const NSTemplateTierProvisionedReason = "Provisioned"
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -71,14 +78,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
 	if created, err := r.ensureRevision(ctx, tier); err != nil {
-		// todo add/update ready condition false in the NSTemplateTier when something fails
+		// set ready condition false in the NSTemplateTier
+		if err := r.setStatusFailed(ctx, tier, UnableToEnsureRevisions, err); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		return reconcile.Result{}, fmt.Errorf("unable to create new TierTemplateRevision after NSTemplateTier changed: %w", err)
 	} else if created {
 		logger.Info("Requeue after creating a new TTR")
 		return reconcile.Result{RequeueAfter: time.Second}, nil
 	}
 
-	return reconcile.Result{}, nil
+	// set ready condition on NSTemplateTier
+	err = r.updateStatus(ctx, tier, ReadyCondition())
+
+	return reconcile.Result{}, err
 }
 
 // ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
@@ -240,4 +254,39 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	}
 
 	return ttr
+}
+
+func (r *Reconciler) setStatusFailed(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, reason string, cause error) error {
+	if err := r.updateStatus(
+		ctx,
+		tmplTier,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  reason,
+			Message: cause.Error(),
+		}); err != nil {
+		logger := log.FromContext(ctx)
+		logger.Error(err, "unable to update NSTemplateTier condition")
+		return err
+	}
+	return cause
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, conditions ...toolchainv1alpha1.Condition) error {
+	var updated bool
+	tmplTier.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(tmplTier.Status.Conditions, conditions...)
+	if !updated {
+		// Nothing changed
+		return nil
+	}
+	return r.Client.Status().Update(ctx, tmplTier)
+}
+
+func ReadyCondition() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: NSTemplateTierProvisionedReason,
+	}
 }
