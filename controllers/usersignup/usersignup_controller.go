@@ -380,6 +380,12 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 			}
 		}
 
+		logger.Info("Checking whether MUR is Ready", "MUR", mur.Name)
+		if !condition.IsTrueWithReason(mur.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.MasterUserRecordProvisionedReason) &&
+			!condition.IsTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete) {
+			return true, r.updateIncompleteStatus(ctx, userSignup, fmt.Sprintf("MUR %s was not ready", mur.Name))
+		}
+
 		logger.Info("Setting UserSignup status to 'Complete'")
 
 		if err := r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name)); err != nil {

@@ -502,9 +502,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
-			// set the space to ready
-			err = r.setSpaceToReady(userSignup.Spec.IdentityClaims.PreferredUsername)
-			require.NoError(t, err)
+			// set the space & mur to ready
+			setSpaceToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+			setMURToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1149,8 +1150,9 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 		t.Run("third reconcile - spacebinding created and usersignup completed", func(t *testing.T) {
 			// given
-			err = r.setSpaceToReady(mur.Name)
-			require.NoError(t, err)
+			setSpaceToReady(t, r.Client, mur.Name)
+			setMURToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1288,8 +1290,9 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 		t.Run("third reconcile", func(t *testing.T) {
 			// given
-			err = r.setSpaceToReady(mur.Name)
-			require.NoError(t, err)
+			setSpaceToReady(t, r.Client, mur.Name)
+			setMURToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1488,8 +1491,9 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 		t.Run("third reconcile", func(t *testing.T) {
 			// given
-			err = r.setSpaceToReady(userSignup.Name)
-			require.NoError(t, err)
+			setSpaceToReady(t, r.Client, userSignup.Name)
+			setMURToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1941,8 +1945,9 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
 		// given the space is ready
-		err = r.setSpaceToReady("foo")
-		require.NoError(t, err)
+		setSpaceToReady(t, r.Client, "foo")
+		setMURToReady(t, r.Client, "foo")
+
 		// Reconcile again so that the userSignup status is now updated
 		_, err = r.Reconcile(context.TODO(), req)
 
@@ -2050,8 +2055,9 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		t.Run("verify usersignup on third reconcile", func(t *testing.T) {
 			// given space is ready
-			err = r.setSpaceToReady(userSignup.Name)
-			require.NoError(t, err)
+			setSpaceToReady(t, r.Client, userSignup.Name)
+			setMURToReady(t, r.Client, userSignup.Spec.IdentityClaims.PreferredUsername)
+
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 
@@ -2771,10 +2777,11 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 
 	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
-		err := r.setSpaceToReady(mur.Name) // given space is ready
-		require.NoError(t, err)
+		// given space & mur are ready
+		setSpaceToReady(t, r.Client, mur.Name)
+		setMURToReady(t, r.Client, mur.Name)
 
-		_, err = r.Reconcile(context.TODO(), req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -4256,9 +4263,10 @@ func TestChangedCompliantUsername(t *testing.T) {
 		Exists().
 		HasSpecTargetCluster("east").
 		HasTier(baseNSTemplateTier.Name)
-	// given space is ready
-	err = r.setSpaceToReady(userSignup.Name)
-	require.NoError(t, err)
+	// given space & mur are ready
+	setSpaceToReady(t, r.Client, userSignup.Name)
+	setMURToReady(t, r.Client, userSignup.Name)
+
 	// 3rd reconcile should create a new SpaceBinding for the new MUR
 	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
@@ -4653,23 +4661,25 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		return userSignup, mur, space, spacebinding
 	}
 
-	signupIncomplete := []toolchainv1alpha1.Condition{
-		{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
-			Message: "space foo was not ready",
-		},
-		{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-			Status: corev1.ConditionFalse,
-			Reason: "UserNotInPreDeactivation",
-		},
-		{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: corev1.ConditionFalse,
-			Reason: "UserIsActive",
-		},
+	signupIncomplete := func(object string) []toolchainv1alpha1.Condition {
+		return []toolchainv1alpha1.Condition{
+			{
+				Type:    toolchainv1alpha1.UserSignupComplete,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+				Message: object + " foo was not ready",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: corev1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: corev1.ConditionFalse,
+				Reason: "UserIsActive",
+			},
+		}
 	}
 	signupComplete := []toolchainv1alpha1.Condition{
 		{
@@ -4689,41 +4699,58 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		},
 	}
 
+	initObjects := []runtimeclient.Object{
+		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+		baseNSTemplateTier, deactivate30Tier, spc1,
+	}
+
 	t.Run("until Space is provisioned", func(t *testing.T) {
 		// given
 		userSignup, mur, space, spacebinding := setup()
-		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
-		// when
-		res, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-		require.Equal(t, reconcile.Result{}, res)
-		// and
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete...)
-	})
+		r, req, _ := prepareReconcile(t, userSignup.Name, append(initObjects, userSignup, mur, space, spacebinding)...)
 
-	t.Run("when space is provisioned", func(t *testing.T) {
-		// given
-		userSignup, mur, space, spacebinding := setup()
-		space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.SpaceProvisionedReason,
-		})
-		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
+
 		// then
 		require.NoError(t, err)
 		require.Equal(t, reconcile.Result{}, res)
-		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("space")...)
+
+		t.Run("when space is provisioned, but not mur", func(t *testing.T) {
+			// given
+			setSpaceToReady(t, r.Client, space.Name)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("MUR")...)
+
+			t.Run("when space & mur are both provisioned", func(t *testing.T) {
+				// given
+				setMURToReady(t, r.Client, mur.Name)
+
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res)
+				err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+				require.NoError(t, err)
+				test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
+			})
+		})
 	})
 
-	// If a space is updating, keep usersignups that have already completed
+	// If a space is updating or mur is not ready, keep usersignups that have already completed
 	t.Run("keep usersignups while space is updating", func(t *testing.T) {
 		// given
 		userSignup, mur, space, spacebinding := setup()
@@ -4733,32 +4760,83 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceUpdatingReason,
 		}}
-		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, append(initObjects, userSignup, mur, space, spacebinding)...)
+
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
 		require.NoError(t, err)
 		require.Equal(t, reconcile.Result{}, res)
-		// then
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
+
+		t.Run("the same for mur", func(t *testing.T) {
+			// given
+			setSpaceToReady(t, r.Client, space.Name)
+			mur.Status.Conditions = []toolchainv1alpha1.Condition{{
+				Type:   toolchainv1alpha1.ConditionReady,
+				Status: corev1.ConditionFalse,
+				Reason: toolchainv1alpha1.MasterUserRecordProvisioningReason,
+			}}
+			require.NoError(t, r.Client.Update(context.TODO(), mur))
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
+
+		})
 	})
 
-	// If a space is updating, usersignups that haven't already completed should be marked as incomplete
+	// If either space is updating or mur is not ready, usersignups that haven't already completed should be marked as incomplete
 	t.Run("mark in-progress signups as incomplete when space is updating", func(t *testing.T) {
 		// given
 		userSignup, mur, space, spacebinding := setup()
-		space.Status.Conditions = signupIncomplete
-		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
-		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+		userSignup.Status.Conditions = signupIncomplete("mur")
+		space.Status.Conditions = []toolchainv1alpha1.Condition{{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceUpdatingReason,
+		}}
+		r, req, _ := prepareReconcile(t, userSignup.Name, append(initObjects, userSignup, mur, space, spacebinding)...)
+
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
 		require.NoError(t, err)
 		require.Equal(t, reconcile.Result{}, res)
-		// then
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete...)
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("space")...)
+
+		t.Run("the same for mur", func(t *testing.T) {
+			// given
+			setSpaceToReady(t, r.Client, space.Name)
+			mur.Status.Conditions = []toolchainv1alpha1.Condition{{
+				Type:   toolchainv1alpha1.ConditionReady,
+				Status: corev1.ConditionFalse,
+				Reason: toolchainv1alpha1.MasterUserRecordProvisioningReason,
+			}}
+			require.NoError(t, r.Client.Update(context.TODO(), mur))
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("MUR")...)
+		})
 	})
 }
 
@@ -4943,20 +5021,34 @@ func TestRecordProvisionTime(t *testing.T) {
 	})
 }
 
-func (r *Reconciler) setSpaceToReady(name string) error {
+func setSpaceToReady(t *testing.T, cl runtimeclient.Client, name string) {
 	space := toolchainv1alpha1.Space{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
+	err := cl.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
 		Namespace: test.HostOperatorNs,
 	}, &space)
-	if err != nil {
-		return err
-	}
-	space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
+	require.NoError(t, err)
+	space.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(space.Status.Conditions, toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
 		Reason: toolchainv1alpha1.SpaceProvisionedReason,
 	})
-	err = r.Client.Status().Update(context.TODO(), &space)
-	return err
+	err = cl.Status().Update(context.TODO(), &space)
+	require.NoError(t, err)
+}
+
+func setMURToReady(t *testing.T, cl runtimeclient.Client, name string) {
+	mur := toolchainv1alpha1.MasterUserRecord{}
+	err := cl.Get(context.TODO(), types.NamespacedName{
+		Name:      name,
+		Namespace: test.HostOperatorNs,
+	}, &mur)
+	require.NoError(t, err)
+	mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: toolchainv1alpha1.MasterUserRecordProvisionedReason,
+	})
+	err = cl.Status().Update(context.TODO(), &mur)
+	require.NoError(t, err)
 }
