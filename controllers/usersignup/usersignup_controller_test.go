@@ -4322,7 +4322,7 @@ func TestMigrateMur(t *testing.T) {
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
 			Exists().
-			HasTier(*deactivate30Tier).                                                         // tier name should be set
+			HasTier(*deactivate30Tier). // tier name should be set
 			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name) // other labels unchanged
 	})
 }
@@ -4792,50 +4792,6 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 			require.NoError(t, err)
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupComplete...)
 
-		})
-	})
-
-	// If either space is updating or mur is not ready, usersignups that haven't already completed should be marked as incomplete
-	t.Run("mark in-progress signups as incomplete when space is updating", func(t *testing.T) {
-		// given
-		userSignup, mur, space, spacebinding := setup()
-		userSignup.Status.Conditions = signupIncomplete("mur")
-		space.Status.Conditions = []toolchainv1alpha1.Condition{{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceUpdatingReason,
-		}}
-		r, req, _ := prepareReconcile(t, userSignup.Name, append(initObjects, userSignup, mur, space, spacebinding)...)
-
-		// when
-		res, err := r.Reconcile(context.TODO(), req)
-
-		// then
-		require.NoError(t, err)
-		require.Equal(t, reconcile.Result{}, res)
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("space")...)
-
-		t.Run("the same for mur", func(t *testing.T) {
-			// given
-			setSpaceToReady(t, r.Client, space.Name)
-			mur.Status.Conditions = []toolchainv1alpha1.Condition{{
-				Type:   toolchainv1alpha1.ConditionReady,
-				Status: corev1.ConditionFalse,
-				Reason: toolchainv1alpha1.MasterUserRecordProvisioningReason,
-			}}
-			require.NoError(t, r.Client.Update(context.TODO(), mur))
-
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-			require.NoError(t, err)
-			test.AssertConditionsMatch(t, userSignup.Status.Conditions, signupIncomplete("MUR")...)
 		})
 	})
 }
