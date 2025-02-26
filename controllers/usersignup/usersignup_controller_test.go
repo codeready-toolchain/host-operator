@@ -4903,9 +4903,10 @@ func TestRecordProvisionTime(t *testing.T) {
 			require.NoError(t, err)
 			AssertThatUserSignup(t, test.HostOperatorNs, userSignup.Name, client).DoesNotHaveAnnotation(toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey)
 		}
-		for _, value := range []int{1, 2, 3, 5, 8, 13, 21, 34, 55, 89} {
+		for _, value := range metrics.UserSignupProvisionTimeHistogramBuckets {
 			metricstest.AssertHistogramBucketEquals(t, value, value, metrics.UserSignupProvisionTimeHistogram) // could fail when debugging
 		}
+		metricstest.AssertHistogramSampleCountEquals(t, 100, metrics.UserSignupProvisionTimeHistogram)
 	})
 
 	t.Run("should not be in histogram", func(t *testing.T) {

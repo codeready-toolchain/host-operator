@@ -33,7 +33,7 @@ require (
 
 replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20250225121920-2aa06e36874e
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20250225154813-c7a74a683dc7
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20250226144039-67625f8d4ee7
 
 require (
 	cloud.google.com/go/auth v0.3.0 // indirect

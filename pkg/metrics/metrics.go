@@ -55,6 +55,8 @@ var (
 var (
 	// UserSignupProvisionTimeHistogram measures the provision time of the UserSignup needed either for its creation or reactivation
 	UserSignupProvisionTimeHistogram prometheus.Histogram
+	// UserSignupProvisionTimeHistogramBuckets is the list of buckets defined for UserSignupProvisionTimeHistogram
+	UserSignupProvisionTimeHistogramBuckets = []float64{1, 2, 3, 5, 8, 13, 21, 34, 55, 89}
 )
 
 // collections
@@ -140,7 +142,7 @@ func newHistogram(name, help string) prometheus.Histogram {
 	v := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    metricsPrefix + name,
 		Help:    help,
-		Buckets: []float64{1, 2, 3, 5, 8, 13, 21, 34, 55, 89},
+		Buckets: UserSignupProvisionTimeHistogramBuckets,
 	})
 	allHistograms = append(allHistograms, v)
 	return v

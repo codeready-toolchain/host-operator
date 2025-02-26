@@ -53,9 +53,10 @@ func TestInitHistogram(t *testing.T) {
 	}
 
 	// then
-	for _, value := range []int{1, 2, 3, 5, 8, 13, 21, 34, 55, 89} {
+	for _, value := range UserSignupProvisionTimeHistogramBuckets {
 		metricstest.AssertHistogramBucketEquals(t, value, value, m)
 	}
+	metricstest.AssertHistogramSampleCountEquals(t, 100, m)
 }
 
 func TestRegisterCustomMetrics(t *testing.T) {

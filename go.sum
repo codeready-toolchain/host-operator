@@ -175,8 +175,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/matousjobanek/api v0.0.0-20250225121920-2aa06e36874e h1:IuZp1p8aL4z+Esa47X+niKxGWbEjhqSt03CUoBN6RrA=
 github.com/matousjobanek/api v0.0.0-20250225121920-2aa06e36874e/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
-github.com/matousjobanek/toolchain-common v0.0.0-20250225154813-c7a74a683dc7 h1:ZpodQA4rZEslZMc97aT5C4nCieWU7z5y6EsZ3/5PKmw=
-github.com/matousjobanek/toolchain-common v0.0.0-20250225154813-c7a74a683dc7/go.mod h1:I38hiluJQcUT/GKo6iLhNLSrueqvtw+W9huBLjwX3SE=
+github.com/matousjobanek/toolchain-common v0.0.0-20250226144039-67625f8d4ee7 h1:uWHQxyvJj3mCsdd98+Xmv7iyX9zfVRDClj/dQ6hy7oA=
+github.com/matousjobanek/toolchain-common v0.0.0-20250226144039-67625f8d4ee7/go.mod h1:I38hiluJQcUT/GKo6iLhNLSrueqvtw+W9huBLjwX3SE=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvlsiIGKtc+UG6U5vzxaoagmhXfyg=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
