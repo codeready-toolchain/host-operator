@@ -26,11 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const UnableToEnsureRevisions = "UnableToEnsureRevisions"
-
-// NSTemplateTierProvisionedReason represents the reason for a successfully provisioned NSTemplateTier.
-const NSTemplateTierProvisionedReason = "Provisioned"
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -79,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
 	if created, err := r.ensureRevision(ctx, tier); err != nil {
 		// set ready condition false in the NSTemplateTier
-		if err := r.setStatusFailed(ctx, tier, UnableToEnsureRevisions, err); err != nil {
+		if err := r.setStatusFailed(ctx, tier, toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason, err); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -287,6 +282,6 @@ func ReadyCondition() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: NSTemplateTierProvisionedReason,
+		Reason: toolchainv1alpha1.NSTemplateTierProvisionedReason,
 	}
 }

@@ -283,7 +283,7 @@ func TestReconcile(t *testing.T) {
 							toolchainv1alpha1.Condition{
 								Type:    toolchainv1alpha1.ConditionReady,
 								Status:  corev1.ConditionFalse,
-								Reason:  nstemplatetier.UnableToEnsureRevisions,
+								Reason:  toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason,
 								Message: errCause,
 							},
 						).
