@@ -4322,7 +4322,7 @@ func TestMigrateMur(t *testing.T) {
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
 			Exists().
-			HasTier(*deactivate30Tier). // tier name should be set
+			HasTier(*deactivate30Tier).                                                         // tier name should be set
 			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name) // other labels unchanged
 	})
 }
