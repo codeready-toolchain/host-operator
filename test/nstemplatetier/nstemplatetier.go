@@ -41,6 +41,15 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 				},
 			},
 		},
+		Status: toolchainv1alpha1.NSTemplateTierStatus{
+			Revisions: map[string]string{
+				"advanced-dev-123abc1":              "advanced-dev-123abc1-ttr",
+				"advanced-stage-123abc2":            "advanced-stage-123abc2-ttr",
+				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-ttr",
+				"advanced-admin-123abc1":            "advanced-admin-123abc1-ttr",
+				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-ttr",
+			},
+		},
 	}
 }
 
@@ -187,6 +196,19 @@ func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, 
 // TierOption an option to configure the NStemplateTier
 type TierOption func(*toolchainv1alpha1.NSTemplateTier)
 
+func WithStatusRevisions() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Status.Revisions = make(map[string]string)
+		for _, ns := range tier.Spec.Namespaces {
+			tier.Status.Revisions[ns.TemplateRef] = ns.TemplateRef + "-ttr"
+		}
+		tier.Status.Revisions[tier.Spec.ClusterResources.TemplateRef] = tier.Spec.ClusterResources.TemplateRef + "-ttr"
+		for _, sp := range tier.Spec.SpaceRoles {
+			tier.Status.Revisions[sp.TemplateRef] = sp.TemplateRef + "-ttr"
+		}
+	}
+}
+
 // WithoutCodeNamespace removes the `code` templates from the tier's specs.
 func WithoutCodeNamespace() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
@@ -224,29 +246,23 @@ func WithParameter(name, value string) TierOption {
 }
 
 // OtherTier returns an "other" NSTemplateTier
-func OtherTier() *toolchainv1alpha1.NSTemplateTier {
-	return &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "toolchain-host-operator",
-			Name:      "other",
-		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{
-			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
-				{
-					TemplateRef: "other-code-123456a",
-				},
-				{
-					TemplateRef: "other-dev-123456a",
-				},
-				{
-					TemplateRef: "other-stage-123456a",
-				},
+func OtherTier(t *testing.T, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return Tier(t, "other", toolchainv1alpha1.NSTemplateTierSpec{
+		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+			{
+				TemplateRef: "other-code-123456a",
 			},
-			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: "other-clusterresources-123456a",
+			{
+				TemplateRef: "other-dev-123456a",
+			},
+			{
+				TemplateRef: "other-stage-123456a",
 			},
 		},
-	}
+		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+			TemplateRef: "other-clusterresources-123456a",
+		},
+	}, options...)
 }
 
 // TierWithoutDeactivationTimeout returns a NSTemplateTier with no deactivation timeout set

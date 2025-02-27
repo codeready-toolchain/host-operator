@@ -51,12 +51,21 @@ var (
 	HostOperatorVersionGaugeVec *prometheus.GaugeVec
 )
 
+// histograms
+var (
+	// UserSignupProvisionTimeHistogram measures the provision time of the UserSignup needed either for its creation or reactivation
+	UserSignupProvisionTimeHistogram prometheus.Histogram
+	// UserSignupProvisionTimeHistogramBuckets is the list of buckets defined for UserSignupProvisionTimeHistogram
+	UserSignupProvisionTimeHistogramBuckets = []float64{1, 2, 3, 5, 8, 13, 21, 34, 55, 89}
+)
+
 // collections
 var (
 	allCounters    = []prometheus.Counter{}
 	allCounterVecs = []*prometheus.CounterVec{}
 	allGauges      = []prometheus.Gauge{}
 	allGaugeVecs   = []*prometheus.GaugeVec{}
+	allHistograms  = []prometheus.Histogram{}
 )
 
 func init() {
@@ -82,6 +91,8 @@ func initMetrics() {
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	HostOperatorVersionGaugeVec = newGaugeVec("host_operator_version", "Current version of the host operator", "commit")
+	// Histograms
+	UserSignupProvisionTimeHistogram = newHistogram("user_signup_provision_time", "UserSignup provision time in seconds")
 	log.Info("custom metrics initialized")
 }
 
@@ -127,6 +138,16 @@ func newGaugeVec(name, help string, labels ...string) *prometheus.GaugeVec {
 	return v
 }
 
+func newHistogram(name, help string) prometheus.Histogram {
+	v := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    metricsPrefix + name,
+		Help:    help,
+		Buckets: UserSignupProvisionTimeHistogramBuckets,
+	})
+	allHistograms = append(allHistograms, v)
+	return v
+}
+
 // RegisterCustomMetrics registers the custom metrics
 func RegisterCustomMetrics() {
 	// register metrics
@@ -140,6 +161,9 @@ func RegisterCustomMetrics() {
 		k8smetrics.Registry.MustRegister(g)
 	}
 	for _, v := range allGaugeVecs {
+		k8smetrics.Registry.MustRegister(v)
+	}
+	for _, v := range allHistograms {
 		k8smetrics.Registry.MustRegister(v)
 	}
 
