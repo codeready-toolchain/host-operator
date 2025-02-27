@@ -8,19 +8,20 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -94,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // returns `true` if a new TierTemplateRevision CR was created, `err` if something wrong happened
 func (r *Reconciler) ensureRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	logger := log.FromContext(ctx)
-	refs := getNSTemplateTierRefs(nsTmplTier)
+	refs := nstemplatetiers.GetNSTemplateTierRefs(nsTmplTier)
 
 	// init revisions
 	if nsTmplTier.Status.Revisions == nil {
@@ -193,26 +194,6 @@ func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTi
 		return "", err
 	}
 	return ttr.GetName(), nil
-}
-
-// getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
-func getNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string {
-	var refs []string
-	for _, ns := range tmplTier.Spec.Namespaces {
-		refs = append(refs, ns.TemplateRef)
-	}
-	if tmplTier.Spec.ClusterResources != nil {
-		refs = append(refs, tmplTier.Spec.ClusterResources.TemplateRef)
-	}
-
-	roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
-	for r := range tmplTier.Spec.SpaceRoles {
-		roles = append(roles, r)
-	}
-	for _, r := range roles {
-		refs = append(refs, tmplTier.Spec.SpaceRoles[r].TemplateRef)
-	}
-	return refs
 }
 
 func (r *Reconciler) createTTR(ctx context.Context, ttr *toolchainv1alpha1.TierTemplateRevision, tmplTier *toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.TierTemplateRevision, error) {
