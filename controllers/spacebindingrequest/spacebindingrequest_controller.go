@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,9 +48,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// Watch SpaceBindingRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
 		b = b.WatchesRawSource(
-			source.Kind(memberCluster.Cache, &toolchainv1alpha1.SpaceBindingRequest{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+			source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.SpaceBindingRequest{},
+				&handler.EnqueueRequestForObject{},
+				predicate.GenerationChangedPredicate{}))
 	}
 	return b.Complete(r)
 }

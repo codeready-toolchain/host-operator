@@ -47,9 +47,9 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager, memberClusters map[st
 
 	// watch UserAccounts in all the member clusters
 	for _, memberCluster := range memberClusters {
-		b = b.WatchesRawSource(source.Kind(memberCluster.Cache, &toolchainv1alpha1.UserAccount{}),
+		b = b.WatchesRawSource(source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.UserAccount{},
 			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
-		)
+		))
 	}
 	return b.Complete(r)
 }
