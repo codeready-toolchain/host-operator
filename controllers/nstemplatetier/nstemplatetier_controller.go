@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// check if the `status.revisions` field is up-to-date and create a TTR for each TierTemplate
 	if created, err := r.ensureRevision(ctx, tier); err != nil {
 		// set ready condition false in the NSTemplateTier
-		if err := r.setStatusFailed(ctx, tier, toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason, err); err != nil {
+		if err := r.setStatusFailed(ctx, tier, FailedCondition(toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason, err.Error())); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -232,21 +232,17 @@ func NewTTR(tierTmpl *toolchainv1alpha1.TierTemplate, nsTmplTier *toolchainv1alp
 	return ttr
 }
 
-func (r *Reconciler) setStatusFailed(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, reason string, cause error) error {
+func (r *Reconciler) setStatusFailed(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, failedCondition toolchainv1alpha1.Condition) error {
 	if err := r.updateStatus(
 		ctx,
 		tmplTier,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  reason,
-			Message: cause.Error(),
-		}); err != nil {
+		failedCondition,
+	); err != nil {
 		logger := log.FromContext(ctx)
 		logger.Error(err, "unable to update NSTemplateTier condition")
 		return err
 	}
-	return cause
+	return nil
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, tmplTier *toolchainv1alpha1.NSTemplateTier, conditions ...toolchainv1alpha1.Condition) error {
@@ -257,6 +253,15 @@ func (r *Reconciler) updateStatus(ctx context.Context, tmplTier *toolchainv1alph
 		return nil
 	}
 	return r.Client.Status().Update(ctx, tmplTier)
+}
+
+func FailedCondition(reason string, cause string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  reason,
+		Message: cause,
+	}
 }
 
 func ReadyCondition() toolchainv1alpha1.Condition {

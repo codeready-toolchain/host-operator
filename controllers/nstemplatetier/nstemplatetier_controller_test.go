@@ -17,7 +17,6 @@ import (
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -280,12 +279,7 @@ func TestReconcile(t *testing.T) {
 					// the revisions field also should remain empty
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 						HasConditions(
-							toolchainv1alpha1.Condition{
-								Type:    toolchainv1alpha1.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason,
-								Message: errCause,
-							},
+							nstemplatetier.FailedCondition(toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason, errCause),
 						).
 						HasNoStatusTierTemplateRevisions()
 					// and the TierTemplateRevision CRs are not created
