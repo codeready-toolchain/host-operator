@@ -417,7 +417,7 @@ func recordProvisionTime(ctx context.Context, cl runtimeclient.Client, userSignu
 		logger.Error(err, "unable to parse the request-received-time annotation", "value", requestReceivedTime)
 		return nil
 	}
-	_, phoneVerificationTriggered := userSignup.Annotations[toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey]
+	_, phoneVerificationTriggered := userSignup.Labels[toolchainv1alpha1.UserSignupUserPhoneHashLabelKey]
 	// don't measure provision time for cases when UserSignup was either approved manually or it required phone verification step
 	if states.ApprovedManually(userSignup) || phoneVerificationTriggered {
 		return nil

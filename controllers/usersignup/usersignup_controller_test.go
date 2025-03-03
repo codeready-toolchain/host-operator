@@ -4934,7 +4934,7 @@ func TestRecordProvisionTime(t *testing.T) {
 			t.Cleanup(metrics.Reset)
 			verify(commonsignup.NewUserSignup(
 				commonsignup.WithRequestReceivedTimeAnnotation(time.Now()),
-				commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "123")))
+				commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserPhoneHashLabelKey, "123")))
 		})
 
 		t.Run("request-received-time annotation is missing", func(t *testing.T) {
