@@ -36,8 +36,8 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/api v0.0.0-20250227073728-5999971adb48 h1:jqGcYw4KdQzqe5WEp+06HXBRyosAktgO5Y6ADs+NF5A=
-github.com/codeready-toolchain/api v0.0.0-20250227073728-5999971adb48/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
+github.com/codeready-toolchain/api v0.0.0-20250304130838-c9c2ff18f4de h1:64key4W/2oUqzwt3z4ZOanPGgHKJMiKUwYaUUpeUO8Q=
+github.com/codeready-toolchain/api v0.0.0-20250304130838-c9c2ff18f4de/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20250303095208-d379ee86d136 h1:IqJ1tXl6IJuCqAW9MSji9TbMX2zWLBMEWD82u6+yui8=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20250303095208-d379ee86d136/go.mod h1:mNRKnxjBHxggT03t6TwGJT5AZvmHMn6oQ32DrkGwV+w=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
