@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: spacerequests.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -33,14 +33,19 @@ spec:
         description: SpaceRequest is the Schema for the space request API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -48,23 +53,27 @@ spec:
             description: SpaceRequestSpec defines the desired state of Space
             properties:
               disableInheritance:
-                description: "DisableInheritance indicates whether or not SpaceBindings
-                  from the parent-spaces are automatically inherited to all sub-spaces
-                  in the tree. \n Set to True to disable SpaceBinding inheritance
-                  from the parent-spaces. Default is False."
+                description: |-
+                  DisableInheritance indicates whether or not SpaceBindings from the parent-spaces are
+                  automatically inherited to all sub-spaces in the tree.
+
+
+                  Set to True to disable SpaceBinding inheritance from the parent-spaces.
+                  Default is False.
                 type: boolean
               targetClusterRoles:
-                description: TargetClusterRoles one or more label keys that define
-                  a set of clusters where the Space can be provisioned. The target
-                  cluster has to match ALL the roles defined in this field in order
-                  for the space to be provisioned there.
+                description: |-
+                  TargetClusterRoles one or more label keys that define a set of clusters
+                  where the Space can be provisioned.
+                  The target cluster has to match ALL the roles defined in this field in order for the space to be provisioned there.
                 items:
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
               tierName:
-                description: TierName is a required property introduced to retain
-                  the name of the tier for which this Space is provisioned.
+                description: |-
+                  TierName is a required property introduced to retain the name of the tier
+                  for which this Space is provisioned.
                 type: string
             required:
             - tierName
@@ -73,8 +82,10 @@ spec:
             description: SpaceRequestStatus defines the observed state of Space
             properties:
               conditions:
-                description: 'Conditions is an array of SpaceRequest conditions Supported
-                  condition types: Provisioning, SpaceNotReady and Ready'
+                description: |-
+                  Conditions is an array of SpaceRequest conditions
+                  Supported condition types:
+                  Provisioning, SpaceNotReady and Ready
                 items:
                   properties:
                     lastTransitionTime:
@@ -119,9 +130,9 @@ spec:
                         namespace
                       type: string
                     secretRef:
-                      description: SecretRef is the name of the secret with a SA token
-                        that has admin-like (or whatever we set in the tier template)
-                        permissions in the namespace
+                      description: |-
+                        SecretRef is the name of the secret with a SA token that has admin-like
+                        (or whatever we set in the tier template) permissions in the namespace
                       type: string
                   required:
                   - name
@@ -130,10 +141,10 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               targetClusterURL:
-                description: TargetClusterURL The API URL of the cluster where Space
-                  is currently provisioned Can be empty if provisioning did not start
-                  or failed The URL is just for informative purposes for developers
-                  and controllers that are placed in member clusters.
+                description: |-
+                  TargetClusterURL The API URL of the cluster where Space is currently provisioned
+                  Can be empty if provisioning did not start or failed
+                  The URL is just for informative purposes for developers and controllers that are placed in member clusters.
                 type: string
             type: object
         type: object
