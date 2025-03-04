@@ -36,8 +36,10 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250227105612-03e9ebab49c7 h1:Y4EMaYLn62ptrChtaPcqzGFe0h0TNDVmwL1WOVbu2IY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20250227105612-03e9ebab49c7/go.mod h1:mNRKnxjBHxggT03t6TwGJT5AZvmHMn6oQ32DrkGwV+w=
+github.com/codeready-toolchain/api v0.0.0-20250304130838-c9c2ff18f4de h1:64key4W/2oUqzwt3z4ZOanPGgHKJMiKUwYaUUpeUO8Q=
+github.com/codeready-toolchain/api v0.0.0-20250304130838-c9c2ff18f4de/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20250303095208-d379ee86d136 h1:IqJ1tXl6IJuCqAW9MSji9TbMX2zWLBMEWD82u6+yui8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20250303095208-d379ee86d136/go.mod h1:mNRKnxjBHxggT03t6TwGJT5AZvmHMn6oQ32DrkGwV+w=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -177,8 +179,6 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvlsiIGKtc+UG6U5vzxaoagmhXfyg=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
-github.com/mfrancisc/api v0.0.0-20250227184606-d79ac2e223e4 h1:tj7IeOxjpi/B1cLrjq21sVNkvSbyM4kH2E0UtN6obZ4=
-github.com/mfrancisc/api v0.0.0-20250227184606-d79ac2e223e4/go.mod h1:gPwicZPTmRm1PF75ysEYXaYKdXoFgwgCggTJd1oYmOs=
 github.com/migueleliasweb/go-github-mock v0.0.18 h1:0lWt9MYmZQGnQE2rFtjlft/YtD6hzxuN6JJRFpujzEI=
 github.com/migueleliasweb/go-github-mock v0.0.18/go.mod h1:CcgXcbMoRnf3rRVHqGssuBquZDIcaplxL2W6G+xs7kM=
 github.com/mitchellh/copystructure v1.0.0 h1:Laisrj+bAB6b/yJwB5Bt3ITZhGJdqmxquMKeZ+mmkFQ=
