@@ -47,16 +47,16 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
-		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
+		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or[runtimeclient.Object](predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&toolchainv1alpha1.NSTemplateTier{},
 			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client))).
 		Watches(&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToParentAndSubSpaces(r.Client)))
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
-		b = b.WatchesRawSource(source.Kind(memberCluster.Cache, &toolchainv1alpha1.NSTemplateSet{}),
+		b = b.WatchesRawSource(source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.NSTemplateSet{},
 			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
-		)
+		))
 	}
 	return b.Complete(r)
 }
