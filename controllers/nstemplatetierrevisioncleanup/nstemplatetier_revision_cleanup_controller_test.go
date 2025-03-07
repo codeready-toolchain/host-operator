@@ -28,24 +28,26 @@ const (
 )
 
 func TestTTRDeletionReconcile(t *testing.T) {
-	//given
-	nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
-	ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
-	s := createSpace(nsTemplateTier)
-	r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
-	//when
-	res, err := r.Reconcile(context.TODO(), req)
-	//then
-	require.NoError(t, err)
-	require.Equal(t, controllerruntime.Result{}, res)
-	tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
-
+	t.Run("TTR Deleted Successfuly", func(t *testing.T) {
+		//given
+		nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
+		ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
+		s := createSpace(nsTemplateTier)
+		r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
+		//when
+		res, err := r.Reconcile(context.TODO(), req)
+		//then
+		require.NoError(t, err)
+		require.Equal(t, controllerruntime.Result{}, res)
+		tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
+	})
 	t.Run("Failure", func(t *testing.T) {
+		nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
+		ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
+		s := createSpace(nsTemplateTier)
 		t.Run("the creation timestamp is less than 30 sec", func(t *testing.T) {
 			// given
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisions())
 			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttr"), metav1.NewTime(time.Now()))
-			s := createSpace(nsTemplateTier)
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 
 			// when
@@ -59,9 +61,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 		t.Run("ttr is still being referenced in status.revisions", func(t *testing.T) {
 			// given
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.PreviousBase1nsTemplates, tiertest.WithStatusRevisions())
 			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttr"), metav1.NewTime(time.Now().Add(-time.Minute)))
-			s := createSpace(nsTemplateTier)
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 
 			// when
@@ -91,6 +91,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
+
 		t.Run("Error while deleting the TTR", func(t *testing.T) {
 			// given
 			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
@@ -107,13 +108,9 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.EqualError(t, err, "unable to delete the current Tier Template Revision base1ns-clusterresources-123456new-ttrcr: some error cannot delete")
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
-
 		})
 
 		t.Run("error while getting revision", func(t *testing.T) {
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
-			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
-			s := createSpace(nsTemplateTier)
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error cannot get")
@@ -128,9 +125,6 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 
 		t.Run("error while listing outdated spaces", func(t *testing.T) {
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
-			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
-			s := createSpace(nsTemplateTier)
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 			cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				return fmt.Errorf("some error")
@@ -155,8 +149,6 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 
 		t.Run("NsTemplate Tier not found", func(t *testing.T) {
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
-			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
 			r, req, _ := prepareReconcile(t, ttr.Name, ttr)
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -167,8 +159,6 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 
 		t.Run("tier label not found", func(t *testing.T) {
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
-			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
 			ttr.Labels = map[string]string{}
 			r, req, _ := prepareReconcile(t, ttr.Name, ttr)
 			//when
@@ -176,7 +166,6 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			//then
 			require.EqualError(t, err, "tier-name label not found in tiertemplaterevision")
 			require.False(t, res.Requeue)
-
 		})
 
 	})
