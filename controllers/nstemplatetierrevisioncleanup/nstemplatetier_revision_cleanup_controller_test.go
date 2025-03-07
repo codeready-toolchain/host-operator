@@ -53,7 +53,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "cannot delete the current TTR,requing :the revision creation timestamp is less than 30 sec(new revision)")
-			require.Equal(t, true, res.Requeue)
+			require.True(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
 		})
@@ -69,7 +69,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "cannot delete the current TTR,requing :the revision is still being referenced in status.revisions")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
 		})
@@ -88,7 +88,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "cannot delete the current TTR,requing :there are still some spaces which are outdated")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 		t.Run("Error while deleting the TTR", func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to delete the current Tier Template Revision base1ns-clusterresources-123456new-ttrcr: some error cannot delete")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
 		})
@@ -123,7 +123,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to get the current TierTemplateRevision: some error cannot get")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 
@@ -140,7 +140,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "cannot delete the current TTR,requing :some error")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 
@@ -150,7 +150,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
 			require.NoError(t, err)
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 
 		})
 
@@ -162,7 +162,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
 			require.NoError(t, err)
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 
 		})
 
@@ -175,7 +175,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
 			require.EqualError(t, err, "tier-name label not found in tiertemplaterevision")
-			require.Equal(t, false, res.Requeue)
+			require.False(t, res.Requeue)
 
 		})
 
