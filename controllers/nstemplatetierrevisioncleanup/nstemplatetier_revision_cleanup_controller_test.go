@@ -28,7 +28,7 @@ const (
 )
 
 func TestTTRDeletionReconcile(t *testing.T) {
-	t.Run("TTR Deleted Successfuly", func(t *testing.T) {
+	t.Run("TTR Deleted Successfully", func(t *testing.T) {
 		//given
 		nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 		ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
