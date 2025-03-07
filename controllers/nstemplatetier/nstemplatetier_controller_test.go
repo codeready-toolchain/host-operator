@@ -115,6 +115,9 @@ func TestReconcile(t *testing.T) {
 					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+						HasConditions(
+							nstemplatetier.ReadyCondition(),
+						).
 						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// no TierTemplateRevision CRs were created
 					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
@@ -161,6 +164,9 @@ func TestReconcile(t *testing.T) {
 					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+						HasConditions(
+							nstemplatetier.ReadyCondition(),
+						).
 						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// expected TierTemplateRevision CRs are still there
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
@@ -268,9 +274,13 @@ func TestReconcile(t *testing.T) {
 					_, err := r.Reconcile(context.TODO(), req)
 					// then
 					// we expect an error caused by the absence of the tiertemplate for the `code` namespace CR
-					require.ErrorContains(t, err, "tiertemplates.toolchain.dev.openshift.com \"base1ns-code-123456new\" not found")
+					errCause := "tiertemplates.toolchain.dev.openshift.com \"base1ns-code-123456new\" not found"
+					require.ErrorContains(t, err, errCause)
 					// the revisions field also should remain empty
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
+						HasConditions(
+							nstemplatetier.FailedCondition(toolchainv1alpha1.NSTemplateTierUnableToEnsureRevisionsReason, errCause),
+						).
 						HasNoStatusTierTemplateRevisions()
 					// and the TierTemplateRevision CRs are not created
 					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()

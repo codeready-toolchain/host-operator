@@ -61,3 +61,10 @@ func (a *Assertion) HasNoStatusTierTemplateRevisions() *Assertion {
 	require.Nil(a.t, a.tier.Status.Revisions)
 	return a
 }
+
+func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	test.AssertConditionsMatch(a.t, a.tier.Status.Conditions, expected...)
+	return a
+}
