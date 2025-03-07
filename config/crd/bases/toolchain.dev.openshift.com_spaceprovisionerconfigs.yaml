@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: spaceprovisionerconfigs.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -28,14 +28,19 @@ spec:
           in the member clusters.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -46,16 +51,21 @@ spec:
                   in this provisioner
                 properties:
                   maxMemoryUtilizationPercent:
-                    description: "MaxMemoryUtilizationPercent is the maximum memory
-                      utilization of the cluster to permit provisioning new spaces
-                      to it. \n 0 or undefined value means no limit."
+                    description: |-
+                      MaxMemoryUtilizationPercent is the maximum memory utilization of the cluster to permit provisioning
+                      new spaces to it.
+
+
+                      0 or undefined value means no limit.
                     maximum: 100
                     minimum: 0
                     type: integer
                   maxNumberOfSpaces:
-                    description: "MaxNumberOfSpaces is the maximum number of spaces
-                      that can be provisioned to the referenced cluster. \n 0 or undefined
-                      value means no limit."
+                    description: |-
+                      MaxNumberOfSpaces is the maximum number of spaces that can be provisioned to the referenced cluster.
+
+
+                      0 or undefined value means no limit.
                     minimum: 0
                     type: integer
                 type: object
@@ -65,8 +75,9 @@ spec:
                   (and therefore can hold spaces) or not.
                 type: boolean
               placementRoles:
-                description: PlacementRoles is the list of roles, or flavors, that
-                  the provisioner possesses that influence the space scheduling decisions.
+                description: |-
+                  PlacementRoles is the list of roles, or flavors, that the provisioner possesses that influence
+                  the space scheduling decisions.
                 items:
                   type: string
                 type: array
@@ -81,11 +92,11 @@ spec:
           status:
             properties:
               conditions:
-                description: 'Conditions describes the state of the configuration
-                  (its validity). The only known condition type is "Ready". The SpaceProvisionerConfig
-                  is ready when the following is true: * the referenced ToolchainCluster
-                  object exists and is itself ready * the consumed capacity doesn''t
-                  breach the thresholds defined in the spec'
+                description: |-
+                  Conditions describes the state of the configuration (its validity).
+                  The only known condition type is "Ready". The SpaceProvisionerConfig is ready when the following is true:
+                     * the referenced ToolchainCluster object exists and is itself ready
+                     * the consumed capacity doesn't breach the thresholds defined in the spec
                 items:
                   properties:
                     lastTransitionTime:
@@ -119,9 +130,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               consumedCapacity:
-                description: ConsumedCapacity reflects the runtime state of the cluster
-                  and the capacity it currently consumes. Nil if the consumed capacity
-                  is not known
+                description: |-
+                  ConsumedCapacity reflects the runtime state of the cluster and the capacity it currently consumes.
+                  Nil if the consumed capacity is not known
                 properties:
                   memoryUsagePercentPerNodeRole:
                     additionalProperties:

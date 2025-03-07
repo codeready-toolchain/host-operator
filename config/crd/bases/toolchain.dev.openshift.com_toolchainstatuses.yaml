@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: toolchainstatuses.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -30,14 +30,19 @@ spec:
         description: ToolchainStatus is used to track overall toolchain status
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -49,8 +54,9 @@ spec:
               including host cluster and member cluster components
             properties:
               conditions:
-                description: 'Conditions is an array of the current overall toolchain
-                  status conditions Supported condition types: ConditionReady'
+                description: |-
+                  Conditions is an array of the current overall toolchain status conditions
+                  Supported condition types: ConditionReady
                 items:
                   properties:
                     lastTransitionTime:
@@ -90,8 +96,9 @@ spec:
                     description: The timestamp of the host operator build
                     type: string
                   conditions:
-                    description: 'Conditions is an array of current host operator
-                      status conditions Supported condition types: ConditionReady'
+                    description: |-
+                      Conditions is an array of current host operator status conditions
+                      Supported condition types: ConditionReady
                     items:
                       properties:
                         lastTransitionTime:
@@ -137,9 +144,9 @@ spec:
                       deployment
                     properties:
                       conditions:
-                        description: 'Conditions is an array of status conditions
-                          for the health of the registration service Supported condition
-                          types: ConditionReady'
+                        description: |-
+                          Conditions is an array of status conditions for the health of the registration service
+                          Supported condition types: ConditionReady
                         items:
                           properties:
                             lastTransitionTime:
@@ -188,8 +195,9 @@ spec:
                 description: HostRoutes/URLs of the host cluster, such as Proxy URL
                 properties:
                   conditions:
-                    description: 'Conditions is an array of current member operator
-                      status conditions Supported condition types: ConditionReady'
+                    description: |-
+                      Conditions is an array of current member operator status conditions
+                      Supported condition types: ConditionReady
                     items:
                       properties:
                         lastTransitionTime:
@@ -246,8 +254,9 @@ spec:
                             and whether the member configuration is correct
                           properties:
                             conditions:
-                              description: 'Conditions is an array of current Che
-                                status conditions Supported condition types: ConditionReady'
+                              description: |-
+                                Conditions is an array of current Che status conditions
+                                Supported condition types: ConditionReady
                               items:
                                 properties:
                                   lastTransitionTime:
@@ -284,8 +293,9 @@ spec:
                               x-kubernetes-list-type: map
                           type: object
                         conditions:
-                          description: 'Conditions is an array of current toolchain
-                            status conditions Supported condition types: ConditionReady'
+                          description: |-
+                            Conditions is an array of current toolchain status conditions
+                            Supported condition types: ConditionReady
                           items:
                             properties:
                               lastTransitionTime:
@@ -325,9 +335,9 @@ spec:
                             host cluster
                           properties:
                             conditions:
-                              description: 'Conditions is an array of current member
-                                operator status conditions Supported condition types:
-                                ConditionReady'
+                              description: |-
+                                Conditions is an array of current member operator status conditions
+                                Supported condition types: ConditionReady
                               items:
                                 properties:
                                   lastTransitionTime:
@@ -368,9 +378,9 @@ spec:
                             with the host cluster
                           properties:
                             apiEndpoint:
-                              description: APIEndpoint is the API endpoint of the
-                                remote cluster. This can be a hostname, hostname:port,
-                                IP or IP:port.
+                              description: |-
+                                APIEndpoint is the API endpoint of the remote cluster. This can be a hostname,
+                                hostname:port, IP or IP:port.
                               type: string
                             conditions:
                               description: Conditions is an array of current cluster
@@ -422,9 +432,9 @@ spec:
                               description: The timestamp of the member operator build
                               type: string
                             conditions:
-                              description: 'Conditions is an array of current member
-                                operator status conditions Supported condition types:
-                                ConditionReady'
+                              description: |-
+                                Conditions is an array of current member operator status conditions
+                                Supported condition types: ConditionReady
                               items:
                                 properties:
                                   lastTransitionTime:
@@ -471,9 +481,9 @@ spec:
                                 operator's deployment
                               properties:
                                 conditions:
-                                  description: 'Conditions is an array of status conditions
-                                    for the health of the registration service Supported
-                                    condition types: ConditionReady'
+                                  description: |-
+                                    Conditions is an array of status conditions for the health of the registration service
+                                    Supported condition types: ConditionReady
                                   items:
                                     properties:
                                       lastTransitionTime:
@@ -537,9 +547,9 @@ spec:
                                 of the cluster if Che is installed
                               type: string
                             conditions:
-                              description: 'Conditions is an array of current member
-                                operator status conditions Supported condition types:
-                                ConditionReady'
+                              description: |-
+                                Conditions is an array of current member operator status conditions
+                                Supported condition types: ConditionReady
                               items:
                                 properties:
                                   lastTransitionTime:
@@ -609,9 +619,9 @@ spec:
                       deployment
                     properties:
                       conditions:
-                        description: 'Conditions is an array of current deployment
-                          status conditions for a host operator Supported condition
-                          types: Available, Progressing'
+                        description: |-
+                          Conditions is an array of current deployment status conditions for a host operator
+                          Supported condition types: Available, Progressing
                         items:
                           properties:
                             lastTransitionTime:
@@ -661,9 +671,9 @@ spec:
                       buildTime:
                         type: string
                       conditions:
-                        description: 'Conditions is an array of status conditions
-                          for the health of the registration service Supported condition
-                          types: ConditionReady'
+                        description: |-
+                          Conditions is an array of status conditions for the health of the registration service
+                          Supported condition types: ConditionReady
                         items:
                           properties:
                             lastTransitionTime:
@@ -716,9 +726,9 @@ spec:
                       created for the registration service
                     properties:
                       conditions:
-                        description: 'Conditions is an array of current registration
-                          service resource status conditions Supported condition types:
-                          Deployed, Deploying, DeployingFailed'
+                        description: |-
+                          Conditions is an array of current registration service resource status conditions
+                          Supported condition types: Deployed, Deploying, DeployingFailed
                         items:
                           properties:
                             lastTransitionTime:
@@ -759,9 +769,9 @@ spec:
                       service
                     properties:
                       conditions:
-                        description: 'Conditions is an array of status conditions
-                          for the health of the registration service Supported condition
-                          types: ConditionReady'
+                        description: |-
+                          Conditions is an array of status conditions for the health of the registration service
+                          Supported condition types: ConditionReady
                         items:
                           properties:
                             lastTransitionTime:
