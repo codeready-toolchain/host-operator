@@ -219,10 +219,10 @@ github.com/redhat-cop/operator-utils v1.3.8 h1:xhoMBg2snSzNdcxT53lSBr7PRXxrzP1cD
 github.com/redhat-cop/operator-utils v1.3.8/go.mod h1:s4R0YY8lVlHkC78GLV20PPuZmywjSbTwZKCHwWUQ3P8=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
-github.com/rsoaresd/api v0.0.0-20250228080234-cb35a07d92d1 h1:gjKtZFgGOwpPEBziz+g/JR5JaGk0qTgji6RDe063mkA=
-github.com/rsoaresd/api v0.0.0-20250228080234-cb35a07d92d1/go.mod h1:shTTQ+bYWinbdF/oK+ly4DO5jdXtIASZ+uPZElsmsKg=
-github.com/rsoaresd/toolchain-common v0.0.0-20250228142733-79ee5c94c8cc h1:Q/0FdZ+QpLH0rHhy0nqchS2fOuJc2jZBUeKxS0xK//E=
-github.com/rsoaresd/toolchain-common v0.0.0-20250228142733-79ee5c94c8cc/go.mod h1:rIjfK1zAVNfKMSWXqL3Ykg+fzztnlNqESj/Yf5jCZks=
+github.com/rsoaresd/api v0.0.0-20250304130858-a7bdb1d138cc h1:nYOl5aw+03mUZhU0A47ee4BkE+y4gXOh+nemqKrtvZs=
+github.com/rsoaresd/api v0.0.0-20250304130858-a7bdb1d138cc/go.mod h1:shTTQ+bYWinbdF/oK+ly4DO5jdXtIASZ+uPZElsmsKg=
+github.com/rsoaresd/toolchain-common v0.0.0-20250310105006-c636fa25fa34 h1:vOHjixMOK1JxxZzkgLEsa28c8VjqT46pXnrP5GaWkrk=
+github.com/rsoaresd/toolchain-common v0.0.0-20250310105006-c636fa25fa34/go.mod h1:nOS9YrV1GIv5MPofuhUQa4tTq/vD4x2f9X/Osshj8cM=
 github.com/segmentio/analytics-go/v3 v3.2.1 h1:G+f90zxtc1p9G+WigVyTR0xNfOghOGs/PYAlljLOyeg=
 github.com/segmentio/analytics-go/v3 v3.2.1/go.mod h1:p8owAF8X+5o27jmvUognuXxdtqvSGtD0ZrfY2kcS9bE=
 github.com/segmentio/backo-go v1.0.0 h1:kbOAtGJY2DqOR0jfRkYEorx/b18RgtepGtY3+Cpe6qA=
