@@ -54,7 +54,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.EqualError(t, err, "cannot delete the current TTR,requing :the revision creation timestamp is less than 30 sec(new revision)")
+			require.NoError(t, err)
 			require.True(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
@@ -68,7 +68,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.EqualError(t, err, "cannot delete the current TTR,requing :the revision is still being referenced in status.revisions")
+			require.NoError(t, err)
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
@@ -87,7 +87,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.EqualError(t, err, "cannot delete the current TTR,requing :there are still some spaces which are outdated")
+			require.NoError(t, err)
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
@@ -133,7 +133,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.EqualError(t, err, "cannot delete the current TTR,requing :some error")
+			require.EqualError(t, err, "some error")
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
@@ -153,7 +153,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
-			require.NoError(t, err)
+			require.Error(t, err)
 			require.False(t, res.Requeue)
 
 		})
@@ -164,7 +164,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
-			require.EqualError(t, err, "tier-name label not found in tiertemplaterevision")
+			require.NoError(t, err)
 			require.False(t, res.Requeue)
 		})
 
@@ -180,7 +180,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	cl := test.NewFakeClient(t, initObjs...)
 	r := &nstemplatetierrevisioncleanup.Reconciler{
 		Client: cl,
-		Scheme: s,
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

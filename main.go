@@ -283,7 +283,6 @@ func main() { // nolint:gocyclo
 	}
 	if err = (&nstemplatetierrevisioncleanup.Reconciler{
 		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
 		os.Exit(1)
