@@ -48,7 +48,7 @@ func TestInitHistogram(t *testing.T) {
 	m := newHistogram("test_histogram", "test histogram description")
 
 	// when
-	for i := 1; i <= 100; i++ {
+	for i := 1; i <= 4000; i++ {
 		m.Observe(float64(i))
 	}
 
@@ -56,7 +56,7 @@ func TestInitHistogram(t *testing.T) {
 	for _, value := range UserSignupProvisionTimeHistogramBuckets {
 		metricstest.AssertHistogramBucketEquals(t, value, value, m)
 	}
-	metricstest.AssertHistogramSampleCountEquals(t, 100, m)
+	metricstest.AssertHistogramSampleCountEquals(t, 4000, m)
 }
 
 func TestRegisterCustomMetrics(t *testing.T) {

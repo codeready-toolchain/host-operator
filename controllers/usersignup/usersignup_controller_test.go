@@ -4891,7 +4891,7 @@ func TestRecordProvisionTime(t *testing.T) {
 	t.Run("should be in histogram", func(t *testing.T) {
 		// given
 		t.Cleanup(metrics.Reset)
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 4000; i++ {
 			userSignup := commonsignup.NewUserSignup(
 				commonsignup.WithRequestReceivedTimeAnnotation(time.Now().Add(-time.Duration(i) * time.Second)))
 			client := test.NewFakeClient(t, userSignup)
@@ -4906,7 +4906,7 @@ func TestRecordProvisionTime(t *testing.T) {
 		for _, value := range metrics.UserSignupProvisionTimeHistogramBuckets {
 			metricstest.AssertHistogramBucketEquals(t, value, value, metrics.UserSignupProvisionTimeHistogram) // could fail when debugging
 		}
-		metricstest.AssertHistogramSampleCountEquals(t, 100, metrics.UserSignupProvisionTimeHistogram)
+		metricstest.AssertHistogramSampleCountEquals(t, 4000, metrics.UserSignupProvisionTimeHistogram)
 	})
 
 	t.Run("should not be in histogram", func(t *testing.T) {
