@@ -56,7 +56,7 @@ var (
 	// UserSignupProvisionTimeHistogram measures the provision time of the UserSignup needed either for its creation or reactivation
 	UserSignupProvisionTimeHistogram prometheus.Histogram
 	// UserSignupProvisionTimeHistogramBuckets is the list of buckets defined for UserSignupProvisionTimeHistogram
-	UserSignupProvisionTimeHistogramBuckets = []float64{1, 2, 3, 5, 8, 13, 21, 34, 55, 89}
+	UserSignupProvisionTimeHistogramBuckets = []float64{1, 2, 3, 5, 10, 30, 60, 120, 180, 360, 3600}
 )
 
 // collections
