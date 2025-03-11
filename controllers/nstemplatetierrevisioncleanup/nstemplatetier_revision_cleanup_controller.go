@@ -59,8 +59,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	//check if there is tier-name label available
 	tierName, ok := ttr.GetLabels()[toolchainv1alpha1.TierLabelKey]
 	if !ok {
-		return reconcile.Result{}, fmt.Errorf("tier-name label not found in tiertemplaterevision")
-
+		//if tier-name label is not found we should delete the TTR
+		if err := r.deleteTTR(ctx, ttr); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
 	}
 	// fetch the related NSTemplateTier tier
 	tier := &toolchainv1alpha1.NSTemplateTier{}
@@ -70,9 +73,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
 			// if there is no related nstemplate tier, we can delete the TTR directly
-			logger.Info("NSTemplateTier not found, proceeding to delete it ")
-			if err := r.Client.Delete(ctx, ttr); err != nil {
-				return reconcile.Result{}, fmt.Errorf("unable to delete the current Tier Template Revision %s: %w", ttr.Name, err)
+			if err := r.deleteTTR(ctx, ttr); err != nil {
+				return reconcile.Result{}, err
 			}
 			return reconcile.Result{}, nil
 		}
@@ -89,15 +91,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Delete the unused revision
 	if isTTrUnused {
-		if err := r.Client.Delete(ctx, ttr); err != nil {
-			return reconcile.Result{}, fmt.Errorf("unable to delete the current Tier Template Revision %s: %w", ttr.Name, err)
+		if err := r.deleteTTR(ctx, ttr); err != nil {
+			return reconcile.Result{}, err
 		}
+		return reconcile.Result{}, nil
 	}
 
 	return reconcile.Result{}, nil
 }
 
-// VerifyUnusedTTR function verifies that the tier template revision's creation time stamp is older than 30sec,
+// verifyUnusedTTR function verifies that the tier template revision's creation time stamp is older than 30sec,
 // it is not present/referenced in status.revisions field, and there are no outdated spaces.
 func (r *Reconciler) verifyUnusedTTR(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier,
 	rev *toolchainv1alpha1.TierTemplateRevision) (bool, error) {
@@ -130,7 +133,13 @@ func (r *Reconciler) verifyUnusedTTR(ctx context.Context, nsTmplTier *toolchainv
 		logger.Info("there are still some spaces which are outdated")
 		return false, nil
 	}
-
 	return true, nil
+}
 
+// deleteTTR function delete the TTR
+func (r *Reconciler) deleteTTR(ctx context.Context, ttr *toolchainv1alpha1.TierTemplateRevision) error {
+	if err := r.Client.Delete(ctx, ttr); err != nil {
+		return fmt.Errorf("unable to delete the current Tier Template Revision %s: %w", ttr.Name, err)
+	}
+	return nil
 }

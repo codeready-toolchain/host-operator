@@ -167,6 +167,16 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 		})
 
+		t.Run("tier label not found", func(t *testing.T) {
+			ttr.Labels = map[string]string{}
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
+			//when
+			res, err := r.Reconcile(context.TODO(), req)
+			//then
+			require.NoError(t, err)
+			require.Equal(t, controllerruntime.Result{}, res)
+			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
+		})
 		t.Run("NSTemplate Tier not found", func(t *testing.T) {
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
 			//when
@@ -191,14 +201,18 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 
-		t.Run("tier label not found", func(t *testing.T) {
+		t.Run("tier label not found but error deleting ttr", func(t *testing.T) {
 			ttr.Labels = map[string]string{}
-			r, req, _ := prepareReconcile(t, ttr.Name, ttr)
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
+			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
+				return fmt.Errorf("some error cannot delete")
+			}
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
-			require.EqualError(t, err, "tier-name label not found in tiertemplaterevision")
+			require.EqualError(t, err, "unable to delete the current Tier Template Revision base1ns-clusterresources-123456new-ttrcr: some error cannot delete")
 			require.False(t, res.Requeue)
+			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 
 	})
