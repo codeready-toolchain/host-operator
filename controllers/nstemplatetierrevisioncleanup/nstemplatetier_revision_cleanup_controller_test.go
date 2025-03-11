@@ -164,7 +164,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
-			require.NoError(t, err)
+			require.EqualError(t, err, "tier-name label not found in tiertemplaterevision")
 			require.False(t, res.Requeue)
 		})
 
