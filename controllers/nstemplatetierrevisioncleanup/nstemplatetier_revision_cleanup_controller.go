@@ -98,7 +98,7 @@ func (r *Reconciler) verifyUnusedTTR(ctx context.Context, nsTmplTier *toolchainv
 	//check if the ttr name is present status.revisions
 	for _, ttStatusRev := range nsTmplTier.Status.Revisions {
 		if ttStatusRev == rev.Name {
-			logger.Info("the revision %s is still being referenced in status.revisions", rev.Name)
+			logger.Info("the revision is still being referenced in status.revisions", "ttr.name", rev.Name)
 			return false, nil
 		}
 	}
