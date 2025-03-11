@@ -14,7 +14,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +28,7 @@ const (
 )
 
 func TestTTRDeletionReconcile(t *testing.T) {
+
 	t.Run("TTR Deleted Successfully", func(t *testing.T) {
 		//given
 		nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
@@ -42,6 +42,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		require.Equal(t, controllerruntime.Result{}, res)
 		tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
 	})
+
 	t.Run("Failure", func(t *testing.T) {
 		nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 		ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
@@ -56,7 +57,8 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.LessOrEqual(t, res.RequeueAfter, time.Second)
+			require.LessOrEqual(t, res.RequeueAfter, time.Second)
+			require.True(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 
 		})
