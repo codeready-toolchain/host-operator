@@ -15,7 +15,9 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -166,19 +168,14 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.False(t, res.Requeue)
 
 		})
-
-		t.Run("tier label not found", func(t *testing.T) {
-			ttr.Labels = map[string]string{}
-			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
-			//when
-			res, err := r.Reconcile(context.TODO(), req)
-			//then
-			require.NoError(t, err)
-			require.Equal(t, controllerruntime.Result{}, res)
-			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
-		})
 		t.Run("NSTemplate Tier not found", func(t *testing.T) {
-			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr, nsTemplateTier)
+			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+					return errors.NewNotFound(schema.GroupResource{}, key.Name)
+				}
+				return cl.Client.Get(ctx, key, obj, opts...)
+			}
 			//when
 			res, err := r.Reconcile(context.TODO(), req)
 			//then
@@ -189,7 +186,13 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 
 		t.Run("NSTemplate Tier not found, but error deleting ttr", func(t *testing.T) {
-			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr, nsTemplateTier)
+			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+					return errors.NewNotFound(schema.GroupResource{}, key.Name)
+				}
+				return cl.Client.Get(ctx, key, obj, opts...)
+			}
 			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				return fmt.Errorf("some error cannot delete")
 			}
@@ -199,6 +202,16 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.EqualError(t, err, "unable to delete the current Tier Template Revision base1ns-clusterresources-123456new-ttrcr: some error cannot delete")
 			require.False(t, res.Requeue)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
+		})
+		t.Run("tier label not found", func(t *testing.T) {
+			ttr.Labels = map[string]string{}
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
+			//when
+			res, err := r.Reconcile(context.TODO(), req)
+			//then
+			require.NoError(t, err)
+			require.Equal(t, controllerruntime.Result{}, res)
+			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
 		})
 
 		t.Run("tier label not found but error deleting ttr", func(t *testing.T) {
