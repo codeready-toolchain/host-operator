@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const deletionTimeThreshold = 30 * time.Second
+const DeletionTimeThreshold = 30 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -51,9 +51,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	timeSinceCreation := time.Since(ttr.GetCreationTimestamp().Time)
 
 	//the ttr age should be greater than 30 seconds
-	if timeSinceCreation < deletionTimeThreshold {
-		requeAfter := deletionTimeThreshold - timeSinceCreation
-		return reconcile.Result{RequeueAfter: requeAfter, Requeue: true}, nil
+	if timeSinceCreation < DeletionTimeThreshold {
+		requeAfter := DeletionTimeThreshold - timeSinceCreation
+		return reconcile.Result{RequeueAfter: requeAfter}, nil
 	}
 
 	//check if there is tier-name label available
@@ -68,6 +68,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		Namespace: ttr.GetNamespace(),
 		Name:      tierName,
 	}, tier); err != nil {
+		if errors.IsNotFound(err) {
+			// if there is no related nstemplate tier, we can delete the TTR directly
+			logger.Info("NSTemplateTier not found, proceeding to delete it ")
+			if err := r.Client.Delete(ctx, ttr); err != nil {
+				return reconcile.Result{}, fmt.Errorf("unable to delete the current Tier Template Revision %s: %w", ttr.Name, err)
+			}
+			return reconcile.Result{}, nil
+		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, fmt.Errorf("unable to get the current NSTemplateTier: %w", err)
 	}
