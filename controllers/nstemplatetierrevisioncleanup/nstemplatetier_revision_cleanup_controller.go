@@ -53,7 +53,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	//the ttr age should be greater than 30 seconds
 	if timeSinceCreation < DeletionTimeThreshold {
 		requeAfter := DeletionTimeThreshold - timeSinceCreation
-		return reconcile.Result{RequeueAfter: requeAfter, Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: requeAfter}, nil
 	}
 
 	//check if there is tier-name label available
