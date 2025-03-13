@@ -80,6 +80,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 		t.Run("spaces are still being updated", func(t *testing.T) {
 			// given
+			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 			nsTemplateTier.Status.Revisions = map[string]string{
 				"base1ns-code-123456new":             "base1ns-code-123456new-ttr",
 				"base1ns-clusterresources-123456new": "base1ns-clusterresources-123456new-ttr",
@@ -98,7 +99,6 @@ func TestTTRDeletionReconcile(t *testing.T) {
 
 		t.Run("Error while deleting the TTR", func(t *testing.T) {
 			// given
-			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
 			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
 			s := createSpace(nsTemplateTier)
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
@@ -114,6 +114,23 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
 
+		t.Run("Is Not Found Error-already deleted, while deleting the TTR", func(t *testing.T) {
+			// given
+			nsTemplateTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
+			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
+			s := createSpace(nsTemplateTier)
+			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
+			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
+				return errors.NewNotFound(schema.GroupResource{}, ttr.Name)
+			}
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, controllerruntime.Result{}, res)
+		})
 		t.Run("error while getting revision", func(t *testing.T) {
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
@@ -167,7 +184,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.Equal(t, controllerruntime.Result{}, res)
 
 		})
-		t.Run("NSTemplate Tier not found", func(t *testing.T) {
+		t.Run("NSTemplate Tier not found - ttr gets deleted", func(t *testing.T) {
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr, nsTemplateTier)
 			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
@@ -202,7 +219,8 @@ func TestTTRDeletionReconcile(t *testing.T) {
 			require.Equal(t, controllerruntime.Result{}, res)
 			tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 		})
-		t.Run("tier label not found", func(t *testing.T) {
+		t.Run("tier label not found - ttr gets deleted", func(t *testing.T) {
+			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
 			ttr.Labels = map[string]string{}
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
 			//when
@@ -214,6 +232,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		})
 
 		t.Run("tier label not found but error deleting ttr", func(t *testing.T) {
+			ttr := createttr(*nsTemplateTier, (nsTemplateTier.Spec.ClusterResources.TemplateRef + "-ttrcr"), metav1.NewTime(time.Now().Add(-time.Minute)))
 			ttr.Labels = map[string]string{}
 			r, req, cl := prepareReconcile(t, ttr.Name, ttr)
 			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
@@ -258,19 +277,12 @@ func createttr(nsTTier toolchainv1alpha1.NSTemplateTier, name string, crtime met
 			Labels:            labels,
 			CreationTimestamp: crtime,
 		},
-		Spec: toolchainv1alpha1.TierTemplateRevisionSpec{
-			Parameters: nsTTier.Spec.Parameters,
-		},
 	}
 	return ttr
 }
 
 func createSpace(nsTTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.Space {
 	testSpace := spacetest.NewSpace(test.HostOperatorNs, "oddity1",
-		spacetest.WithTierNameAndHashLabelFor(nsTTier),
-		spacetest.WithSpecTargetCluster("member-1"),
-		spacetest.WithStatusTargetCluster("member-1"),
-		spacetest.WithFinalizer(),
-		spacetest.WithCondition(spacetest.Ready()))
+		spacetest.WithTierNameAndHashLabelFor(nsTTier))
 	return testSpace
 }
