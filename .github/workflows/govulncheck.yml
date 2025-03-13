@@ -7,7 +7,7 @@ on:
 jobs:
   govulncheck:
     name: govulncheck
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
@@ -25,6 +25,6 @@ jobs:
     - name: Run govulncheck
       uses: golang/govulncheck-action@v1
       with:
-        go-version-input: ${{ steps.install-go.outputs.go-version }}
+        go-version-file: go.mod
         go-package: ./...
         repo-checkout: false
