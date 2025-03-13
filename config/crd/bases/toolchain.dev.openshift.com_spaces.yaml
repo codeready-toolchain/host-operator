@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: spaces.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -33,14 +33,19 @@ spec:
         description: Space is the Schema for the spaces API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -48,46 +53,53 @@ spec:
             description: SpaceSpec defines the desired state of Space
             properties:
               disableInheritance:
-                description: "DisableInheritance indicates whether or not SpaceBindings
-                  from the parent-spaces are automatically inherited to all sub-spaces
-                  in the tree. \n Set to True to disable SpaceBinding inheritance
-                  from the parent-spaces. Default is False."
+                description: |-
+                  DisableInheritance indicates whether or not SpaceBindings from the parent-spaces are
+                  automatically inherited to all sub-spaces in the tree.
+
+
+                  Set to True to disable SpaceBinding inheritance from the parent-spaces.
+                  Default is False.
                 type: boolean
               parentSpace:
-                description: "ParentSpace holds the name of the context (Space) from
-                  which this space was created (requested), enabling hierarchy relationships
-                  between different Spaces. \n Keeping this association brings two
-                  main benefits: 1. SpaceBindings are inherited from the parent Space
-                  2. Ability to easily monitor quota for the requested sub-spaces"
+                description: |-
+                  ParentSpace holds the name of the context (Space) from which this space was created (requested),
+                  enabling hierarchy relationships between different Spaces.
+
+
+                  Keeping this association brings two main benefits:
+                  1. SpaceBindings are inherited from the parent Space
+                  2. Ability to easily monitor quota for the requested sub-spaces
                 type: string
               targetCluster:
-                description: TargetCluster The cluster in which this Space is going
-                  to be provisioned If not set then the target cluster will be picked
-                  automatically
+                description: |-
+                  TargetCluster The cluster in which this Space is going to be provisioned
+                  If not set then the target cluster will be picked automatically
                 type: string
               targetClusterRoles:
-                description: TargetClusterRoles one or more label keys that define
-                  a set of clusters where the Space can be provisioned. The target
-                  cluster has to match ALL the roles defined in this field in order
-                  for the space to be provisioned there. It can be used as an alternative
-                  to targetCluster field, which has precedence in case both roles
-                  and name are provided.
+                description: |-
+                  TargetClusterRoles one or more label keys that define a set of clusters
+                  where the Space can be provisioned.
+                  The target cluster has to match ALL the roles defined in this field in order for the space to be provisioned there.
+                  It can be used as an alternative to targetCluster field, which has precedence in case both roles and name are provided.
                 items:
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
               tierName:
-                description: TierName is introduced to retain the name of the tier
-                  for which this Space is provisioned If not set then the tier name
-                  will be set automatically
+                description: |-
+                  TierName is introduced to retain the name of the tier
+                  for which this Space is provisioned
+                  If not set then the tier name will be set automatically
                 type: string
             type: object
           status:
             description: SpaceStatus defines the observed state of Space
             properties:
               conditions:
-                description: 'Conditions is an array of current Space conditions Supported
-                  condition types: ConditionReady'
+                description: |-
+                  Conditions is an array of current Space conditions
+                  Supported condition types: ConditionReady
                 items:
                   properties:
                     lastTransitionTime:
@@ -124,9 +136,9 @@ spec:
                 description: ProvisionedNamespaces is a list of Namespaces that were
                   provisioned for the Space.
                 items:
-                  description: SpaceNamespace is a common type to define the information
-                    about a namespace within a Space Used in NSTemplateSet, Space
-                    and Workspace status
+                  description: |-
+                    SpaceNamespace is a common type to define the information about a namespace within a Space
+                    Used in NSTemplateSet, Space and Workspace status
                   properties:
                     name:
                       description: Name the name of the namespace.
@@ -138,10 +150,10 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               targetCluster:
-                description: TargetCluster The cluster in which this Space is currently
-                  provisioned Can be empty if provisioning did not start or failed
-                  To be used to de-provision the NSTemplateSet if the Spec.TargetCluster
-                  is either changed or removed
+                description: |-
+                  TargetCluster The cluster in which this Space is currently provisioned
+                  Can be empty if provisioning did not start or failed
+                  To be used to de-provision the NSTemplateSet if the Spec.TargetCluster is either changed or removed
                 type: string
             type: object
         type: object
