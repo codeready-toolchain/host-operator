@@ -48,7 +48,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	//there is no point in fetching  the NStemplateTier, if the TTR  is just created,
 	// as it is a new TTR created due to changes in NSTemplate Tier,
-	// and the referneces are still being updated to nstemplatetier
+	// and the references are still being updated to nstemplatetier
 	//get the tier template revision creation time stamp and the duration
 	timeSinceCreation := time.Since(ttr.GetCreationTimestamp().Time)
 
