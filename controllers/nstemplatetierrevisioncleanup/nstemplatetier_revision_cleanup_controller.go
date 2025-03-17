@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const DeletionTimeThreshold = 30 * time.Second
+const minTTRAge = 30 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -34,24 +34,27 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// fetch the NSTemplateTier tier
+	// fetch the TTR
 	ttr := &toolchainv1alpha1.TierTemplateRevision{}
 	if err := r.Client.Get(ctx, request.NamespacedName, ttr); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("TierTemplateRevision not found")
 			return reconcile.Result{}, nil
 		}
+
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, fmt.Errorf("unable to get the current TierTemplateRevision: %w", err)
 	}
 
-	//there is no point in fetching  the NStemplateTier, if the TTR  is just created
+	//there is no point in fetching  the NStemplateTier, if the TTR  is just created,
+	// as it is a new TTR created due to changes in NSTemplate Tier,
+	// and the referneces are still being updated to nstemplatetier
 	//get the tier template revision creation time stamp and the duration
 	timeSinceCreation := time.Since(ttr.GetCreationTimestamp().Time)
 
 	//the ttr age should be greater than 30 seconds
-	if timeSinceCreation < DeletionTimeThreshold {
-		requeueAfter := DeletionTimeThreshold - timeSinceCreation
+	if timeSinceCreation < minTTRAge {
+		requeueAfter := minTTRAge - timeSinceCreation
 		logger.Info("the TierTemplateRevision is not old enough", "requeue-after", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
@@ -90,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-// verifyUnusedTTR function verifies that the TTR is not used (returns true if it's used).
+// verifyUnusedTTR function verifies that the TTR is not used (returns true if it's NOT used).
 // this is done by:
 //   - checking the NSTemplateTier.status.revisions field, if the TTR is referenced there or not
 //   - checking if all Spaces are up-to-date. In case there are some outdated space, we could risk that the TTR is still being used
