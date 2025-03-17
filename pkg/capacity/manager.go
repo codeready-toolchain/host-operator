@@ -142,7 +142,6 @@ func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClu
 	}
 
 	for _, candidate := range candidates {
-		candidate := candidate
 		clusterName := candidate.clusterName
 		if clusterName == b.lastUsed {
 			provisioned := candidate.spaceCount
@@ -199,7 +198,6 @@ func (b *ClusterManager) getOptimalTargetClusters(ctx context.Context, preferred
 	matching := make([]provisionerCandidate, 0, len(list.Items))
 
 	for _, spc := range list.Items {
-		spc := spc // to prevent the memory aliasing in a for-loop
 		candidate := provisionerCandidateFromSPC(&spc, counts)
 		if matches(candidate, predicates) {
 			matching = append(matching, candidate)
