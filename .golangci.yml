@@ -30,6 +30,5 @@ linters-settings:
     rules:
       - name: dot-imports
         disabled: true # we allow for dot-imports
-      - name: comment-spacings
 
  
