@@ -9,6 +9,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -46,6 +47,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, fmt.Errorf("unable to get the current TierTemplateRevision: %w", err)
 	}
 
+	// if the TTR has deletion time stamp, return, no need to do anything as its already marked for deleteion
+	if util.IsBeingDeleted(ttr) {
+		logger.Info("TierTemplateRevision already marked for deletion")
+		return reconcile.Result{}, nil
+	}
 	//there is no point in fetching  the NStemplateTier, if the TTR  is just created,
 	// as it is a new TTR created due to changes in NSTemplate Tier,
 	// and the references are still being updated to nstemplatetier

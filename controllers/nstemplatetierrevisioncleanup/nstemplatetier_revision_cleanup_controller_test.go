@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetierrevisioncleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -39,6 +41,21 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, controllerruntime.Result{}, res)
 		tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).DoNotExist()
+	})
+
+	t.Run("TTR has deletion time Stamp", func(t *testing.T) {
+		//given
+		ttr.DeletionTimestamp = &metav1.Time{
+			Time: time.Now(),
+		}
+		controllerutil.AddFinalizer(ttr, v1alpha1.FinalizerName)
+		r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
+		//when
+		res, err := r.Reconcile(context.TODO(), req)
+		//then
+		require.NoError(t, err)
+		require.Equal(t, controllerruntime.Result{}, res)
+		tiertemplaterevision.AssertThatTTRs(t, cl, nsTemplateTier.GetNamespace()).ExistFor(nsTemplateTier.Name)
 	})
 
 	t.Run("the creation timestamp is less than 30 sec", func(t *testing.T) {
