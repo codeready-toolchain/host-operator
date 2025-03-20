@@ -18,7 +18,7 @@ $(OUT_DIR)/operator:
 		go build ${V_FLAG} \
 		-ldflags "-X ${GO_PACKAGE_PATH}/version.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/version.BuildTime=${BUILD_TIME}" \
 		-o $(OUT_DIR)/bin/host-operator \
-		main.go
+		./cmd/main.go
 
 .PHONY: vendor
 vendor:
