@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"time"
 
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetierrevisioncleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
@@ -277,6 +279,12 @@ func main() { // nolint:gocyclo
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
+		os.Exit(1)
+	}
+	if err = (&nstemplatetierrevisioncleanup.Reconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
 		os.Exit(1)
 	}
 	if err := (&toolchainconfig.Reconciler{
