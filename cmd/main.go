@@ -294,6 +294,7 @@ func main() { // nolint:gocyclo
 		Client:         mgr.GetClient(),
 		GetMembersFunc: commoncluster.GetMemberClusters,
 		Scheme:         mgr.GetScheme(),
+		FieldManager:   hostOperatorFieldManager,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 		os.Exit(1)

@@ -21,7 +21,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -36,7 +35,6 @@ var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-
 	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")
@@ -58,6 +56,7 @@ type Reconciler struct {
 	GetMembersFunc     cluster.GetMemberClustersFunc
 	Scheme             *runtime.Scheme
 	RegServiceTemplate *templatev1.Template
+	FieldManager       string
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -101,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Load the latest config and secrets into the cache
 	cfg, err := ForceLoadToolchainConfig(r.Client)
 	if err != nil {
-		return reconcile.Result{}, r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to load the latest configuration")
+		return reconcile.Result{}, r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, fmt.Errorf("failed to load the latest configuration: %w", err))
 	}
 
 	// Deploy registration service
@@ -128,34 +127,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) ensureRegistrationService(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, vars templateVars) error {
 	// process template with variables taken from the RegistrationService CRD
-	cl := applycl.NewApplyClient(r.Client)
+	cl := applycl.NewSSAApplyClient(r.Client, r.FieldManager)
 	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.RegServiceTemplate.DeepCopy(), vars)
 	if err != nil {
-		return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")
+		return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, fmt.Errorf("failed to process registration service template: %w", err))
 	}
 
 	// create all objects that are within the template, and update only when the object has changed.
-	var updated []string
-	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.ApplyObject(ctx, toolchainObject, applycl.SetOwner(toolchainConfig))
-		if err != nil {
-			return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
-		}
-		if createdOrUpdated {
-			gvk, err := apiutil.GVKForObject(toolchainObject, r.Scheme)
-			if err != nil {
-				return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to determine GroupVersionKind for registration service object %s", toolchainObject.GetName())
-			}
-			updated = append(updated, fmt.Sprintf("%s: %s", gvk.Kind, toolchainObject.GetName()))
-		}
+	if err := cl.Apply(ctx, toolchainObjects, applycl.SetOwnerReference(toolchainConfig)); err != nil {
+		return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, fmt.Errorf("failed to apply registration service: %w", err))
 	}
 
 	logger := log.FromContext(ctx)
-	if len(updated) > 0 {
-		logger.Info("Updated registration service resources", "updated resources", updated)
-		return r.updateStatusCondition(ctx, toolchainConfig, ToRegServiceDeploying(fmt.Sprintf("updated resources: %s", updated)), false)
-	}
-
 	logger.Info("All objects in registration service template have been created and are up-to-date")
 	return r.updateStatusCondition(ctx, toolchainConfig, ToRegServiceDeployComplete(), false)
 }
@@ -200,19 +183,16 @@ func (r *Reconciler) WrapErrorWithStatusUpdate(
 	ctx context.Context,
 	toolchainConfig *toolchainv1alpha1.ToolchainConfig,
 	statusUpdater func(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error,
-	providedError error,
-	format string,
-	args ...interface{},
+	err error,
 ) error {
-	if providedError == nil {
+	if err == nil {
 		return nil
 	}
-	wrappedErr := errs.Wrapf(providedError, format, args...)
-	if err := statusUpdater(ctx, toolchainConfig, wrappedErr.Error()); err != nil {
+	if err := statusUpdater(ctx, toolchainConfig, err.Error()); err != nil {
 		logger := log.FromContext(ctx)
 		logger.Error(err, "status update failed")
 	}
-	return wrappedErr
+	return err
 }
 
 // ToSyncComplete condition when the sync completed with success
@@ -240,16 +220,6 @@ func ToRegServiceDeployComplete() toolchainv1alpha1.Condition {
 		Type:   toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
 		Status: corev1.ConditionTrue,
 		Reason: toolchainv1alpha1.ToolchainConfigRegServiceDeployedReason,
-	}
-}
-
-// ToRegServiceDeploying condition when deploying is in progress
-func ToRegServiceDeploying(msg string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.ToolchainConfigRegServiceDeployingReason,
-		Message: msg,
 	}
 }
 
