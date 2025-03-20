@@ -14,7 +14,7 @@ const ResourceName = "registration-service"
 const ProxyRouteName = "api"
 
 func GetDeploymentTemplate() (*templatev1.Template, error) {
-	deployment, err := deploy.RegistrationServiceFS.ReadFile("registration-service/registration-service.yaml")
+	deployment, err := deploy.RegistrationServiceFS.ReadFile("templates/registration-service/registration-service.yaml")
 	if err != nil {
 		return nil, err
 	}
