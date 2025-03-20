@@ -70,7 +70,8 @@ var (
 )
 
 const (
-	memberClientTimeout = 3 * time.Second
+	memberClientTimeout      = 3 * time.Second
+	hostOperatorFieldManager = "kubesaw-host-operator"
 )
 
 func init() {
