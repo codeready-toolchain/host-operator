@@ -434,8 +434,7 @@ func main() { // nolint:gocyclo
 
 		// create or update all UserTiers on the cluster at startup
 		setupLog.Info("Creating/updating the UserTier resources")
-		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
-		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, deploy.UserTiersFS, "templates/usertiers"); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
