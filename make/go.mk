@@ -64,9 +64,6 @@ generate-assets: go-bindata
 	@rm ./test/templates/usertiers/usertier_assets.go 2>/dev/null || true
 	@$(GO_BINDATA) -pkg usertiers_test -o ./test/templates/usertiers/usertier_assets.go -nometadata -nocompress -prefix $(USERTEMPLATES_TEST_BASEDIR) -ignore doc.go $(USERTEMPLATES_TEST_BASEDIR)/...
 
-	@echo "generating registration service template data..."
-	@$(GO_BINDATA) -pkg registrationservice -o ./pkg/templates/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
-
 .PHONY: verify-dependencies
 ## Runs commands to verify after the updated dependecies of toolchain-common/API(go mod replace), if the repo needs any changes to be made
 verify-dependencies: tidy vet build test lint-go-code
