@@ -35,6 +35,7 @@ var expectedTestTiers = []string{
 }
 
 const (
+	rootDir  = "templates/usertiers"
 	testRoot = "testtemplates/testusertiers"
 )
 
@@ -46,7 +47,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// when
-			tmpls, err := loadTemplatesByTiers(deploy.UserTiersFS, "templates/usertiers")
+			tmpls, err := loadTemplatesByTiers(deploy.UserTiersFS, rootDir)
 			// then
 			require.NoError(t, err)
 			require.Len(t, tmpls, len(expectedProdTiers))
