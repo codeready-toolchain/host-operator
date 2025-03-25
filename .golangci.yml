@@ -1,34 +1,62 @@
-run:
-  # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 10m
-
+version: "2"
 linters:
   enable:
-    - megacheck
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - durationcheck
+    - errchkjson
+    - errorlint
+    - exhaustive
+    - gocheckcompilerdirectives
+    - gochecksumtype
     - gocyclo
-    - gofmt
-    - revive
+    - gosec
+    - gosmopolitan
+    - loggercheck
+    - makezero
     - misspell
-  presets: # groups of linters. See https://golangci-lint.run/usage/linters/
-    - bugs
-    - unused
-  disable: 
-    - golint # deprecated, use 'revive'
-    - scopelint # deprecated, use 'exportloopref'
-    - contextcheck # too many false-positives
-    - noctx # not needed
-
-# all available settings of specific linters
-linters-settings:
-  unparam:
-    # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
-    # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: true
-  revive:
-    rules:
-      - name: dot-imports
-        disabled: true # we allow for dot-imports
-
- 
+    - musttag
+    - nilerr
+    - nilnesserr
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - spancheck
+    - sqlclosecheck
+    - testifylint
+    - unparam
+    - zerologlint
+  disable:
+    - contextcheck
+    - noctx
+  settings:
+    revive:
+      rules:
+        - name: dot-imports
+          disabled: true
+    unparam:
+      check-exported: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
