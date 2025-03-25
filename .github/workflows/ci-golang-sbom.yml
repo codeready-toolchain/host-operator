@@ -27,7 +27,7 @@ jobs:
         make generate
     
     - name: Lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v7
       with:
         version: v1.63.1
         skip-pkg-cache: true
