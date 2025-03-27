@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -206,7 +207,7 @@ func main() { // nolint:gocyclo
 	}
 
 	startManager := &restart.StartManager{}
-	startManager.InitializeManager = func() (manager.Manager, error) {
+	startManager.InitializeManager = func(ctx context.Context) (manager.Manager, error) {
 		// Webhook server will be created with default values (port 9443) as per doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/manager/manager.go#L244-L247
 		// Cache Options design doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/designs/cache_options.md
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

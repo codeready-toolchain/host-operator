@@ -31,7 +31,7 @@ type MockManager struct {
 func TestStartManager(t *testing.T) {
 	t.Run("returns no error when manager returns with no error after context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		startManager := &StartManager{InitializeManager: func() (manager.Manager, error) {
+		startManager := &StartManager{InitializeManager: func(context.Context) (manager.Manager, error) {
 			return &MockManager{waitUntilContextCancelled: true}, nil
 		}}
 
@@ -51,7 +51,7 @@ func TestStartManager(t *testing.T) {
 
 	t.Run("returns error when manager fails to start", func(t *testing.T) {
 		errToReturn := errors.New("an error")
-		startManager := &StartManager{InitializeManager: func() (manager.Manager, error) {
+		startManager := &StartManager{InitializeManager: func(context.Context) (manager.Manager, error) {
 			return &MockManager{errorToReturn: errToReturn}, nil
 		}}
 
@@ -62,7 +62,7 @@ func TestStartManager(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		doneCh := make(chan struct{})
 		startCh := make(chan struct{})
-		startManager := &StartManager{InitializeManager: func() (manager.Manager, error) {
+		startManager := &StartManager{InitializeManager: func(context.Context) (manager.Manager, error) {
 			return &MockManager{
 				waitUntilContextCancelled: true,
 				startFn: func() {

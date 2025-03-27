@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	restartNeededError  = errors.New("restart needed called")
-	alreadyRunningError = errors.New("controller manager already running")
+	errRestartNeeded  = errors.New("restart needed called")
+	errAlreadyRunning = errors.New("controller manager already running")
 
 	_ Restarter = (*StartManager)(nil)
 )
 
-type InitializeManagerFunc func() (manager.Manager, error)
+type InitializeManagerFunc func(context.Context) (manager.Manager, error)
 
 // Restarter is a thing that can be told that a restart is needed.
 // The StartManager is the sole implementation at runtime, but this interface
@@ -25,7 +25,7 @@ type Restarter interface {
 }
 
 // StartManager manages the lifecycle of the controller manager.
-// It it supplied a function that initalizes the manager (and which MUST NOT start it).
+// It it supplied a function that initializes the manager (and which MUST NOT start it).
 // StartManager then can be used to start the controller manager and can also
 // be asked to restart it.
 type StartManager struct {
@@ -48,7 +48,8 @@ func (s *StartManager) Start(ctx context.Context) error {
 
 		if s.runningContext == nil {
 			// this actually means that the start failed, but we need a non-nil value for the runningContext
-			// so that we can select on it below
+			// so that we can select on it below. We need to reach the select so that we can "catch" the potential
+			// startErr.
 			s.runningContext = context.TODO()
 		}
 
@@ -75,7 +76,7 @@ func (s *StartManager) Start(ctx context.Context) error {
 
 				// now, let's see what caused the cancellation
 
-				if !errors.Is(context.Cause(s.runningContext), restartNeededError) {
+				if !errors.Is(context.Cause(s.runningContext), errRestartNeeded) {
 					// this can only happen if the passed-in context is cancellable and is itself cancelled.
 					// In this case, the error, if any, is retrievable from the context and therefore should NOT be returned
 					// from this function.
@@ -122,14 +123,14 @@ func (s *StartManager) doStart(ctx context.Context) (<-chan error, <-chan struct
 
 	if s.running {
 		debug("doStart: already running")
-		err <- alreadyRunningError
+		err <- errAlreadyRunning
 		return err, finished
 	}
 
 	s.runningContext, s.cancelFunc = context.WithCancelCause(ctx)
 
 	debug("doStart: calling InitializeManager")
-	mgr, initErr := s.InitializeManager()
+	mgr, initErr := s.InitializeManager(s.runningContext)
 	if initErr != nil {
 		debug("doStart: InitializeManager failed")
 		err <- initErr
@@ -168,6 +169,6 @@ func (s *StartManager) RestartNeeded() {
 		}
 
 		debug("restartNeeded: calling restart function")
-		s.cancelFunc(restartNeededError)
+		s.cancelFunc(errRestartNeeded)
 	}()
 }
