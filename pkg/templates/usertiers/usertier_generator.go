@@ -137,8 +137,8 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		tmpl := template{
 			content: content,
 		}
-		switch {
-		case filename == "tier.yaml":
+		switch filename {
+		case "tier.yaml":
 			results[tier].rawTemplates.userTier = &tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)

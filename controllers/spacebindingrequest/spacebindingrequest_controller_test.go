@@ -293,7 +293,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(t, hostClient, member1)
 
@@ -339,7 +339,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(t, hostClient, member1)
 

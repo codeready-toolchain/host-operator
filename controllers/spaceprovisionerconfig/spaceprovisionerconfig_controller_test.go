@@ -328,7 +328,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); ok {
 				return getErr
 			}
-			return cl.Client.Get(ctx, key, obj, opts...)
+			return cl.Get(ctx, key, obj, opts...)
 		}
 
 		// when
@@ -398,7 +398,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainCluster); ok {
 				return &kerrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 			}
-			return cl.Client.Get(ctx, key, obj, opts...)
+			return cl.Get(ctx, key, obj, opts...)
 		}
 
 		// when
@@ -481,7 +481,7 @@ func TestCollectConsumedCapacity(t *testing.T) {
 			if key.Name == "toolchain-status" {
 				return errors.New("intetionally failing")
 			}
-			return cl.Client.Get(ctx, key, obj, opts...)
+			return cl.Get(ctx, key, obj, opts...)
 		}
 
 		// when

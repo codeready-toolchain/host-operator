@@ -248,7 +248,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// in some rare circumstances the deactivating notification/status may fail to be set due to cluster downtime or
 	// other reasons.  Because of this, the scheduled deactivation time that is set in the UserSignup.Status should be
 	// treated as informational only.
-	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
+	deactivationDueTime := deactivatingCondition.LastTransitionTime.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
 
 	if time.Now().Before(deactivationDueTime) {
 		// Update the ScheduledDeactivationTimestamp to the recalculated time base on when the deactivating notification was sent

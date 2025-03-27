@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/test/spacebinding"
-	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -41,18 +40,18 @@ func TestDeleteSpaceBindingForKubeSawAuthenticated(t *testing.T) {
 		{
 			name:                  "with public-viewer disabled kubesaw-authenticated SpaceBinding is removed when MUR is missing",
 			toolchainConfigOption: testconfig.PublicViewerConfig(false),
-			spaceBindingAssert:    func(assertion *sb.Assertion) { assertion.DoesNotExist() },
+			spaceBindingAssert:    func(assertion *spacebinding.Assertion) { assertion.DoesNotExist() },
 		},
 		{
 
 			name:                  "with public-viewer enabled kubesaw-authenticated SpaceBinding is NOT removed when MUR is missing",
 			toolchainConfigOption: testconfig.PublicViewerConfig(true),
-			spaceBindingAssert:    func(assertion *sb.Assertion) { assertion.Exists() },
+			spaceBindingAssert:    func(assertion *spacebinding.Assertion) { assertion.Exists() },
 		},
 	}
 
 	redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
-	sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
+	sbPublicViewerRedhatView := spacebinding.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -68,7 +67,7 @@ func TestDeleteSpaceBindingForKubeSawAuthenticated(t *testing.T) {
 			// then
 			require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 			require.NoError(t, err)
-			tc.spaceBindingAssert(sb.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient))
+			tc.spaceBindingAssert(spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient))
 		})
 	}
 }
@@ -92,9 +91,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// given
 
-			sbLaraRedhatAdmin := sb.NewSpaceBinding("lara", "redhat", "admin", "signupA")
-			sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view", "signupB")
-			sbLaraIbmEdit := sb.NewSpaceBinding("lara", "ibm", "edit", "signupC")
+			sbLaraRedhatAdmin := spacebinding.NewSpaceBinding("lara", "redhat", "admin", "signupA")
+			sbJoeRedhatView := spacebinding.NewSpaceBinding("joe", "redhat", "view", "signupB")
+			sbLaraIbmEdit := spacebinding.NewSpaceBinding("lara", "ibm", "edit", "signupC")
 
 			redhatSpace := spacetest.NewSpace(test.HostOperatorNs, "redhat")
 			ibmSpace := spacetest.NewSpace(test.HostOperatorNs, "ibm")
@@ -102,7 +101,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			laraMur := masteruserrecord.NewMasterUserRecord(t, "lara")
 			joeMur := masteruserrecord.NewMasterUserRecord(t, "joe")
 
-			sbPublicViewerRedhatView := sb.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
+			sbPublicViewerRedhatView := spacebinding.NewSpaceBinding(toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", "view", "signupD")
 			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, tc.toolchainConfigOption)
 
 			t.Run("error retrieving the ToolchainConfig", func(t *testing.T) {
@@ -128,7 +127,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).DoesNotExist()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).DoesNotExist()
 			})
 
 			t.Run("lara-redhat SpaceBinding removed when redhat space is missing", func(t *testing.T) {
@@ -141,9 +140,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 			})
 
 			t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
@@ -157,16 +156,16 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).DoesNotExist()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).DoesNotExist()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 			})
 
 			t.Run("lara-redhat SpaceBinding is being deleted, so no action needed", func(t *testing.T) {
 				sbLaraRedhatAdmin := sbLaraRedhatAdmin.DeepCopy()
 				now := metav1.Now()
 				sbLaraRedhatAdmin.DeletionTimestamp = &now
-				controllerutil.AddFinalizer(sbLaraRedhatAdmin, v1alpha1.FinalizerName)
+				controllerutil.AddFinalizer(sbLaraRedhatAdmin, toolchainv1alpha1.FinalizerName)
 				fakeClient := test.NewFakeClient(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -176,9 +175,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 			})
 
 			t.Run("no SpaceBinding removed when MUR and Space are present", func(t *testing.T) {
@@ -192,9 +191,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 			})
 
 			t.Run("fails while getting the bound resource", func(t *testing.T) {
@@ -206,7 +205,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 						if key.Name == boundResourceName {
 							return fmt.Errorf("some error")
 						}
-						return fakeClient.Client.Get(ctx, key, obj, opts...)
+						return fakeClient.Get(ctx, key, obj, opts...)
 					}
 
 					// when
@@ -214,7 +213,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 					// then
 					require.Error(t, err)
-					sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+					spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 				}
 			})
 
@@ -231,7 +230,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.Error(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 			})
 		})
 	}
@@ -262,7 +261,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 			sbr := sbrtestcommon.NewSpaceBindingRequest("lara", "lara-tenant",
 				sbrtestcommon.WithMUR("lara"),
 				sbrtestcommon.WithSpaceRole("admin"))
-			sbLaraAdmin := sb.NewSpaceBinding("lara", "lara", "admin", sbr.GetName(), sb.WithSpaceBindingRequest(sbr)) // the spacebinding was created from spacebindingrequest
+			sbLaraAdmin := spacebinding.NewSpaceBinding("lara", "lara", "admin", sbr.GetName(), spacebinding.WithSpaceBindingRequest(sbr)) // the spacebinding was created from spacebindingrequest
 			t.Run("SpaceBindingRequest is deleted", func(t *testing.T) {
 				// given
 				member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sbr), "member-1", corev1.ConditionTrue)
@@ -290,14 +289,14 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
 				require.NoError(t, err)
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).DoesNotExist() // the spacebinding is deleted
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).DoesNotExist() // the spacebinding is deleted
 			})
 
 			t.Run("unable to get SpaceBindingRequest", func(t *testing.T) {
 				// given
 				member1Client := test.NewFakeClient(t)
 				member1Client.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
-					if _, ok := obj.(*v1alpha1.SpaceBindingRequest); ok {
+					if _, ok := obj.(*toolchainv1alpha1.SpaceBindingRequest); ok {
 						return fmt.Errorf("mock error")
 					}
 					return member1Client.Get(ctx, key, obj, opts...)
@@ -310,15 +309,15 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 				// then
-				require.EqualError(t, err, "unable to get the current *v1alpha1.SpaceBindingRequest: mock error")
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
+				require.EqualError(t, err, "unable to get the current *toolchainv1alpha1.SpaceBindingRequest: mock error")
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
 			})
 
 			t.Run("fails while deleting the SpaceBindingRequest", func(t *testing.T) {
 				// given
 				member1Client := test.NewFakeClient(t, sbr)
 				member1Client.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
-					if _, ok := obj.(*v1alpha1.SpaceBindingRequest); ok {
+					if _, ok := obj.(*toolchainv1alpha1.SpaceBindingRequest); ok {
 						return fmt.Errorf("mock error")
 					}
 					return member1Client.Client.Delete(ctx, obj, opts...)
@@ -332,7 +331,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 
 				// then
 				require.EqualError(t, err, "unable to delete the SpaceBindingRequest: mock error")
-				sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
 			})
 		})
 	}
@@ -364,7 +363,7 @@ func prepareReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters
 	return reconciler
 }
 
-func requestFor(s *v1alpha1.SpaceBinding) reconcile.Request {
+func requestFor(s *toolchainv1alpha1.SpaceBinding) reconcile.Request {
 	if s != nil {
 		return reconcile.Request{
 			NamespacedName: types.NamespacedName{

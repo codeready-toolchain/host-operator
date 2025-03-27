@@ -48,7 +48,7 @@ func TestReconcile(t *testing.T) {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
 					}
-					return cl.Client.Get(ctx, key, obj, opts...)
+					return cl.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -65,7 +65,7 @@ func TestReconcile(t *testing.T) {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
-					return cl.Client.Get(ctx, key, obj, opts...)
+					return cl.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -302,7 +302,7 @@ func TestReconcile(t *testing.T) {
 					return fmt.Errorf("should not call Get more than once")
 				}
 				called = true
-				return cl.Client.Get(ctx, key, obj, opts...)
+				return cl.Get(ctx, key, obj, opts...)
 			}
 			cl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				return fmt.Errorf("should not call Create")

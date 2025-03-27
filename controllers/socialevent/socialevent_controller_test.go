@@ -3,8 +3,9 @@ package socialevent_test
 import (
 	"context"
 	"fmt"
-	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	"testing"
+
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
@@ -95,7 +96,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 
@@ -144,7 +145,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 

@@ -150,7 +150,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 				return fmt.Errorf("get failed")
 			}
-			return fakeClient.Client.Get(ctx, key, obj, opts...)
+			return fakeClient.Get(ctx, key, obj, opts...)
 		}
 
 		// when
@@ -1250,7 +1250,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						assertToolchainStatusNotificationNotCreated(t, fakeClient, restoredStatusNotification)
 						// Confirm the unready notification has been created
 						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
-						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+						require.True(t, strings.HasPrefix(notification.Name, "toolchainstatus-unready-"))
 
 						require.NotNil(t, notification)
 						require.Equal(t, "ToolchainStatus has been in an unready status for an extended period for host-cluster", notification.Spec.Subject)
@@ -1279,7 +1279,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 							// Confirm restored notification has been created
 							notification := assertToolchainStatusNotificationCreated(t, fakeClient)
-							require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-restored-"))
+							require.True(t, strings.HasPrefix(notification.Name, "toolchainstatus-restored-"))
 
 							fmt.Println(notification)
 							require.NotNil(t, notification)
@@ -1385,8 +1385,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 }
 
 func assertToolChainNotificationUnreadyStatus(t *testing.T, invalidURL bool, notification *toolchainv1alpha1.Notification, email string) {
-	require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
-	require.Len(t, notification.ObjectMeta.Name, 38)
+	require.True(t, strings.HasPrefix(notification.Name, "toolchainstatus-unready-"))
+	require.Len(t, notification.Name, 38)
 	require.NotNil(t, notification)
 	if invalidURL {
 		assert.Equal(t, "ToolchainStatus has been in an unready status for an extended period for ", notification.Spec.Subject)
@@ -1430,7 +1430,7 @@ func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.
 	})
 	require.NoError(t, err)
 	for _, notification := range notifications.Items {
-		require.False(t, strings.HasPrefix(notification.ObjectMeta.Name, notificationType))
+		require.False(t, strings.HasPrefix(notification.Name, notificationType))
 	}
 }
 
@@ -1580,7 +1580,7 @@ func TestExtractStatusMetadata(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 1)
-		require.Equal(t, "", meta[0].ComponentType)
+		require.Empty(t, meta[0].ComponentType)
 		require.Equal(t, "SomeReason", meta[0].Reason)
 		require.Equal(t, "A message", meta[0].Message)
 		require.Equal(t, "ToolchainStatus", meta[0].ComponentName)
@@ -1828,7 +1828,7 @@ func TestRemoveSchemeFromURL(t *testing.T) {
 		domain, err := removeSchemeFromURL("incorrect$%url")
 
 		// then
-		require.Equal(t, "", domain)
+		require.Empty(t, domain)
 		require.Error(t, err)
 
 	})

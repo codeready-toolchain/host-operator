@@ -327,7 +327,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -408,7 +408,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj, opts...)
+				return hostClient.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -441,7 +441,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Client.Get(ctx, key, obj, opts...)
+				return member1Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -823,7 +823,7 @@ func TestDeleteSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Client.Get(ctx, key, obj, opts...)
+				return member1Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -1017,7 +1017,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					// but MORE than 1s after the Space Ready condition was set to `Ready=false/Updating`
 
 					// hack: change Space's condition timestamp
-					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Add(-1 * time.Second))
 					err := hostClient.Status().Update(context.TODO(), s)
 					require.NoError(t, err)
 
@@ -1106,7 +1106,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			err := member1.Client.Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
 			// hack: change Space's updating condition timestamp so that it appears the status is ready for >1 second since it's required before can go to Ready condition
-			s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+			s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Add(-1 * time.Second))
 			err = hostClient.Status().Update(context.TODO(), s)
 			require.NoError(t, err)
 

@@ -80,7 +80,7 @@ func TestReconcile(t *testing.T) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
 				default:
-					return cl.Client.Status().Update(ctx, obj)
+					return cl.Status().Update(ctx, obj)
 				}
 			}
 
@@ -169,7 +169,7 @@ func TestReconcile(t *testing.T) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
 				default:
-					return fakeClient.Client.Status().Update(ctx, obj)
+					return fakeClient.Status().Update(ctx, obj)
 				}
 			}
 
@@ -266,7 +266,7 @@ func TestReconcile(t *testing.T) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
 				default:
-					return cl.Client.Status().Update(ctx, obj)
+					return cl.Status().Update(ctx, obj)
 				}
 			}
 
@@ -315,7 +315,7 @@ func TestReconcile(t *testing.T) {
 				case *toolchainv1alpha1.UserSignup:
 					return errors.New("mock error")
 				default:
-					return cl.Client.Status().Update(ctx, obj)
+					return cl.Status().Update(ctx, obj)
 				}
 			}
 
@@ -355,7 +355,7 @@ func TestReconcile(t *testing.T) {
 					case *toolchainv1alpha1.UserSignup:
 						return errors.New("mock error")
 					default:
-						return cl.Client.Status().Update(ctx, obj)
+						return cl.Status().Update(ctx, obj)
 					}
 				}
 
@@ -410,7 +410,7 @@ func TestReconcile(t *testing.T) {
 						case *toolchainv1alpha1.UserSignup:
 							return errors.New("mock error")
 						default:
-							return cl.Client.Status().Update(ctx, obj)
+							return cl.Status().Update(ctx, obj)
 						}
 					}
 
@@ -664,7 +664,7 @@ func TestReconcile(t *testing.T) {
 					case *toolchainv1alpha1.UserSignup:
 						return errors.New("mock error")
 					default:
-						return fakeClient.Client.Status().Update(ctx, obj)
+						return fakeClient.Status().Update(ctx, obj)
 					}
 				}
 
