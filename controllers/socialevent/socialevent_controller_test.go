@@ -96,7 +96,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Get(ctx, key, obj, opts...)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 
@@ -145,7 +145,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Get(ctx, key, obj, opts...)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 

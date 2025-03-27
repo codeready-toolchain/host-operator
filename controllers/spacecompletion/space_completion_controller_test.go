@@ -175,7 +175,7 @@ func TestCreateSpace(t *testing.T) {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}
-				return cl.Get(ctx, key, obj, opts...)
+				return cl.Client.Get(ctx, key, obj, opts...)
 			}
 
 			// when

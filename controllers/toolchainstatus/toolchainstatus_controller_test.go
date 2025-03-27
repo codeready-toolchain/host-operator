@@ -150,7 +150,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 				return fmt.Errorf("get failed")
 			}
-			return fakeClient.Get(ctx, key, obj, opts...)
+			return fakeClient.Client.Get(ctx, key, obj, opts...)
 		}
 
 		// when

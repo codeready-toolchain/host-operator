@@ -327,7 +327,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Get(ctx, key, obj, opts...)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -408,7 +408,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Get(ctx, key, obj, opts...)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -441,7 +441,7 @@ func TestCreateSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Get(ctx, key, obj, opts...)
+				return member1Client.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -823,7 +823,7 @@ func TestDeleteSpace(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Get(ctx, key, obj, opts...)
+				return member1Client.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)

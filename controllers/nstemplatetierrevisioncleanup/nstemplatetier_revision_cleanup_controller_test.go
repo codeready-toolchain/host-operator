@@ -164,7 +164,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
-				return cl.Get(ctx, key, obj, opts...)
+				return cl.Client.Get(ctx, key, obj, opts...)
 			}
 			//when
 			_, err := r.Reconcile(context.TODO(), req)

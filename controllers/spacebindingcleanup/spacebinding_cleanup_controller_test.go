@@ -205,7 +205,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 						if key.Name == boundResourceName {
 							return fmt.Errorf("some error")
 						}
-						return fakeClient.Get(ctx, key, obj, opts...)
+						return fakeClient.Client.Get(ctx, key, obj, opts...)
 					}
 
 					// when
@@ -299,7 +299,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 					if _, ok := obj.(*toolchainv1alpha1.SpaceBindingRequest); ok {
 						return fmt.Errorf("mock error")
 					}
-					return member1Client.Get(ctx, key, obj, opts...)
+					return member1Client.Client.Get(ctx, key, obj, opts...)
 				}
 				member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue) // for some reason spacebindingrequest is gone from member cluster
 				hostClient := test.NewFakeClient(t, sbLaraAdmin, toolchainconfig)
@@ -309,7 +309,7 @@ func TestDeleteSpaceBindingRequest(t *testing.T) {
 				_, err := reconciler.Reconcile(context.TODO(), requestFor(sbLaraAdmin))
 
 				// then
-				require.EqualError(t, err, "unable to get the current *toolchainv1alpha1.SpaceBindingRequest: mock error")
+				require.EqualError(t, err, "unable to get the current *v1alpha1.SpaceBindingRequest: mock error")
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "lara", hostClient).Exists() // the spacebinding is not deleted yet
 			})
 
