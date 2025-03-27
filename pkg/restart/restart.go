@@ -17,10 +17,17 @@ var (
 
 type InitializeManagerFunc func() (manager.Manager, error)
 
+// Restarter is a thing that can be told that a restart is needed.
+// The StartManager is the sole implementation at runtime, but this interface
+// should be used at use-sites to help with unit testing that a restart was requested.
 type Restarter interface {
 	RestartNeeded()
 }
 
+// StartManager manages the lifecycle of the controller manager.
+// It it supplied a function that initalizes the manager (and which MUST NOT start it).
+// StartManager then can be used to start the controller manager and can also
+// be asked to restart it.
 type StartManager struct {
 	InitializeManager InitializeManagerFunc
 

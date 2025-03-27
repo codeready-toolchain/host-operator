@@ -195,6 +195,11 @@ func (m *MockManager) GetWebhookServer() webhook.Server {
 	return nil
 }
 
+// AddMetricsServerExtraHandler implements manager.Manager.
+func (m *MockManager) AddMetricsServerExtraHandler(path string, handler http.Handler) error {
+	return nil
+}
+
 // Start implements manager.Manager.
 func (m *MockManager) Start(ctx context.Context) error {
 	defer func() {
