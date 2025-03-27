@@ -49,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// fetch the SocialEvent resource
 	event := &toolchainv1alpha1.SocialEvent{}
-	if err := r.Client.Get(ctx, request.NamespacedName, event); err != nil {
+	if err := r.Get(ctx, request.NamespacedName, event); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("SocialEvent not found")
 			return reconcile.Result{}, nil
@@ -65,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// count the number of UserSignups with the `toolchain.dev.openshift.com/social-event` label matching the SocialEvent.Name
 	// and update the SocialEvent.Status.ActivationCount accordingly
 	usersignups := &toolchainv1alpha1.UserSignupList{}
-	if err := r.Client.List(ctx, usersignups,
+	if err := r.List(ctx, usersignups,
 		runtimeclient.InNamespace(r.Namespace),
 		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SocialEventUserSignupLabelKey: event.Name,
@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	logger.Info("approved usersignups with activation code", "count", len(usersignups.Items))
 	event.Status.ActivationCount = len(usersignups.Items)
-	if err := r.Client.Status().Update(ctx, event); err != nil {
+	if err := r.Status().Update(ctx, event); err != nil {
 		return reconcile.Result{}, errs.Wrap(err, "unable to update status with activation count")
 	}
 	return reconcile.Result{}, nil
@@ -84,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) checkTier(ctx context.Context, event *toolchainv1alpha1.SocialEvent) error {
 	// fetch the UserTier specified in the SocialEvent
 	userTier := &toolchainv1alpha1.UserTier{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
+	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.UserTier,
 	}, userTier); err != nil {
@@ -97,7 +97,7 @@ func (r *Reconciler) checkTier(ctx context.Context, event *toolchainv1alpha1.Soc
 
 	// fetch the NSTemplateTier specified in the SocialEvent
 	spaceTier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
+	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.SpaceTier,
 	}, spaceTier); err != nil {

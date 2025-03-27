@@ -570,7 +570,7 @@ func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetClust
 	// create apiConfig based on the secret content
 	clusters := make(map[string]*api.Cluster, 1)
 	clusters["default-cluster"] = &api.Cluster{
-		Server:                   subSpaceTargetCluster.Config.APIEndpoint,
+		Server:                   subSpaceTargetCluster.APIEndpoint,
 		CertificateAuthorityData: subSpaceTargetCluster.RestConfig.CAData,
 		InsecureSkipTLSVerify:    subSpaceTargetCluster.RestConfig.Insecure,
 	}

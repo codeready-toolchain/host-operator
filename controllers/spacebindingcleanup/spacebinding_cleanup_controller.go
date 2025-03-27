@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the SpaceBinding instance
 	spaceBinding := &toolchainv1alpha1.SpaceBinding{}
-	err := r.Client.Get(ctx, request.NamespacedName, spaceBinding)
+	err := r.Get(ctx, request.NamespacedName, spaceBinding)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// ensure the space exists
 	spaceName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.Space}
 	space := &toolchainv1alpha1.Space{}
-	if err := r.Client.Get(ctx, spaceName, space); err != nil {
+	if err := r.Get(ctx, spaceName, space); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("the Space was not found", "Space", spaceBinding.Spec.Space)
 			requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
@@ -110,7 +110,7 @@ func (r *Reconciler) ensureMURExists(ctx context.Context, spaceBinding *toolchai
 	// ensure that MUR exists: if it does not exist, then delete the SpaceBinding
 	murName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.MasterUserRecord}
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	if err := r.Client.Get(ctx, murName, mur); err != nil {
+	if err := r.Get(ctx, murName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("the MUR was not found", "MasterUserRecord", spaceBinding.Spec.MasterUserRecord)
 			return r.deleteSpaceBinding(ctx, spaceBinding)

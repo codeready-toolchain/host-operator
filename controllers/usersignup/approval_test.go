@@ -10,7 +10,6 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
@@ -42,7 +41,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -63,7 +62,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -128,7 +127,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 			// then
 			if testFields.ErrorExpected {
@@ -156,7 +155,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -173,7 +172,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -189,7 +188,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -205,7 +204,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -222,7 +221,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -239,7 +238,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -256,7 +255,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -273,7 +272,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
-		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 		// then
 		require.NoError(t, err)
@@ -291,7 +290,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
@@ -311,7 +310,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(test.HostOperatorNs, fakeClient))
+			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
 
 			// then
 			require.EqualError(t, err, "unable to get the optimal target cluster: failed to find the optimal space provisioner config: some error")

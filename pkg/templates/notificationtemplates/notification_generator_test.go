@@ -160,7 +160,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
-			assert.Equal(t, "Could not find any emails templates for the environment alpha", err.Error())
+			assert.Equal(t, "could not find any emails templates for the environment alpha", err.Error())
 		})
 		t.Run("no directory name", func(t *testing.T) {
 			// given

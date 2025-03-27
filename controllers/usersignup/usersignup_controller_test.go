@@ -1640,10 +1640,11 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
 			initObjs := []runtimeclient.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
-			if testcase.testName == "create space error" {
+			switch testcase.testName {
+			case "create space error":
 				// mur must exist first, space is created on the reconcile after the mur is created
 				initObjs = append(initObjs, mur)
-			} else if testcase.testName == "create spacebinding error" {
+			case "create spacebinding error":
 				// mur and space must exist first, spacebinding is created on the reconcile after the space is created
 				initObjs = append(initObjs, mur, space)
 			}
@@ -2132,7 +2133,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.Equal(t, mur.Spec.PropagatedClaims, userSignup.Spec.IdentityClaims.PropagatedClaims)
 
 	// Modify one of the propagated claims
-	userSignup.Spec.IdentityClaims.PropagatedClaims.UserID = "314159265358979"
+	userSignup.Spec.IdentityClaims.UserID = "314159265358979"
 
 	// Reconcile the UserSignup again
 	r, req, _ = prepareReconcile(t, userSignup.Name, spc1, userSignup, deactivate30Tier)

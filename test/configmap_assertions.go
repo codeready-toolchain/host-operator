@@ -54,7 +54,7 @@ func (a *ConfigMapAssertion) HasOwner(owner runtime.Object) *ConfigMapAssertion 
 func (a *ConfigMapAssertion) HasData(data map[string]string) *ConfigMapAssertion {
 	err := a.loadConfigMap()
 	require.NoError(a.t, err)
-	require.Equal(a.t, len(data), len(a.configmap.Data))
+	require.Len(a.t, a.configmap.Data, len(data))
 	for k, v := range data {
 		require.Contains(a.t, a.configmap.Data, k)
 		assert.Equal(a.t, v, a.configmap.Data[k])
