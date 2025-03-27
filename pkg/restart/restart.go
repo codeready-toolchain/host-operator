@@ -47,10 +47,9 @@ func (s *StartManager) Start(ctx context.Context) error {
 		startErr, finished := s.doStart(ctx)
 
 		if s.runningContext == nil {
-			// this actually means that the start failed, but we need a non-nil value for the runningContext
-			// so that we can select on it below. We need to reach the select so that we can "catch" the potential
-			// startErr.
-			s.runningContext = context.TODO()
+			err := <-startErr
+			debug("Start: start failed before initializing the running context, quitting")
+			return err
 		}
 
 		debug("Start: selecting on cancellation and error channels")
