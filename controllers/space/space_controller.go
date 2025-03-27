@@ -12,10 +12,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
-
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -47,17 +47,16 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
-		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
+		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.Or[runtimeclient.Object](predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&toolchainv1alpha1.NSTemplateTier{},
-			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client))).
 		Watches(&toolchainv1alpha1.SpaceBinding{},
 			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToParentAndSubSpaces(r.Client)))
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
-		b = b.WatchesRawSource(source.Kind(memberCluster.Cache, &toolchainv1alpha1.NSTemplateSet{}),
+		b = b.WatchesRawSource(source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.NSTemplateSet{},
 			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
-		)
+		))
 	}
 	return b.Complete(r)
 }
@@ -254,7 +253,7 @@ func (r *Reconciler) ensureNSTemplateSet(ctx context.Context, space *toolchainv1
 
 		return norequeue, r.setStatusProvisioned(ctx, space)
 	default:
-		return norequeue, r.setStatusProvisioningFailed(ctx, space, fmt.Errorf(nsTmplSetReady.Message))
+		return norequeue, r.setStatusProvisioningFailed(ctx, space, fmt.Errorf("%s", nsTmplSetReady.Message))
 	}
 }
 
@@ -295,6 +294,10 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 	spaceBindings, err := spaceBindingLister.ListForSpace(space, []toolchainv1alpha1.SpaceBinding{})
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
+	}
+
+	if errValidating := validateRevisions(tmplTier); errValidating != nil {
+		return nil, requeueDelay, errValidating
 	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
@@ -422,13 +425,15 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	}
 	if tmplTier.Spec.ClusterResources != nil {
 		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			TemplateRef: tmplTier.Spec.ClusterResources.TemplateRef,
+			TemplateRef: tmplTier.Status.Revisions[tmplTier.Spec.ClusterResources.TemplateRef],
 		}
 	}
 	if len(tmplTier.Spec.Namespaces) > 0 {
 		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
 		for i, ns := range tmplTier.Spec.Namespaces {
-			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+				TemplateRef: tmplTier.Status.Revisions[ns.TemplateRef],
+			}
 		}
 	}
 	// space roles
@@ -446,7 +451,7 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 			// no need to add an entry in space roles if there is no associated user
 			if len(usernames) > 0 {
 				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
-					TemplateRef: sr.TemplateRef,
+					TemplateRef: tmplTier.Status.Revisions[sr.TemplateRef],
 					Usernames:   usernames,
 				})
 			}
@@ -455,6 +460,18 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 	return s
 }
 
+// In order for the NSTemplateTier to be considered ready, we must wait until the template refs
+// in the spec are actually processed and updated in the status.revisions field, hence we validate
+// here if the tenplate refs are all present in the status.revsions
+func validateRevisions(tmplTier *toolchainv1alpha1.NSTemplateTier) error {
+	specTempRef := nstemplatetiers.GetNSTemplateTierRefs(tmplTier)
+	for _, temp := range specTempRef {
+		if _, present := tmplTier.Status.Revisions[temp]; !present {
+			return errs.Errorf("The nstemplatier status.revisions is still not updated")
+		}
+	}
+	return nil
+}
 func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []string {
 	usernames := map[string]interface{}{} // using a map to avoid duplicate entries
 	for _, b := range bindings {

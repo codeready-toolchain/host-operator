@@ -847,7 +847,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}
 			return memberClient.Client.Update(ctx, obj, opts...)
 		}
-		otherTier := tiertest.OtherTier()
+		otherTier := tiertest.OtherTier(t)
 		modifiedMur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel("john-123"),
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),

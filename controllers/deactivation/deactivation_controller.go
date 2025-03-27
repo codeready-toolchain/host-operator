@@ -3,10 +3,11 @@ package deactivation
 import (
 	"context"
 	"fmt"
-	usersignup2 "github.com/codeready-toolchain/host-operator/controllers/usersignup"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
+
+	usersignup2 "github.com/codeready-toolchain/host-operator/controllers/usersignup"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -192,7 +193,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// If the usersignup state hasn't been set to deactivating, then set it now
-	if !states.Deactivating(usersignup) {
+	if !states.Deactivating(usersignup) && deactivatingNotificationDays > 0 {
 
 		// Before we update the UserSignup in order to set the deactivating state, we should reset the scheduled
 		// deactivation time if required just in case the current value is nil or has somehow changed.  Since the UserSignup

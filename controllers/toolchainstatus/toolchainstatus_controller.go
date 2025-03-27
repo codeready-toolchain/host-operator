@@ -937,7 +937,7 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionChec
 	// add the health status to the toolchainstatus
 	toolchainStatus.Status.RegistrationService.Health = healthStatus
 	if !healthValues.Alive {
-		err = fmt.Errorf(errMsgRegistrationServiceHealthStatusUnhealthy)
+		err = fmt.Errorf("%s", errMsgRegistrationServiceHealthStatusUnhealthy)
 		logger.Error(err, "registration service is unhealthy")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}

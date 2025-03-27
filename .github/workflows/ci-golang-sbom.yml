@@ -12,7 +12,7 @@ on:
 jobs:
   golangci:
     name: GolangCI Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -29,14 +29,14 @@ jobs:
     - name: Lint
       uses: golangci/golangci-lint-action@v6
       with:
-        version: v1.52.0
+        version: v1.63.1
         skip-pkg-cache: true
         skip-build-cache: true
         args: --config=./.golangci.yml --verbose
   
   sbom:
     name: Generate SBOM
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

@@ -43,6 +43,22 @@ func TestInitGaugeVec(t *testing.T) {
 	metricstest.AssertMetricsGaugeEquals(t, 2, m.WithLabelValues("member-2"))
 }
 
+func TestInitHistogram(t *testing.T) {
+	// given
+	m := newHistogram("test_histogram", "test histogram description")
+
+	// when
+	for i := 1; i <= 4000; i++ {
+		m.Observe(float64(i))
+	}
+
+	// then
+	for _, value := range UserSignupProvisionTimeHistogramBuckets {
+		metricstest.AssertHistogramBucketEquals(t, value, value, m)
+	}
+	metricstest.AssertHistogramSampleCountEquals(t, 4000, m)
+}
+
 func TestRegisterCustomMetrics(t *testing.T) {
 	// when
 	RegisterCustomMetrics()
@@ -60,6 +76,10 @@ func TestRegisterCustomMetrics(t *testing.T) {
 	for _, m := range allGaugeVecs {
 		assert.True(t, k8smetrics.Registry.Unregister(m))
 	}
+
+	for _, m := range allHistograms {
+		assert.True(t, k8smetrics.Registry.Unregister(m))
+	}
 }
 
 func TestResetMetrics(t *testing.T) {
@@ -67,10 +87,12 @@ func TestResetMetrics(t *testing.T) {
 	// when
 	UserSignupUniqueTotal.Inc()
 	SpaceGaugeVec.WithLabelValues("member-1").Set(20)
+	UserSignupProvisionTimeHistogram.Observe(1)
 
 	Reset()
 
 	// then
 	metricstest.AssertMetricsCounterEquals(t, 0, UserSignupUniqueTotal)
 	metricstest.AssertMetricsGaugeEquals(t, 0, SpaceGaugeVec.WithLabelValues("member-1"))
+	metricstest.AssertAllHistogramBucketsAreEmpty(t, UserSignupProvisionTimeHistogram)
 }

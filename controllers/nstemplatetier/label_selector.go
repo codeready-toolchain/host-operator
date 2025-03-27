@@ -21,7 +21,7 @@ import (
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
 func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (runtimeclient.MatchingLabelsSelector, error) {
-	// compute the h of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+	// compute the h of the value of `status.revisions[]`
 	h, err := hash.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return runtimeclient.MatchingLabelsSelector{}, err

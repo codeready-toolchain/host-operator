@@ -8,10 +8,15 @@ import (
 	goruntime "runtime"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetierrevisioncleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
@@ -58,7 +63,6 @@ import (
 	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -202,16 +206,18 @@ func main() { // nolint:gocyclo
 	}
 
 	startManager := &restart.StartManager{}
-
 	startManager.InitializeManager = func() (manager.Manager, error) {
+		// Webhook server will be created with default values (port 9443) as per doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/manager/manager.go#L244-L247
+		// Cache Options design doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/designs/cache_options.md
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-			Scheme:                 scheme,
-			MetricsBindAddress:     metricsAddr,
-			Port:                   9443,
+			Scheme: scheme,
+			Metrics: metricsserver.Options{
+				BindAddress: metricsAddr,
+			},
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "dc07038f.toolchain.host.operator",
-			Namespace:              namespace,
+			Cache:                  cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
 		})
 		if err != nil {
 			setupLog.Error(err, "unable to start manager")
@@ -278,6 +284,12 @@ func main() { // nolint:gocyclo
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
+			os.Exit(1)
+		}
+		if err = (&nstemplatetierrevisioncleanup.Reconciler{
+			Client: mgr.GetClient(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
 			os.Exit(1)
 		}
 		if err := (&toolchainconfig.Reconciler{
@@ -395,7 +407,7 @@ func main() { // nolint:gocyclo
 		}
 		if err = (&spaceprovisionerconfig.Reconciler{
 			Client: mgr.GetClient(),
-		}).SetupWithManager(ctx, mgr); err != nil {
+		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
 			os.Exit(1)
 		}
@@ -448,14 +460,6 @@ func main() { // nolint:gocyclo
 		return mgr, nil
 	}
 
-	// set up a nasty way to test this out - request a restart of the controller manager every minute
-	go func() {
-		for {
-			time.Sleep(1 * time.Minute)
-			startManager.RestartNeeded()
-		}
-	}()
-
 	if err := startManager.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
@@ -476,14 +480,14 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 			// for some resources like SpaceRequest/SpaceBindingRequest we need the cache to be clustered scoped
 			// because those resources are in user namespaces and not member operator namespace.
 			if namespacedCache {
-				options.Cache.Namespaces = []string{memberConfig.OperatorNamespace}
+				options.Cache.DefaultNamespaces = map[string]cache.Config{memberConfig.OperatorNamespace: {}}
 			}
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create member cluster definition for "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to create member cluster definition for '%s': %w", memberConfig.Name, err)
 		}
 		if err := mgr.Add(memberCluster); err != nil {
-			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to add member cluster to the manager for '%s' : %w", memberConfig.Name, err)
 		}
 		// These fields need to be set when using the REST client
 		memberConfig.RestConfig.ContentConfig = rest.ContentConfig{
@@ -492,7 +496,7 @@ func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace stri
 		}
 		restClient, err := rest.RESTClientFor(memberConfig.RestConfig)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create member cluster rest client "+memberConfig.Name)
+			return nil, fmt.Errorf("unable to create member cluster rest client '%s' : %w", memberConfig.Name, err)
 		}
 		memberClusters[memberConfig.Name] = cluster.Cluster{
 			Config:     memberConfig,

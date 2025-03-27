@@ -97,7 +97,7 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		cl := test.NewFakeClient(t, spc0, spc1, spc2)
 
 		// when
-		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
+		reqs := mapToolchainClusterToSpaceProvisionerConfigs(cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
 				Namespace: test.HostOperatorNs,
@@ -123,9 +123,56 @@ func TestMapToolchainClusterToSpaceProvisionerConfigs(t *testing.T) {
 		}
 
 		// when
-		reqs := MapToolchainClusterToSpaceProvisionerConfigs(context.TODO(), cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
+		reqs := mapToolchainClusterToSpaceProvisionerConfigs(cl)(context.TODO(), &toolchainv1alpha1.ToolchainCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
+				Namespace: test.HostOperatorNs,
+			},
+		})
+
+		// then
+		require.Empty(t, reqs)
+	})
+}
+
+func TestMapToolchainStatusToSpaceProvisionerConfig(t *testing.T) {
+	t.Run("finds all SPCs in namespace", func(t *testing.T) {
+		// given
+		spc0 := NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
+		spc1 := NewSpaceProvisionerConfig("spc1", test.HostOperatorNs, ReferencingToolchainCluster("cluster2"))
+		spc2 := NewSpaceProvisionerConfig("spc2", test.HostOperatorNs, ReferencingToolchainCluster("cluster1"))
+		cl := test.NewFakeClient(t, spc0, spc1, spc2)
+
+		// when
+		reqs := MapToolchainStatusToSpaceProvisionerConfigs(cl)(context.TODO(), &toolchainv1alpha1.ToolchainStatus{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "toolchain-status",
+				Namespace: test.HostOperatorNs,
+			},
+		})
+
+		// then
+		require.Equal(t, []reconcile.Request{
+			requestFromObject(spc0),
+			requestFromObject(spc1),
+			requestFromObject(spc2),
+		}, reqs)
+	})
+	t.Run("interprets erors as empty result", func(t *testing.T) {
+		// given
+		cl := test.NewFakeClient(t, NewSpaceProvisionerConfig("spc0", test.HostOperatorNs, ReferencingToolchainCluster("cluster1")))
+		expectedErr := errors.New("expected list error")
+		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
+			if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
+				return expectedErr
+			}
+			return cl.Client.List(ctx, list, opts...)
+		}
+
+		// when
+		reqs := MapToolchainStatusToSpaceProvisionerConfigs(cl)(context.TODO(), &toolchainv1alpha1.ToolchainStatus{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "toolchain-status",
 				Namespace: test.HostOperatorNs,
 			},
 		})

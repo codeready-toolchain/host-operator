@@ -3,6 +3,8 @@ package usersignup
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	recaptcha "cloud.google.com/go/recaptchaenterprise/v2/apiv1"
 	recaptchapb "cloud.google.com/go/recaptchaenterprise/v2/apiv1/recaptchaenterprisepb"
@@ -36,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strconv"
 )
 
 type StatusUpdaterFunc func(ctx context.Context, userAcc *toolchainv1alpha1.UserSignup, message string) error
@@ -379,12 +380,52 @@ func (r *Reconciler) checkIfMurAlreadyExists(
 			}
 		}
 
+		logger.Info("Checking whether MUR is Ready", "MUR", mur.Name)
+		if !condition.IsTrueWithReason(mur.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.MasterUserRecordProvisionedReason) &&
+			!condition.IsTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete) {
+			return true, r.updateIncompleteStatus(ctx, userSignup, fmt.Sprintf("MUR %s was not ready", mur.Name))
+		}
+
 		logger.Info("Setting UserSignup status to 'Complete'")
 
-		return true, r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name))
+		if err := r.updateStatus(ctx, userSignup, r.updateCompleteStatus(mur.Name)); err != nil {
+			return true, err
+		}
+		if err := recordProvisionTime(ctx, r.Client, userSignup); err != nil {
+			return true, fmt.Errorf("unable to record provision time: %w", err)
+		}
+		return true, nil
 	}
 
 	return false, nil
+}
+
+func recordProvisionTime(ctx context.Context, cl runtimeclient.Client, userSignup *toolchainv1alpha1.UserSignup) error {
+	requestReceivedTime, ok := userSignup.Annotations[toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey]
+	// if annotation not present, then nothing to record
+	if !ok {
+		return nil
+	}
+	// delete annotation to make sure that we don't record the same UserSignup twice
+	delete(userSignup.Annotations, toolchainv1alpha1.UserSignupRequestReceivedTimeAnnotationKey)
+	if err := cl.Update(ctx, userSignup); err != nil {
+		return err
+	}
+	logger := log.FromContext(ctx)
+	parsedTime, err := time.Parse(time.RFC3339, requestReceivedTime)
+	if err != nil {
+		logger.Error(err, "unable to parse the request-received-time annotation", "value", requestReceivedTime)
+		return nil
+	}
+	_, phoneVerificationTriggered := userSignup.Labels[toolchainv1alpha1.UserSignupUserPhoneHashLabelKey]
+	// don't measure provision time for cases when UserSignup was either approved manually or it required phone verification step
+	if states.ApprovedManually(userSignup) || phoneVerificationTriggered {
+		return nil
+	}
+	provisionTimeSeconds := time.Since(parsedTime).Seconds()
+	logger.Info("provision time", "time-in-seconds", provisionTimeSeconds)
+	metrics.UserSignupProvisionTimeHistogram.Observe(provisionTimeSeconds)
+	return nil
 }
 
 func (r *Reconciler) ensureNewMurIfApproved(
@@ -610,7 +651,7 @@ func (r *Reconciler) generateCompliantUsername(
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
+			return "", fmt.Errorf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up", mur.Name, instance.Name)
 		}
 
 		if len(transformed) > maxlengthWithSuffix {
@@ -620,7 +661,7 @@ func (r *Reconciler) generateCompliantUsername(
 		}
 	}
 
-	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername))
+	return "", fmt.Errorf("unable to transform username [%s] even after 100 attempts", instance.Spec.IdentityClaims.PreferredUsername)
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
