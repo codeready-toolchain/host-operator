@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
@@ -33,6 +35,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/pkg/restart"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
@@ -202,257 +205,263 @@ func main() { // nolint:gocyclo
 			}
 		}()
 	}
-	// Webhook server will be created with default values (port 9443) as per doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/manager/manager.go#L244-L247
-	// Cache Options design doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/designs/cache_options.md
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
-		},
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "dc07038f.toolchain.host.operator",
-		Cache:                  cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-	memberClusters, err := addMemberClusters(mgr, cl, namespace, true)
-	if err != nil {
-		setupLog.Error(err, "")
-		os.Exit(1)
-	}
 
-	// Setup all Controllers
-	if err = (&toolchainclusterresources.Reconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Templates: &deploy.ToolchainClusterTemplateFS,
-	}).SetupWithManager(mgr, namespace); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterResources")
-		os.Exit(1)
-	}
-	if err = toolchainclustercache.NewReconciler(
-		mgr,
-		namespace,
-		memberClientTimeout,
-	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
-		os.Exit(1)
-	}
-
-	if err := (&toolchaincluster.Reconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RequeAfter: 10 * time.Second,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
-		os.Exit(1)
-	}
-
-	if err := (&deactivation.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Deactivation")
-		os.Exit(1)
-	}
-	if err := (&masteruserrecord.Reconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Namespace:      namespace,
-		MemberClusters: memberClusters,
-	}).SetupWithManager(mgr, memberClusters); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
-		os.Exit(1)
-	}
-	if err := (&notification.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, crtConfig); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Notification")
-		os.Exit(1)
-	}
-	if err := (&nstemplatetier.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
-		os.Exit(1)
-	}
-	if err = (&nstemplatetierrevisioncleanup.Reconciler{
-		Client: mgr.GetClient(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
-		os.Exit(1)
-	}
-	if err := (&toolchainconfig.Reconciler{
-		Client:         mgr.GetClient(),
-		GetMembersFunc: commoncluster.GetMemberClusters,
-		Scheme:         mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
-		os.Exit(1)
-	}
-
-	if err := (&toolchainstatus.Reconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		HTTPClientImpl:      &http.Client{},
-		VersionCheckManager: status.VersionCheckManager{GetGithubClientFunc: commonclient.NewGitHubClient},
-		GetMembersFunc:      commoncluster.GetMemberClusters,
-		Namespace:           namespace,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
-		os.Exit(1)
-	}
-	if err := (&usersignup.Reconciler{
-		StatusUpdater: &usersignup.StatusUpdater{
-			Client: mgr.GetClient(),
-		},
-		Namespace:      namespace,
-		Scheme:         mgr.GetScheme(),
-		SegmentClient:  segmentClient,
-		ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
-	}).SetupWithManager(ctx, mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
-		os.Exit(1)
-	}
-	if err := (&usersignupcleanup.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
-		os.Exit(1)
-	}
-	// init cluster scoped member cluster clients
-	clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
-	if err != nil {
-		setupLog.Error(err, "")
-		os.Exit(1)
-	}
-
-	// enable space request
-	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
-		if err = (&spacerequest.Reconciler{
-			Client:         mgr.GetClient(),
-			Namespace:      namespace,
-			MemberClusters: clusterScopedMemberClusters,
-			Scheme:         mgr.GetScheme(),
-		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
+	startManager := &restart.StartManager{}
+	startManager.InitializeManager = func(ctx context.Context) (manager.Manager, error) {
+		// Webhook server will be created with default values (port 9443) as per doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/manager/manager.go#L244-L247
+		// Cache Options design doc - https://github.com/kubernetes-sigs/controller-runtime/blob/main/designs/cache_options.md
+		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+			Scheme: scheme,
+			Metrics: metricsserver.Options{
+				BindAddress: metricsAddr,
+			},
+			HealthProbeBindAddress: probeAddr,
+			LeaderElection:         enableLeaderElection,
+			LeaderElectionID:       "dc07038f.toolchain.host.operator",
+			Cache:                  cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
+		})
+		if err != nil {
+			setupLog.Error(err, "unable to start manager")
 			os.Exit(1)
 		}
-	}
-
-	// enable space binding request
-	if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
-		if err = (&spacebindingrequest.Reconciler{
-			Client:         mgr.GetClient(),
-			Namespace:      namespace,
-			MemberClusters: clusterScopedMemberClusters,
-			Scheme:         mgr.GetScheme(),
-		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
-			os.Exit(1)
-		}
-	}
-	if err = (&space.Reconciler{
-		Client:         mgr.GetClient(),
-		Namespace:      namespace,
-		MemberClusters: memberClusters,
-	}).SetupWithManager(mgr, memberClusters); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Space")
-		os.Exit(1)
-	}
-	if err = (&spacecompletion.Reconciler{
-		Client:         mgr.GetClient(),
-		Namespace:      namespace,
-		ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
-	}).SetupWithManager(ctx, mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
-		os.Exit(1)
-	}
-	if err = (&spacebindingcleanup.Reconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Namespace:      namespace,
-		MemberClusters: clusterScopedMemberClusters,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
-		os.Exit(1)
-	}
-	if err = (&spacecleanup.Reconciler{
-		Client:    mgr.GetClient(),
-		Namespace: namespace,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SpaceCleanup")
-		os.Exit(1)
-	}
-	if err = (&socialevent.Reconciler{
-		Client:    mgr.GetClient(),
-		Namespace: namespace,
-		StatusUpdater: &socialevent.StatusUpdater{
-			Client: mgr.GetClient(),
-		},
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SocialEvent")
-		os.Exit(1)
-	}
-	if err = (&spaceprovisionerconfig.Reconciler{
-		Client: mgr.GetClient(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
-		os.Exit(1)
-	}
-	//+kubebuilder:scaffold:builder
-
-	go func() {
-		setupLog.Info("Starting cluster health checker & creating/updating the NSTemplateTier resources once cache is sync'd")
-		if !mgr.GetCache().WaitForCacheSync(ctx) {
-			setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
-			os.Exit(1)
-		}
-
-		// create or update Toolchain status during the operator deployment
-		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		if err := toolchainstatus.CreateOrUpdateResources(ctx, mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
-			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
-			os.Exit(1)
-		}
-		setupLog.Info("Created/updated the ToolchainStatus resource")
-
-		// create or update all NSTemplateTiers on the cluster at startup
-		setupLog.Info("Creating/updating the NSTemplateTier resources")
-		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
+		memberClusters, err := addMemberClusters(mgr, cl, namespace, true)
+		if err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
-		setupLog.Info("Created/updated the NSTemplateTier resources")
 
-		// create or update all UserTiers on the cluster at startup
-		setupLog.Info("Creating/updating the UserTier resources")
-		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
-		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+		// Setup all Controllers
+		if err = (&toolchainclusterresources.Reconciler{
+			Client:    mgr.GetClient(),
+			Scheme:    mgr.GetScheme(),
+			Templates: &deploy.ToolchainClusterTemplateFS,
+		}).SetupWithManager(mgr, namespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterResources")
+			os.Exit(1)
+		}
+		if err = toolchainclustercache.NewReconciler(
+			mgr,
+			namespace,
+			memberClientTimeout,
+		).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterCache")
+			os.Exit(1)
+		}
+
+		if err := (&toolchaincluster.Reconciler{
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			RequeAfter: 10 * time.Second,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
+			os.Exit(1)
+		}
+
+		if err := (&deactivation.Reconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Deactivation")
+			os.Exit(1)
+		}
+		if err := (&masteruserrecord.Reconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Namespace:      namespace,
+			MemberClusters: memberClusters,
+		}).SetupWithManager(mgr, memberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
+			os.Exit(1)
+		}
+		if err := (&notification.Reconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr, crtConfig); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Notification")
+			os.Exit(1)
+		}
+		if err := (&nstemplatetier.Reconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
+			os.Exit(1)
+		}
+		if err = (&nstemplatetierrevisioncleanup.Reconciler{
+			Client: mgr.GetClient(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
+			os.Exit(1)
+		}
+		if err := (&toolchainconfig.Reconciler{
+			Client:         mgr.GetClient(),
+			GetMembersFunc: commoncluster.GetMemberClusters,
+			Scheme:         mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
+			os.Exit(1)
+		}
+
+		if err := (&toolchainstatus.Reconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			HTTPClientImpl:      &http.Client{},
+			VersionCheckManager: status.VersionCheckManager{GetGithubClientFunc: commonclient.NewGitHubClient},
+			GetMembersFunc:      commoncluster.GetMemberClusters,
+			Namespace:           namespace,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
+			os.Exit(1)
+		}
+		if err := (&usersignup.Reconciler{
+			StatusUpdater: &usersignup.StatusUpdater{
+				Client: mgr.GetClient(),
+			},
+			Namespace:      namespace,
+			Scheme:         mgr.GetScheme(),
+			SegmentClient:  segmentClient,
+			ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
+		}).SetupWithManager(ctx, mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
+			os.Exit(1)
+		}
+		if err := (&usersignupcleanup.Reconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
+			os.Exit(1)
+		}
+		// init cluster scoped member cluster clients
+		clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
+		if err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
-		setupLog.Info("Created/updated the UserTier resources")
-	}()
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		// enable space request
+		if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+			if err = (&spacerequest.Reconciler{
+				Client:         mgr.GetClient(),
+				Namespace:      namespace,
+				MemberClusters: clusterScopedMemberClusters,
+				Scheme:         mgr.GetScheme(),
+			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
+				os.Exit(1)
+			}
+		}
+
+		// enable space binding request
+		if crtConfig.SpaceConfig().SpaceBindingRequestIsEnabled() {
+			if err = (&spacebindingrequest.Reconciler{
+				Client:         mgr.GetClient(),
+				Namespace:      namespace,
+				MemberClusters: clusterScopedMemberClusters,
+				Scheme:         mgr.GetScheme(),
+			}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingRequest")
+				os.Exit(1)
+			}
+		}
+		if err = (&space.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			MemberClusters: memberClusters,
+		}).SetupWithManager(mgr, memberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Space")
+			os.Exit(1)
+		}
+		if err = (&spacecompletion.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
+		}).SetupWithManager(ctx, mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
+			os.Exit(1)
+		}
+		if err = (&spacebindingcleanup.Reconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Namespace:      namespace,
+			MemberClusters: clusterScopedMemberClusters,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
+			os.Exit(1)
+		}
+		if err = (&spacecleanup.Reconciler{
+			Client:    mgr.GetClient(),
+			Namespace: namespace,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceCleanup")
+			os.Exit(1)
+		}
+		if err = (&socialevent.Reconciler{
+			Client:    mgr.GetClient(),
+			Namespace: namespace,
+			StatusUpdater: &socialevent.StatusUpdater{
+				Client: mgr.GetClient(),
+			},
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SocialEvent")
+			os.Exit(1)
+		}
+		if err = (&spaceprovisionerconfig.Reconciler{
+			Client: mgr.GetClient(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceProvisionerConfig")
+			os.Exit(1)
+		}
+		//+kubebuilder:scaffold:builder
+
+		go func() {
+			setupLog.Info("Starting cluster health checker & creating/updating the NSTemplateTier resources once cache is sync'd")
+			if !mgr.GetCache().WaitForCacheSync(ctx) {
+				setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
+				os.Exit(1)
+			}
+
+			// create or update Toolchain status during the operator deployment
+			setupLog.Info("Creating/updating the ToolchainStatus resource")
+			if err := toolchainstatus.CreateOrUpdateResources(ctx, mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
+				setupLog.Error(err, "cannot create/update ToolchainStatus resource")
+				os.Exit(1)
+			}
+			setupLog.Info("Created/updated the ToolchainStatus resource")
+
+			// create or update all NSTemplateTiers on the cluster at startup
+			setupLog.Info("Creating/updating the NSTemplateTier resources")
+			nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+			if err := nstemplatetiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
+				setupLog.Error(err, "")
+				os.Exit(1)
+			}
+			setupLog.Info("Created/updated the NSTemplateTier resources")
+
+			// create or update all UserTiers on the cluster at startup
+			setupLog.Info("Creating/updating the UserTier resources")
+			usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
+			if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+				setupLog.Error(err, "")
+				os.Exit(1)
+			}
+			setupLog.Info("Created/updated the UserTier resources")
+		}()
+
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up health check")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up ready check")
+			os.Exit(1)
+		}
+
+		setupLog.Info("starting manager")
+		return mgr, nil
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctx); err != nil {
+	if err := startManager.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
