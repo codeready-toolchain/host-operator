@@ -58,7 +58,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.UserTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
+				assert.Equal(t, int64(1), tier.Generation)
 
 				switch tierName {
 				case "base":
@@ -91,7 +91,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.UserTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
+				assert.Equal(t, int64(1), tier.Generation)
 
 				switch tierName {
 				case "advanced":

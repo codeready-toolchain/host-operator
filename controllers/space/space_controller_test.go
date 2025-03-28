@@ -1017,7 +1017,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					// but MORE than 1s after the Space Ready condition was set to `Ready=false/Updating`
 
 					// hack: change Space's condition timestamp
-					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Add(-1 * time.Second))
 					err := hostClient.Status().Update(context.TODO(), s)
 					require.NoError(t, err)
 
@@ -1106,7 +1106,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			err := member1.Client.Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
 			// hack: change Space's updating condition timestamp so that it appears the status is ready for >1 second since it's required before can go to Ready condition
-			s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+			s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Add(-1 * time.Second))
 			err = hostClient.Status().Update(context.TODO(), s)
 			require.NoError(t, err)
 

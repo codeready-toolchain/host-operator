@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetierrevisioncleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -48,7 +47,7 @@ func TestTTRDeletionReconcile(t *testing.T) {
 		ttr.DeletionTimestamp = &metav1.Time{
 			Time: time.Now(),
 		}
-		controllerutil.AddFinalizer(ttr, v1alpha1.FinalizerName)
+		controllerutil.AddFinalizer(ttr, toolchainv1alpha1.FinalizerName)
 		r, req, cl := prepareReconcile(t, ttr.Name, ttr, s, nsTemplateTier)
 		//when
 		res, err := r.Reconcile(context.TODO(), req)

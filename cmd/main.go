@@ -524,15 +524,16 @@ func (kw klogWriter) Write(p []byte) (n int, err error) {
 		klogv2.InfoDepth(OutputCallDepth, string(p))
 		return len(p), nil
 	}
-	if p[0] == 'I' {
+	switch p[0] {
+	case 'I':
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'W' {
+	case 'W':
 		klogv2.WarningDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'E' {
+	case 'E':
 		klogv2.ErrorDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'F' {
+	case 'F':
 		klogv2.FatalDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else {
+	default:
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
 	}
 	return len(p), nil
