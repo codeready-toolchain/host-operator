@@ -8,9 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
-	testusertiers "github.com/codeready-toolchain/host-operator/test/templates/usertiers"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/pkg/errors"
@@ -24,14 +22,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+const (
+	testRoot = "testtemplates/testusertiers"
+)
+
 func TestCreateOrUpdateResources(t *testing.T) {
 
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-
-	testassets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -45,10 +45,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, userTiers.Items)
 
-			assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
-
 			// when
-			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
+			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 
 			// then
 			require.NoError(t, err)
@@ -77,11 +75,11 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := commontest.NewFakeClient(t)
 
 			// when
-			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
+			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 			require.NoError(t, err)
 
 			// when calling CreateOrUpdateResources a second time
-			err = usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
+			err = usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 
 			// then
 			require.NoError(t, err)
@@ -109,20 +107,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 
-		t.Run("failed to read assets", func(t *testing.T) {
-			// given
-			fakeAssets := assets.NewAssets(testusertiers.AssetNames, func(name string) ([]byte, error) {
-				// error occurs when fetching the content of the 'tier.yaml' template
-				return nil, errors.Errorf("an error")
-			})
-			clt := commontest.NewFakeClient(t)
-			// when
-			err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, fakeAssets)
-			// then
-			require.Error(t, err)
-			assert.Equal(t, "unable to create UserTier generator: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
-		})
-
 		t.Run("usertiers", func(t *testing.T) {
 
 			t.Run("failed to create usertiers", func(t *testing.T) {
@@ -135,9 +119,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					}
 					return clt.Client.Create(ctx, obj, opts...)
 				}
-				assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 				// when
-				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
+				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, "unable to create UserTiers: unable to create or update the '\\w+' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: an error", err.Error())
@@ -159,9 +142,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					}
 					return clt.Client.Update(ctx, obj, opts...)
 				}
-				testassets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
+
 				// when
-				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
+				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unable to create UserTiers: unable to create or update the 'advanced' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: unable to update the resource")

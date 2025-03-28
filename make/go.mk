@@ -57,12 +57,6 @@ generate-assets: go-bindata
 	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
 	@$(GO_BINDATA) -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
 	
-	@echo "generating bindata for files in $(USERTEMPLATES_BASEDIR) ..."
-	@rm ./pkg/templates/usertiers/usertier_assets.go 2>/dev/null || true
-	@$(GO_BINDATA) -pkg usertiers -o ./pkg/templates/usertiers/usertier_assets.go -nometadata -nocompress -prefix $(USERTEMPLATES_BASEDIR) $(USERTEMPLATES_BASEDIR)/...
-	@echo "generating bindata for files in $(USERTEMPLATES_TEST_BASEDIR) ..."
-	@rm ./test/templates/usertiers/usertier_assets.go 2>/dev/null || true
-	@$(GO_BINDATA) -pkg usertiers_test -o ./test/templates/usertiers/usertier_assets.go -nometadata -nocompress -prefix $(USERTEMPLATES_TEST_BASEDIR) -ignore doc.go $(USERTEMPLATES_TEST_BASEDIR)/...
 
 .PHONY: verify-dependencies
 ## Runs commands to verify after the updated dependecies of toolchain-common/API(go mod replace), if the repo needs any changes to be made
