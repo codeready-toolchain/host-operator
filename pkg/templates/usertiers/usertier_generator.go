@@ -146,8 +146,8 @@ func loadTemplatesByTiers(userTierFS embed.FS, root string) (map[string]*tierDat
 		tmpl := template{
 			content: content,
 		}
-		switch {
-		case filename == "tier.yaml":
+		switch filename {
+		case "tier.yaml":
 			results[tier].rawTemplates.userTier = &tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)

@@ -115,8 +115,8 @@ func TestNewUserTier(t *testing.T) {
 				tier := runtimeObjectToUserTier(t, s, tierObjs[0])
 
 				// require.True(t, found)
-				assert.Equal(t, name, tier.ObjectMeta.Name)
-				assert.Equal(t, namespace, tier.ObjectMeta.Namespace)
+				assert.Equal(t, name, tier.Name)
+				assert.Equal(t, namespace, tier.Namespace)
 
 				switch name {
 				case "nodeactivation":

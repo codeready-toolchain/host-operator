@@ -215,7 +215,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "failed to find the optimal space provisioner config: some error")
-			assert.Equal(t, "", clusterName)
+			assert.Empty(t, clusterName)
 		})
 	})
 }

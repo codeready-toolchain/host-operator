@@ -491,7 +491,7 @@ func TestCreateSpaceBindingRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sbrForDuplicatedSpaceBinding))
 
 			// then
-			cause := fmt.Sprintf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", janeSpace.GetName(), janeMur.GetName())
+			cause := fmt.Sprintf("a SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", janeSpace.GetName(), janeMur.GetName())
 			require.EqualError(t, err, cause)
 			sbrtestcommon.AssertThatSpaceBindingRequest(t, sbr.GetNamespace(), sbr.GetName(), member1.Client).
 				HasConditions(sbrtestcommon.UnableToCreateSpaceBinding(cause)).

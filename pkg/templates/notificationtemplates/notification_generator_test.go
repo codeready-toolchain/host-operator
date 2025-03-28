@@ -29,8 +29,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			assert.Equal(t, "Notice: Your Developer Sandbox account is provisioned", template.Subject)
-			assert.Contains(t, template.Content, "is now provisioned and ready to use. Your account will be active for")
+			assert.Equal(t, "Notice: Your Developer Sandbox account is ready", template.Subject)
+			assert.Contains(t, template.Content, "is now ready to use. Your account will be active for")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
@@ -42,8 +42,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			require.NotEmpty(t, template["userprovisioned"])
-			assert.Equal(t, "Notice: Your Developer Sandbox account is provisioned", template["userprovisioned"].Subject)
-			assert.Contains(t, template["userprovisioned"].Content, "is now provisioned and ready to use. Your account will be active for")
+			assert.Equal(t, "Notice: Your Developer Sandbox account is ready", template["userprovisioned"].Subject)
+			assert.Contains(t, template["userprovisioned"].Content, "is now ready to use. Your account will be active for")
 			assert.Equal(t, UserProvisionedTemplateName, template["userprovisioned"].Name)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
-			assert.Equal(t, "Could not find any emails templates for the environment alpha", err.Error())
+			assert.Equal(t, "could not find any emails templates for the environment alpha", err.Error())
 		})
 		t.Run("no directory name", func(t *testing.T) {
 			// given

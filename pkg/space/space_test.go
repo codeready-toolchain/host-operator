@@ -2,9 +2,10 @@ package space
 
 import (
 	"fmt"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"strings"
 	"testing"
+
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
@@ -139,6 +140,6 @@ func TestNewSubSubSpace(t *testing.T) {
 	assert.Equal(t, expectedSubSubSpace, subSubSpace)
 
 	// also assert that names don't grow in length as we increase nesting
-	assert.Equal(t, len(subSpace.Name), len(subSubSpace.Name))
+	assert.Len(t, subSubSpace.Name, len(subSpace.Name))
 	assert.NotEqual(t, subSpace.Name, subSubSpace.Name)
 }
