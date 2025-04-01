@@ -22,6 +22,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const UserTierRootDir = "templates/usertiers"
+
 var log = logf.Log.WithName("usertiers")
 
 // CreateOrUpdateResources generates the UserTier resources,

@@ -71,7 +71,6 @@ var (
 
 const (
 	memberClientTimeout = 3 * time.Second
-	userTierRootDir     = "templates/usertiers"
 )
 
 func init() {
@@ -437,7 +436,7 @@ func main() { // nolint:gocyclo
 
 		// create or update all UserTiers on the cluster at startup
 		setupLog.Info("Creating/updating the UserTier resources")
-		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, deploy.UserTiersFS, userTierRootDir); err != nil {
+		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, deploy.UserTiersFS, usertiers.UserTierRootDir); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}

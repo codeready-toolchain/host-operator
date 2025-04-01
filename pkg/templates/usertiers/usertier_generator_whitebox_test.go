@@ -35,7 +35,6 @@ var expectedTestTiers = []string{
 }
 
 const (
-	rootDir  = "templates/usertiers"
 	testRoot = "testtemplates/testusertiers"
 )
 
@@ -47,7 +46,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// when
-			tmpls, err := loadTemplatesByTiers(deploy.UserTiersFS, rootDir)
+			tmpls, err := loadTemplatesByTiers(deploy.UserTiersFS, UserTierRootDir)
 			// then
 			require.NoError(t, err)
 			require.Len(t, tmpls, len(expectedProdTiers))
@@ -104,7 +103,7 @@ func TestNewUserTier(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			// when
-			tc, err := newUserTierGenerator(s, nil, namespace, deploy.UserTiersFS, rootDir)
+			tc, err := newUserTierGenerator(s, nil, namespace, deploy.UserTiersFS, UserTierRootDir)
 			require.NoError(t, err)
 			// then
 			require.Len(t, tc.templatesByTier, len(expectedProdTiers))
