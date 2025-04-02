@@ -69,7 +69,9 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const memberClientTimeout = 3 * time.Second
+const (
+	memberClientTimeout = 3 * time.Second
+)
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -434,8 +436,7 @@ func main() { // nolint:gocyclo
 
 		// create or update all UserTiers on the cluster at startup
 		setupLog.Info("Creating/updating the UserTier resources")
-		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
-		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, deploy.UserTiersFS, usertiers.UserTierRootDir); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
