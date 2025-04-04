@@ -265,9 +265,9 @@ func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTem
 	return toolchainObjects, nil
 }
 
-func getAllFileNames(notificationFS *embed.FS, root string) (files []string, err error) {
+func getAllFileNames(userTierFS *embed.FS, root string) (files []string, err error) {
 
-	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(userTierFS, root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
