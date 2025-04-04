@@ -15,3 +15,6 @@ var RegistrationServiceFS embed.FS
 
 //go:embed templates/usertiers/*
 var UserTiersFS embed.FS
+
+//go:embed templates/nstemplatetiers/*
+var NSTemplateTiersFS embed.FS
