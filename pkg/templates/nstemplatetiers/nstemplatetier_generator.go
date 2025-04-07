@@ -4,15 +4,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"io/fs"
 	"strings"
 
+	"github.com/codeready-toolchain/host-operator/pkg/templates"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template/nstemplatetiers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,7 +33,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 		return errors.Wrapf(err, "unable to load templates")
 	}
 
-	paths, err := getAllFileNames(&nstemplatetierFS, root)
+	paths, err := templates.GetAllFileNames(&nstemplatetierFS, root)
 	if err != nil {
 		return err
 	}
@@ -73,19 +72,4 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 		applyCl := commonclient.NewApplyClient(client)
 		return applyCl.ApplyObject(ctx, toEnsure, commonclient.ForceUpdate(true))
 	}, namespace, metadata, files)
-}
-
-func getAllFileNames(nsTemplateTierFS *embed.FS, root string) (files []string, err error) {
-
-	if err := fs.WalkDir(nsTemplateTierFS, root, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-		files = append(files, path)
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return files, nil
 }
