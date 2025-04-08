@@ -1,1 +1,1 @@
-Notice: Your running workload in namespace {{.Namespace}} has been idled
+Notice: Your workload in namespace {{.Namespace}} has been idled
