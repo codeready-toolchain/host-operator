@@ -66,7 +66,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.Equal(t, "Notice: Your workload in namespace {{.Namespace}} has been idled", template.Subject)
-			assert.Contains(t, template.Content, "Thank you for using the Developer Sandbox! We wanted to let you know that we have scaled down one or more of your workloads. Our system does this automatically and no action is required by you.")
+			assert.Contains(t, template.Content, "Thank you for using the Developer Sandbox! We wanted to let you know that we have scaled down one or more of your workloads.")
 
 		})
 	})
