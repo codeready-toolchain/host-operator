@@ -53,6 +53,26 @@ func roles(_ string) []string {
 	return []string{"admin"}
 }
 
+func TestMo(t *testing.T) {
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
+	t.Run("missing asset", func(t *testing.T) {
+		// given
+
+		clt := commontest.NewFakeClient(t)
+
+		// when
+		err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, nstemplatetiers.FakeNSTemplateTierFS, testNStemplateTierRoot)
+
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file 'testtemplates/fakenstemplatetiers/extra_file.yaml'")
+	})
+}
+
 func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 
 	s := scheme.Scheme
@@ -119,7 +139,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 			// given
 			clt := commontest.NewFakeClient(t)
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, nstemplatetiers.FakeNSTemplatTierFS, "/"+testNStemplateTierRoot)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, nstemplatetiers.FakeNSTemplateTierFS, "/"+testNStemplateTierRoot)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to load templates: open /testtemplates/fakenstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
@@ -189,18 +209,19 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 			})
 		})
 
-		t.Run("missing asset", func(t *testing.T) {
+		t.Run("Invalid name format", func(t *testing.T) {
 			// given
 
 			clt := commontest.NewFakeClient(t)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, nstemplatetiers.FakeNSTemplatTierFS, testNStemplateTierRoot)
+			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, nstemplatetiers.FakeNSTemplateTierFS, testNStemplateTierRoot)
 
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file 'testtemplates/fakenstemplatetiers/metadata.yaml'")
+			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file 'testtemplates/fakenstemplatetiers/extra_file.yaml'")
 		})
+
 	})
 }
 

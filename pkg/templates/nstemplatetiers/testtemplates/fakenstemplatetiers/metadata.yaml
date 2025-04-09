@@ -1,2 +1,4 @@
-advanced/based_on_tier: "ca97f74"
+test/cluster: "8f6bbba"
+test/ns_dev: "d3c2c60"
 test/spacerole_admin: "88b275d"
+test/tier: "88b275d"

@@ -43,7 +43,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 
 	files := map[string][]byte{}
 	for _, name := range paths {
-		if name == "templates/nstemplatetiers/metadata.yaml" {
+		if name == root+"/metadata.yaml" {
 			continue
 		}
 
