@@ -5,9 +5,9 @@ import (
 	"io/fs"
 )
 
-func GetAllFileNames(nsTemplateTierFS *embed.FS, root string) (files []string, err error) {
+func GetAllFileNames(TemplateTierFS *embed.FS, root string) (files []string, err error) {
 
-	if err := fs.WalkDir(nsTemplateTierFS, root, func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(TemplateTierFS, root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
