@@ -52,9 +52,6 @@ func roles(_ string) []string {
 	return []string{"admin"}
 }
 
-func TestMo(t *testing.T) {
-
-}
 func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 
 	s := scheme.Scheme

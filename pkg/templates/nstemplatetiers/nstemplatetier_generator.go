@@ -17,13 +17,13 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const NSTemplateTierRootDir = "templates/nstemplatetiers"
+const nsTemplateTierRootDir = "templates/nstemplatetiers"
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string) error {
 
-	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, NSTemplateTierRootDir)
+	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, nsTemplateTierRootDir)
 	if err != nil {
 		return err
 	}
@@ -41,6 +41,8 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 	}, namespace, metadata, files)
 }
 
+// LoadFiles takes the file from deploy/nstemplatetiers/<tiername>/<yaml file name> . the folder structure should be 4 steps .
+// as the cologic here is written accordingly
 func LoadFiles(nsTemplateTiers embed.FS, root string) (metadata map[string]string, files map[string][]byte, err error) {
 	// load templates from assets
 	metadataContent, err := nsTemplateTiers.ReadFile(root + "/metadata.yaml")
