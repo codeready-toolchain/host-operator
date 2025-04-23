@@ -31,7 +31,10 @@ require (
 	sigs.k8s.io/controller-runtime v0.19.7
 )
 
-require k8s.io/kubectl v0.31.2
+require (
+	k8s.io/kubectl v0.31.2
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
+)
 
 require (
 	cloud.google.com/go/auth v0.3.0 // indirect
@@ -121,7 +124,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/cli-runtime v0.31.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
-	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.17.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
@@ -134,7 +136,7 @@ go 1.22.0
 toolchain go1.22.12
 
 replace (
-	github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20250422110645-bbac9d0b9d02
+	github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20250423134557-697fdaef2044
 
-	github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20250422113257-74adc050d724
+	github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20250423135328-c3800b175eee
 )
