@@ -55,10 +55,12 @@ import (
 	"k8s.io/client-go/rest"
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
+	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -215,6 +217,9 @@ func main() { // nolint:gocyclo
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "dc07038f.toolchain.host.operator",
 		Cache:                  cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
+		Controller: ctrlconfig.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
