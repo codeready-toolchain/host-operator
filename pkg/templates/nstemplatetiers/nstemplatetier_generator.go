@@ -76,7 +76,7 @@ func LoadFiles(nsTemplateTiers embed.FS, root string) (metadata map[string]strin
 		}
 
 		fileName := parts[2] + "/" + parts[3]
-		content, err := deploy.NSTemplateTiersFS.ReadFile(name)
+		content, err := nsTemplateTiers.ReadFile(name)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "unable to load templates")
 		}
