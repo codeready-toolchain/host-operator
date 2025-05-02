@@ -7,6 +7,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	applycl "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -56,7 +57,6 @@ type Reconciler struct {
 	GetMembersFunc     cluster.GetMemberClustersFunc
 	Scheme             *runtime.Scheme
 	RegServiceTemplate *templatev1.Template
-	FieldManager       string
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -127,7 +127,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) ensureRegistrationService(ctx context.Context, toolchainConfig *toolchainv1alpha1.ToolchainConfig, vars templateVars) error {
 	// process template with variables taken from the RegistrationService CRD
-	cl := applycl.NewSSAApplyClient(r.Client, r.FieldManager)
+	cl := applycl.NewSSAApplyClient(r.Client, constants.HostOperatorFieldManager)
 	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.RegServiceTemplate.DeepCopy(), vars)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(ctx, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, fmt.Errorf("failed to process registration service template: %w", err))
