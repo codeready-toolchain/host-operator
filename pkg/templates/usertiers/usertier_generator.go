@@ -2,12 +2,13 @@ package usertiers
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"reflect"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 
@@ -21,14 +22,16 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const UserTierRootDir = "templates/usertiers"
+
 var log = logf.Log.WithName("usertiers")
 
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
+func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, userTiersFS embed.FS, root string) error {
 
 	// initialize tier generator, loads templates from assets
-	generator, err := newUserTierGenerator(s, client, namespace, assets)
+	generator, err := newUserTierGenerator(s, client, namespace, userTiersFS, root)
 	if err != nil {
 		return errors.Wrap(err, "unable to create UserTier generator")
 	}
@@ -66,9 +69,9 @@ type template struct {
 }
 
 // newUserTierGenerator loads templates from the provided assets and processes the UserTiers
-func newUserTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
-	// load templates from assets
-	templatesByTier, err := loadTemplatesByTiers(assets)
+func newUserTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namespace string, userTiersFS embed.FS, root string) (*tierGenerator, error) {
+	// load templates
+	templatesByTier, err := loadTemplatesByTiers(userTiersFS, root)
 	if err != nil {
 		return nil, err
 	}
@@ -113,32 +116,40 @@ func newUserTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namesp
 // The output is a map of `tierData` indexed by tier.
 // Each `tierData` object contains template objects for the tier.
 // Each `template` object contains a `revision` (`string`) and the `content` of the template to apply (`[]byte`)
-func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
+func loadTemplatesByTiers(userTierFS embed.FS, root string) (map[string]*tierData, error) {
+	paths, err := getAllFileNames(&userTierFS, root)
+	if err != nil {
+		return nil, err
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("could not find any user templates")
+	}
+
 	results := make(map[string]*tierData)
-	for _, name := range assets.Names() {
+	for _, name := range paths {
 		// split the name using the `/` separator
 		parts := strings.Split(name, "/")
 		// skip any name that does not have 2 parts
-		if len(parts) != 2 {
+		if len(parts) != 4 {
 			return nil, fmt.Errorf("unable to load templates: invalid name format for file '%s'", name)
 		}
-		tier := parts[0]
-		filename := parts[1]
+		tier := parts[2]
+		filename := parts[3]
 		if _, exists := results[tier]; !exists {
 			results[tier] = &tierData{
 				name:         tier,
 				rawTemplates: &templates{},
 			}
 		}
-		content, err := assets.Asset(name)
+		content, err := userTierFS.ReadFile(name)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to load templates")
 		}
 		tmpl := template{
 			content: content,
 		}
-		switch {
-		case filename == "tier.yaml":
+		switch filename {
+		case "tier.yaml":
 			results[tier].rawTemplates.userTier = &tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
@@ -252,4 +263,19 @@ func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTem
 		toolchainObjects[i].SetName(strings.Replace(toolchainObjects[i].GetName(), sourceTierName, tierName, 1))
 	}
 	return toolchainObjects, nil
+}
+
+func getAllFileNames(notificationFS *embed.FS, root string) (files []string, err error) {
+
+	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		files = append(files, path)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return files, nil
 }

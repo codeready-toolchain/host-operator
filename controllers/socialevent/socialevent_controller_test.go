@@ -3,8 +3,9 @@ package socialevent_test
 import (
 	"context"
 	"fmt"
-	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	"testing"
+
+	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"

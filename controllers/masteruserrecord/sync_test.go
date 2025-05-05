@@ -565,7 +565,7 @@ func TestAlignReadiness(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, ready)
-		require.True(t, preAlignTime.Time.After(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
+		require.True(t, preAlignTime.After(mur.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
 		assert.Equal(t, provisionTime.Time, mur.Status.ProvisionedTime.Time) // timestamp should be the same
 		murtest.AssertThatMasterUserRecord(t, "john", test.NewFakeClient(t, mur)).
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
