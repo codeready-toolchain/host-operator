@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: toolchainconfigs.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -25,14 +25,19 @@ spec:
           host and member operators
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -47,13 +52,12 @@ spec:
                     description: Keeps parameters necessary for automatic approval
                     properties:
                       domains:
-                        description: 'Comma-separated email domains to consider for
-                          auto-approval. For example: "domain.com,anotherdomain.org"
-                          If domains is not set and enabled is true, it will default
-                          to auto approving all authenticated emails. If domains is
-                          set and enabled is true, it will allow auto approving only
-                          for authenticated emails under the domains entered. If enabled
-                          is false domains will be ignored.'
+                        description: |-
+                          Comma-separated email domains to consider for auto-approval.
+                          For example: "domain.com,anotherdomain.org"
+                          If domains is not set and enabled is true, it will default to auto approving all authenticated emails.
+                          If domains is set and enabled is true, it will allow auto approving only for authenticated emails under
+                          the domains entered. If enabled is false domains will be ignored.
                         type: string
                       enabled:
                         description: Defines if the automatic approval is enabled
@@ -64,32 +68,27 @@ spec:
                     description: Keeps parameters concerned with user deactivation
                     properties:
                       deactivatingNotificationDays:
-                        description: DeactivatingNotificationDays is the number of
-                          days after a pre-deactivating notification is sent that
-                          actual deactivation occurs.  If this parameter is set to
-                          zero, then there will be no delay
+                        description: |-
+                          DeactivatingNotificationDays is the number of days after a pre-deactivating notification is sent that actual
+                          deactivation occurs.  If this parameter is set to zero, then there will be no delay
                         type: integer
                       deactivationDomainsExcluded:
-                        description: 'DeactivationDomainsExcluded is a string of comma-separated
-                          domains that should be excluded from automatic user deactivation
-                          For example: "@redhat.com,@ibm.com"'
+                        description: |-
+                          DeactivationDomainsExcluded is a string of comma-separated domains that should be excluded from automatic user deactivation
+                          For example: "@redhat.com,@ibm.com"
                         type: string
                       userSignupDeactivatedRetentionDays:
-                        description: UserSignupDeactivatedRetentionDays is used to
-                          configure how many days we should keep deactivated UserSignup
-                          resources before deleting them.  This parameter value should
-                          reflect an extended period of time sufficient for gathering
-                          user metrics before removing the resources from the cluster.
+                        description: |-
+                          UserSignupDeactivatedRetentionDays is used to configure how many days we should keep deactivated UserSignup
+                          resources before deleting them.  This parameter value should reflect an extended period of time sufficient for
+                          gathering user metrics before removing the resources from the cluster.
                         type: integer
                       userSignupUnverifiedRetentionDays:
-                        description: UserSignupUnverifiedRetentionDays is used to
-                          configure how many days we should keep unverified (i.e.
-                          the user hasn't completed the user verification process
-                          via the registration service) UserSignup resources before
-                          deleting them.  It is intended for this parameter to define
-                          an aggressive cleanup schedule for unverified user signups,
-                          and the default configuration value for this parameter reflects
-                          this.
+                        description: |-
+                          UserSignupUnverifiedRetentionDays is used to configure how many days we should keep unverified (i.e. the user
+                          hasn't completed the user verification process via the registration service) UserSignup resources before deleting
+                          them.  It is intended for this parameter to define an aggressive cleanup schedule for unverified user signups,
+                          and the default configuration value for this parameter reflects this.
                         type: integer
                     type: object
                   environment:
@@ -100,9 +99,9 @@ spec:
                     description: Keeps parameters concerned with metrics
                     properties:
                       forceSynchronization:
-                        description: ForceSynchronization is a flag used to trigger
-                          synchronization of the metrics based on the resources rather
-                          than on the content of `ToolchainStatus.status.metrics`
+                        description: |-
+                          ForceSynchronization is a flag used to trigger synchronization of the metrics
+                          based on the resources rather than on the content of `ToolchainStatus.status.metrics`
                         type: boolean
                     type: object
                   notifications:
@@ -152,10 +151,11 @@ spec:
                         type: string
                     type: object
                   publicViewerConfig:
-                    description: 'Contains the PublicViewer configuration. IMPORTANT:
-                      To provide a consistent User-Experience, each user the space
-                      has been directly shared with should have at least the same
-                      permissions the kubesaw-authenticated user has.'
+                    description: |-
+                      Contains the PublicViewer configuration.
+                      IMPORTANT: To provide a consistent User-Experience, each user
+                      the space has been directly shared with should have at least
+                      the same permissions the kubesaw-authenticated user has.
                     properties:
                       enabled:
                         default: false
@@ -222,10 +222,9 @@ spec:
                         description: LogLevel specifies the logging level
                         type: string
                       namespace:
-                        description: Namespace specifies the namespace in which the
-                          registration service and host operator is running Consumed
-                          by host operator and set as env var on registration-service
-                          deployment
+                        description: |-
+                          Namespace specifies the namespace in which the registration service and host operator is running
+                          Consumed by host operator and set as env var on registration-service deployment
                         type: string
                       registrationServiceURL:
                         description: RegistrationServiceURL is the URL used to a ccess
@@ -236,24 +235,35 @@ spec:
                           use for the registration service deployment
                         format: int32
                         type: integer
+                      uiCanaryDeploymentWeight:
+                        description: |-
+                          UICanaryDeploymentWeight specifies the threshold of users that will be using the new UI.
+                          This configuration option is just a temporary solution for rolling out our new RHDH based UI using canary deployment strategy.
+                          Once we switch all our users to the new UI this will be removed.
+                          How this works:
+                          - backend returns a weight
+                          - old UI assigns a sticky random number for each user
+                          - if the user has a number within the weight returned from the backend than user get's redirect to to new UI
+                          - if the user has a number above the weight they keep using the current UI
+                        format: int32
+                        type: integer
                       verification:
                         description: Keeps parameters necessary for the registration
                           service verification config
                         properties:
                           attemptsAllowed:
-                            description: VerificationAttemptsAllowed specifies the
-                              number of times a user may attempt to correctly enter
-                              a verification code, if they fail then they must request
-                              another code
+                            description: |-
+                              VerificationAttemptsAllowed specifies the number of times a user may attempt to correctly enter a verification code,
+                              if they fail then they must request another code
                             type: integer
                           awsRegion:
                             description: AWSRegion to use when sending notification
                               SMS
                             type: string
                           awsSMSType:
-                            description: AWSSMSType is the type of SMS message to
-                              send, either `Promotional` or `Transactional` See https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
-                              for details
+                            description: |-
+                              AWSSMSType is the type of SMS message to send, either `Promotional` or `Transactional`
+                              See https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html for details
                             type: string
                           awsSenderID:
                             description: AWSSenderID the Alphanumeric Sender ID to
@@ -278,19 +288,14 @@ spec:
                                   that has the recaptcha service enabled.
                                 type: string
                               requiredScore:
-                                description: RequiredScore defines the lowest captcha
-                                  score, below this score the user cannot proceed
-                                  with the signup process at all. Users with captcha
-                                  score lower than the required one can still be approved
-                                  manually.
+                                description: |-
+                                  RequiredScore defines the lowest captcha score, below this score the user cannot proceed with the signup process at all.
+                                  Users with captcha score lower than the required one can still be approved manually.
                                 type: string
                               scoreThreshold:
-                                description: ScoreThreshold defines the captcha assessment
-                                  score threshold. A score equal to or above the threshold
-                                  means the user is most likely human and can proceed
-                                  signing up but a score below the threshold means
-                                  the score is suspicious and further verification
-                                  may be required.
+                                description: |-
+                                  ScoreThreshold defines the captcha assessment score threshold. A score equal to or above the threshold means the user is most likely human and
+                                  can proceed signing up but a score below the threshold means the score is suspicious and further verification may be required.
                                 type: string
                               siteKey:
                                 description: SiteKey defines the recaptcha site key
@@ -300,42 +305,41 @@ spec:
                                 type: string
                             type: object
                           codeExpiresInMin:
-                            description: VerificationCodeExpiresInMin specifies an
-                              int representing the number of minutes before a verification
-                              code should be expired
+                            description: |-
+                              VerificationCodeExpiresInMin specifies an int representing the number of minutes before a verification code should
+                              be expired
                             type: integer
                           dailyLimit:
-                            description: VerificationDailyLimit specifies the number
-                              of times a user may initiate a phone verification request
-                              within a 24 hour period
+                            description: |-
+                              VerificationDailyLimit specifies the number of times a user may initiate a phone verification request within a
+                              24 hour period
                             type: integer
                           enabled:
-                            description: 'VerificationEnabled specifies whether verification
-                              is enabled or not Verification enablement works in the
-                              following way: 1. verification.enabled == false No verification
-                              during the signup process at all. (no phone, no captcha)
-                              2. verification.enabled == true && verification.captcha.enabled
-                              == true Captcha is enabled and will bypass phone verification
-                              if the score is above the threshold but if the score
-                              is below the threshold then phone verification kicks
-                              in. 3. verification.enabled == true && verification.captcha.enabled
-                              == false Only phone verification is effect.'
+                            description: |-
+                              VerificationEnabled specifies whether verification is enabled or not
+                              Verification enablement works in the following way:
+                                1. verification.enabled == false
+                                   No verification during the signup process at all. (no phone, no captcha)
+                                2. verification.enabled == true && verification.captcha.enabled == true
+                                   Captcha is enabled and will bypass phone verification if the score is above the threshold but if the score is
+                                   below the threshold then phone verification kicks in.
+                                3. verification.enabled == true && verification.captcha.enabled == false
+                                   Only phone verification is effect.
                             type: boolean
                           excludedEmailDomains:
-                            description: VerificationExcludedEmailDomains specifies
-                              the list of email address domains for which phone verification
+                            description: |-
+                              VerificationExcludedEmailDomains specifies the list of email address domains for which phone verification
                               is not required
                             type: string
                           messageTemplate:
-                            description: VerificationMessageTemplate specifies the
-                              message template used to generate the content sent to
-                              users via SMS for phone verification
+                            description: |-
+                              VerificationMessageTemplate specifies the message template used to generate the content sent to users via SMS for
+                              phone verification
                             type: string
                           notificationSender:
-                            description: NotificationSender is used to specify which
-                              service should be used to send verification notifications.
-                              Allowed values are "twilio", "aws".  If not specified,
-                              the Twilio sender will be used.
+                            description: |-
+                              NotificationSender is used to specify which service should be used to send verification notifications. Allowed
+                              values are "twilio", "aws".  If not specified, the Twilio sender will be used.
                             type: string
                           secret:
                             description: Defines all secrets related to the registration
@@ -350,9 +354,9 @@ spec:
                                   used to authenticate in order to access AWS services
                                 type: string
                               recaptchaServiceAccountFile:
-                                description: RecaptchaServiceAccountFile is the GCP
-                                  service account file contents encoded in base64,
-                                  it is to be used with the recaptcha client for authentication
+                                description: |-
+                                  RecaptchaServiceAccountFile is the GCP service account file contents encoded in base64, it is
+                                  to be used with the recaptcha client for authentication
                                 type: string
                               ref:
                                 description: Reference is the name of the secret resource
@@ -378,18 +382,15 @@ spec:
                             description: TwilioSenderConfigs is an array of TwilioSenderConfig
                               objects
                             items:
-                              description: "TwilioSenderConfig is used to associate
-                                a particular sender ID (a sender ID is a text value
-                                that appears instead of a phone number when receiving
-                                an SMS message), for example \"RED HAT\", with an
-                                array of country code values for which the Sender
-                                ID value will be set via the Twilio API when sending
-                                a verification code to a user in any of the country
-                                codes specified. \n Since some countries are starting
-                                to block long form phone numbers (i.e. SMS messages
-                                from international phone numbers) the Sender ID may
-                                be an acceptable alternative to requiring the verification
-                                message to be sent from a local phone number."
+                              description: |-
+                                TwilioSenderConfig is used to associate a particular sender ID (a sender ID is a text value that appears instead of
+                                a phone number when receiving an SMS message), for example "RED HAT", with an array of country
+                                code values for which the Sender ID value will be set via the Twilio API when sending a verification code to a user in
+                                any of the country codes specified.
+
+
+                                Since some countries are starting to block long form phone numbers (i.e. SMS messages from international phone numbers)
+                                the Sender ID may be an acceptable alternative to requiring the verification message to be sent from a local phone number.
                               properties:
                                 countryCodes:
                                   description: CountryCodes
@@ -412,18 +413,14 @@ spec:
                       provisioning functionality
                     properties:
                       spaceBindingRequestEnabled:
-                        description: SpaceBindingRequestEnabled specifies whether
-                          the SpaceBindingRequest controller should start or not.
-                          This is specifically useful in order to enable/disable this
-                          functionality from configuration (e.g. disabled by default
-                          in Sandbox and enabled only for AppStudio stage/prod ...).
+                        description: |-
+                          SpaceBindingRequestEnabled specifies whether the SpaceBindingRequest controller should start or not.
+                          This is specifically useful in order to enable/disable this functionality from configuration (e.g. disabled by default in Sandbox and enabled only for AppStudio stage/prod ...).
                         type: boolean
                       spaceRequestEnabled:
-                        description: SpaceRequestEnabled specifies whether the SpaceRequest
-                          controller should start or not. This is specifically useful
-                          in order to enable/disable this functionality from configuration
-                          (e.g. disabled by default in Sandbox and enabled only for
-                          AppStudio stage/prod ...).
+                        description: |-
+                          SpaceRequestEnabled specifies whether the SpaceRequest controller should start or not.
+                          This is specifically useful in order to enable/disable this functionality from configuration (e.g. disabled by default in Sandbox and enabled only for AppStudio stage/prod ...).
                         type: boolean
                     type: object
                   tiers:
@@ -445,41 +442,35 @@ spec:
                         description: FeatureToggles specifies the list of feature
                           toggles/flags
                         items:
-                          description: 'FeatureToggle defines a feature toggle/flag.
-                            Each feature is supposed to have a unique name. Features
-                            are represented by kube object manifests in space and
-                            user templates. Such manifests must have an annotation
-                            which refers to the corresponding feature name. For example
-                            a manifest for a RoleBinding object in a space tier template
-                            with the following annotation: "toolchain.dev.openshift.com/feature:
-                            os-lightspeed" would refer to a feature with "os-lightspeed"
-                            name. When that template is applied for a new space then
-                            that RoleBinding object would be applied conditionally,
-                            according to its weight.'
+                          description: |-
+                            FeatureToggle defines a feature toggle/flag. Each feature is supposed to have a unique name.
+                            Features are represented by kube object manifests in space and user templates.
+                            Such manifests must have an annotation which refers to the corresponding feature name.
+                            For example a manifest for a RoleBinding object in a space tier template with the following annotation:
+                            "toolchain.dev.openshift.com/feature: os-lightspeed" would refer to a feature with "os-lightspeed" name.
+                            When that template is applied for a new space then that RoleBinding object would be applied conditionally,
+                            according to its weight.
                           properties:
                             name:
                               description: A unique name of the feature
                               type: string
                             weight:
                               default: 100
-                              description: 'Rollout weight of the feature. An integer
-                                between 0-100. If not set then 100 is used by default.
-                                0 means the corresponding feature should not be enabled
-                                at all, which means that corresponding template objects
-                                should not be applied at all. 100 means the feature
-                                should be always enabled (the template is always applied).
+                              description: |-
+                                Rollout weight of the feature. An integer between 0-100.
+                                If not set then 100 is used by default.
+                                0 means the corresponding feature should not be enabled at all, which means
+                                that corresponding template objects should not be applied at all.
+                                100 means the feature should be always enabled (the template is always applied).
                                 The features are weighted independently of each other.
-                                For example if there are two features: - feature1,
-                                weight=5 - feature2, weight=90 And tiers (one or many)
-                                contain the following object manifests: - RoleBinding
-                                with "toolchain.dev.openshift.com/feature: feature1"
-                                annotation - ConfigMap with "toolchain.dev.openshift.com/feature:
-                                feature2" annotation Then the RoleBinding will be
-                                created for the corresponding tiers with probability
-                                of 0.05 (around 5 out of every 100 spaces would have
-                                it) And the ConfigMap will be created with probability
-                                of 0.9 (around 90 out of every 100 spaces would have
-                                it)'
+                                For example if there are two features:
+                                - feature1, weight=5
+                                - feature2, weight=90
+                                And tiers (one or many) contain the following object manifests:
+                                - RoleBinding with "toolchain.dev.openshift.com/feature: feature1" annotation
+                                - ConfigMap with "toolchain.dev.openshift.com/feature: feature2" annotation
+                                Then the RoleBinding will be created for the corresponding tiers with probability of 0.05 (around 5 out of every 100 spaces would have it)
+                                And the ConfigMap will be created with probability of 0.9 (around 90 out of every 100 spaces would have it)
                               maximum: 100
                               minimum: 0
                               type: integer
@@ -491,9 +482,9 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                       templateUpdateRequestMaxPoolSize:
-                        description: TemplateUpdateRequestMaxPoolSize specifies the
-                          maximum number of concurrent TemplateUpdateRequests when
-                          updating MasterUserRecords
+                        description: |-
+                          TemplateUpdateRequestMaxPoolSize specifies the maximum number of concurrent TemplateUpdateRequests
+                          when updating MasterUserRecords
                         type: integer
                     type: object
                   toolchainStatus:
@@ -521,16 +512,14 @@ spec:
                     description: Keeps parameters concerned with user management
                     properties:
                       forbiddenUsernamePrefixes:
-                        description: ForbiddenUsernamePrefixes is a comma-separated
-                          string that defines the prefixes that a username may not
-                          have when signing up. If a username has a forbidden prefix,
-                          then the username compliance prefix is added to the username
+                        description: |-
+                          ForbiddenUsernamePrefixes is a comma-separated string that defines the prefixes that a username may not have when signing up.
+                          If a username has a forbidden prefix, then the username compliance prefix is added to the username
                         type: string
                       forbiddenUsernameSuffixes:
-                        description: ForbiddenUsernameSuffixes is a comma-separated
-                          string that defines the suffixes that a username may not
-                          have when signing up.  If a username has a forbidden suffix,
-                          then the username compliance suffix is added to the username
+                        description: |-
+                          ForbiddenUsernameSuffixes is a comma-separated string that defines the suffixes that a username may not have when signing up.  If a
+                          username has a forbidden suffix, then the username compliance suffix is added to the username
                         type: string
                       masterUserRecordUpdateFailureThreshold:
                         description: MasterUserRecordUpdateFailureThreshold specifies
@@ -664,10 +653,9 @@ spec:
                         description: Keeps parameters concerned with the webhook
                         properties:
                           deploy:
-                            description: Defines the flag that determines whether
-                              to deploy the Webhook. If the deploy flag is set to
-                              False and the Webhook was deployed previously it will
-                              be deleted by the memberoperatorconfig controller.
+                            description: |-
+                              Defines the flag that determines whether to deploy the Webhook.
+                              If the deploy flag is set to False and the Webhook was deployed previously it will be deleted by the memberoperatorconfig controller.
                             type: boolean
                           secret:
                             description: Defines all secrets related to webhook configuration
@@ -805,10 +793,9 @@ spec:
                           description: Keeps parameters concerned with the webhook
                           properties:
                             deploy:
-                              description: Defines the flag that determines whether
-                                to deploy the Webhook. If the deploy flag is set to
-                                False and the Webhook was deployed previously it will
-                                be deleted by the memberoperatorconfig controller.
+                              description: |-
+                                Defines the flag that determines whether to deploy the Webhook.
+                                If the deploy flag is set to False and the Webhook was deployed previously it will be deleted by the memberoperatorconfig controller.
                               type: boolean
                             secret:
                               description: Defines all secrets related to webhook
@@ -835,8 +822,9 @@ spec:
             description: ToolchainConfigStatus defines the observed state of ToolchainConfig
             properties:
               conditions:
-                description: 'Conditions is an array of the current ToolchainConfig
-                  conditions Supported condition types: ConditionReady'
+                description: |-
+                  Conditions is an array of the current ToolchainConfig conditions
+                  Supported condition types: ConditionReady
                 items:
                   properties:
                     lastTransitionTime:
@@ -872,9 +860,9 @@ spec:
               syncErrors:
                 additionalProperties:
                   type: string
-                description: SyncErrors is a map of sync errors indexed by toolchaincluster
-                  name that indicates whether an attempt to sync configuration to
-                  a member cluster failed
+                description: |-
+                  SyncErrors is a map of sync errors indexed by toolchaincluster name that indicates whether
+                  an attempt to sync configuration to a member cluster failed
                 type: object
                 x-kubernetes-map-type: atomic
             type: object
