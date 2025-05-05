@@ -227,8 +227,8 @@ github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
 github.com/rsoaresd/api v0.0.0-20250423134557-697fdaef2044 h1:QdnVGiFVq6OBCP+RyqHlBkARgmnPhO6LaEQH0Dc26qY=
 github.com/rsoaresd/api v0.0.0-20250423134557-697fdaef2044/go.mod h1:20258od6i5+jP406Z76YaI2ow/vc7URwsDU2bokpkRE=
-github.com/rsoaresd/toolchain-common v0.0.0-20250423135328-c3800b175eee h1:MpJqYZi9QgvVMDRBUh2jGhYvEweiAn1mJ2n6XpJS2iI=
-github.com/rsoaresd/toolchain-common v0.0.0-20250423135328-c3800b175eee/go.mod h1:rrKReVXMoRtAsBvg4Z1BToZYGSucuPP43wprYdjYQE0=
+github.com/rsoaresd/toolchain-common v0.0.0-20250430141251-9d0638b33fb1 h1:gjCaqiEwWznv9Frww8m9/bB2N1j5HD5C6cmS+R1cxFY=
+github.com/rsoaresd/toolchain-common v0.0.0-20250430141251-9d0638b33fb1/go.mod h1:rrKReVXMoRtAsBvg4Z1BToZYGSucuPP43wprYdjYQE0=
 github.com/segmentio/analytics-go/v3 v3.2.1 h1:G+f90zxtc1p9G+WigVyTR0xNfOghOGs/PYAlljLOyeg=
 github.com/segmentio/analytics-go/v3 v3.2.1/go.mod h1:p8owAF8X+5o27jmvUognuXxdtqvSGtD0ZrfY2kcS9bE=
 github.com/segmentio/backo-go v1.0.0 h1:kbOAtGJY2DqOR0jfRkYEorx/b18RgtepGtY3+Cpe6qA=
