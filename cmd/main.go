@@ -68,9 +68,7 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const (
-	memberClientTimeout = 3 * time.Second
-)
+const memberClientTimeout = 3 * time.Second
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))

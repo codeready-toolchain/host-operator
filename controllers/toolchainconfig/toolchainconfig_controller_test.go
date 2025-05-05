@@ -86,7 +86,7 @@ func TestReconcile(t *testing.T) {
 				Exists().
 				HasConditions(
 					toolchainconfig.ToSyncComplete(),
-					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Route: registration-service Service: registration-service Service: registration-service-metrics Route: api Service: api Service: proxy-metrics-service]")).
+					toolchainconfig.ToRegServiceDeployComplete()).
 				HasNoSyncErrors()
 
 			// check member1 config
@@ -233,8 +233,8 @@ func TestReconcile(t *testing.T) {
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true))
 			hostCl := test.NewFakeClient(t, config)
-			hostCl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
-				return fmt.Errorf("create error")
+			hostCl.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
+				return fmt.Errorf("patch error")
 			}
 			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
@@ -243,14 +243,14 @@ func TestReconcile(t *testing.T) {
 			_, err := controller.Reconcile(context.TODO(), newRequest())
 
 			// then
-			require.EqualError(t, err, "failed to apply registration service object registration-service: unable to create resource of kind: ServiceAccount, version: v1: create error")
+			require.EqualError(t, err, "failed to apply registration service: unable to patch '/v1, Kind=ServiceAccount' called 'registration-service' in namespace 'toolchain-host-operator': patch error")
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
 				HasConditions(
-					toolchainconfig.ToRegServiceDeployFailure("failed to apply registration service object registration-service: unable to create resource of kind: ServiceAccount, version: v1: create error")).
+					toolchainconfig.ToRegServiceDeployFailure("failed to apply registration service: unable to patch '/v1, Kind=ServiceAccount' called 'registration-service' in namespace 'toolchain-host-operator': patch error")).
 				HasNoSyncErrors()
 		})
 
@@ -274,7 +274,7 @@ func TestReconcile(t *testing.T) {
 				Exists().
 				HasConditions(
 					toolchainconfig.ToSyncFailure(),
-					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Route: registration-service Service: registration-service Service: registration-service-metrics Route: api Service: api Service: proxy-metrics-service]")).
+					toolchainconfig.ToRegServiceDeployComplete()).
 				HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
 		})
 	})
@@ -296,7 +296,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		}
 
 		// test
-		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, nil, "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, nil)
 
 		require.NoError(t, err)
 	})
@@ -308,7 +308,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		}
 
 		// test
-		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("failed to load the latest configuration: %w", fmt.Errorf("underlying error")))
 
 		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
 	})
@@ -319,7 +319,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		}
 
 		// when
-		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+		err := controller.WrapErrorWithStatusUpdate(ctx, config, statusUpdater, fmt.Errorf("failed to load the latest configuration: %w", fmt.Errorf("underlying error")))
 
 		// then
 		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
