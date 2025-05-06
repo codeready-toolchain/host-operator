@@ -37,6 +37,7 @@ type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) e
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("UserSignupCleanup").
 		For(&toolchainv1alpha1.UserSignup{}).
 		Complete(r)
 }
