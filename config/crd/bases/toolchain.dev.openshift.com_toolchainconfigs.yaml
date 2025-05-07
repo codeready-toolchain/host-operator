@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: toolchainconfigs.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -235,6 +235,19 @@ spec:
                           use for the registration service deployment
                         format: int32
                         type: integer
+                      uiCanaryDeploymentWeight:
+                        description: |-
+                          UICanaryDeploymentWeight specifies the threshold of users that will be using the new UI.
+                          This configuration option is just a temporary solution for rolling out our new RHDH based UI using canary deployment strategy.
+                          Once we switch all our users to the new UI this will be removed.
+                          How this works:
+                          - backend returns a weight
+                          - old UI assigns a sticky random number for each user
+                          - if the user has a number within the weight returned from the backend than user get's redirect to new UI
+                          - if the user has a number above the weight they keep using the current UI
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       verification:
                         description: Keeps parameters necessary for the registration
                           service verification config
@@ -375,7 +388,6 @@ spec:
                                 a phone number when receiving an SMS message), for example "RED HAT", with an array of country
                                 code values for which the Sender ID value will be set via the Twilio API when sending a verification code to a user in
                                 any of the country codes specified.
-
 
                                 Since some countries are starting to block long form phone numbers (i.e. SMS messages from international phone numbers)
                                 the Sender ID may be an acceptable alternative to requiring the verification message to be sent from a local phone number.
