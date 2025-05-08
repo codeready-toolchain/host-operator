@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/codeready-toolchain/host-operator/deploy"
@@ -17,13 +18,13 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const nsTemplateTierRootDir = "templates/nstemplatetiers"
+const NsTemplateTierRootDir = "templates/nstemplatetiers"
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string) error {
 
-	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, nsTemplateTierRootDir)
+	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, NsTemplateTierRootDir)
 	if err != nil {
 		return err
 	}
@@ -45,7 +46,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 // as the cologic here is written accordingly
 func LoadFiles(nsTemplateTiers embed.FS, root string) (metadata map[string]string, files map[string][]byte, err error) {
 	// load templates from assets
-	metadataContent, err := nsTemplateTiers.ReadFile(root + "/metadata.yaml")
+	metadataContent, err := nsTemplateTiers.ReadFile(filepath.Join(root, "metadata.yaml"))
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "unable to load templates")
 	}
@@ -65,7 +66,7 @@ func LoadFiles(nsTemplateTiers embed.FS, root string) (metadata map[string]strin
 	}
 	files = make(map[string][]byte)
 	for _, name := range paths {
-		if name == root+"/metadata.yaml" {
+		if name == filepath.Join(root, "metadata.yaml") {
 			continue
 		}
 
@@ -75,7 +76,7 @@ func LoadFiles(nsTemplateTiers embed.FS, root string) (metadata map[string]strin
 			return nil, nil, fmt.Errorf("unable to load templates: invalid name format for file '%s'", name)
 		}
 
-		fileName := parts[2] + "/" + parts[3]
+		fileName := filepath.Join(parts[2], parts[3])
 		content, err := nsTemplateTiers.ReadFile(name)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "unable to load templates")

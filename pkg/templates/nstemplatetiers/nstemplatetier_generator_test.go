@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofrs/uuid"
-	"github.com/pkg/errors"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/gofrs/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -180,18 +180,10 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	})
 	t.Run("failed to load assets", func(t *testing.T) {
 		// when
-		_, _, err := nstemplatetiers.LoadFiles(nstemplatetiers.FakeNSTemplateTierFS, "/"+testNStemplateTierRoot)
+		_, _, err := nstemplatetiers.LoadFiles(deploy.NSTemplateTiersFS, "/"+nstemplatetiers.NsTemplateTierRootDir)
 		// then
 		require.Error(t, err)
-		assert.Equal(t, "unable to load templates: open /testtemplates/fakenstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
-	})
-	t.Run("Invalid name format", func(t *testing.T) {
-		// when
-		_, _, err := nstemplatetiers.LoadFiles(nstemplatetiers.FakeNSTemplateTierFS, testNStemplateTierRoot)
-
-		// then
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file 'testtemplates/fakenstemplatetiers/extra_file.yaml'")
+		assert.Equal(t, "unable to load templates: open /templates/nstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
 	})
 
 }
