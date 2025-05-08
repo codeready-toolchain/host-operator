@@ -23,8 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-const testNStemplateTierRoot = "testtemplates/fakenstemplatetiers"
-
 var expectedProdTiers = []string{
 	"advanced",
 	"base",
