@@ -40,7 +40,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 		files[name] = content
 	}
 
-	// initialize tier generator, loads templates from assets
+	// initialize tier generator, loads templates from assets .
 	return nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, canUpdate bool, _ string) (bool, error) {
 		if !canUpdate {
 			if err := client.Create(ctx, toEnsure); err != nil && !apierrors.IsAlreadyExists(err) {
