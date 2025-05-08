@@ -33,10 +33,7 @@ USERTEMPLATES_TEST_BASEDIR = test/templates/usertiers
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
-generate: install-go-bindata generate-metadata generate-assets 
-
-install-go-bindata:
-	@go install github.com/go-bindata/go-bindata/...
+generate: generate-metadata 
 
 clean-metadata:
 	@rm $(NSTEMPLATES_BASEDIR)/metadata.yaml 2>/dev/null || true
@@ -51,12 +48,6 @@ define git_commit
 	echo "$(patsubst $(2)/%.yaml,%,$(1)): \""`git log -1 --format=%h $(1)`"\"">> $(2)/$(3) # surround the commit hash with quotes to force the value as a string, even if it's a number
 endef
 
-.PHONY: generate-assets
-generate-assets: go-bindata
-	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
-	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
-	@$(GO_BINDATA) -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
-	
 
 .PHONY: verify-dependencies
 ## Runs commands to verify after the updated dependecies of toolchain-common/API(go mod replace), if the repo needs any changes to be made

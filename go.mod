@@ -5,7 +5,6 @@ require (
 	github.com/codeready-toolchain/api v0.0.0-20250506092100-39b4862e1271
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20250506093954-2b65ad3a2e12
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.4.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/mailgun/mailgun-go/v4 v4.8.1

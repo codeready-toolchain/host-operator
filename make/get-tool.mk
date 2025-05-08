@@ -7,10 +7,6 @@ CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,${CONTROLLER_GEN_VERSION})
 
-GO_BINDATA = $(shell pwd)/bin/go-bindata
-go-bindata: ## Download go-bindata locally if necessary.
-	$(call go-get-tool,$(GO_BINDATA),github.com/go-bindata/go-bindata/go-bindata,${GO_BINDATA_VERSION})
-
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))

@@ -6,15 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofrs/uuid"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
-
+	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,10 +58,9 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 	cl := commontest.NewFakeClient(t)
-	templateAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
 
 	// when
-	err = nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, cl, namespace, templateAssets)
+	err = nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, cl, namespace)
 
 	// then
 	require.NoError(t, err)
@@ -113,24 +111,6 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-
-		t.Run("failed to read assets", func(t *testing.T) {
-			// given
-			fakeAssets := assets.NewAssets(nstemplatetiers.AssetNames, func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
-					return []byte("advanced-code: abcdef"), nil
-				}
-				// error occurs when fetching the content of the 'advanced-code.yaml' template
-				return nil, errors.Errorf("an error")
-			})
-			clt := commontest.NewFakeClient(t)
-			// when
-			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, fakeAssets)
-			// then
-			require.Error(t, err)
-			assert.Equal(t, "unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
-		})
-
 		t.Run("nstemplatetiers", func(t *testing.T) {
 
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
@@ -143,9 +123,8 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 					}
 					return clt.Client.Create(ctx, obj, opts...)
 				}
-				assets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, assets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
@@ -167,9 +146,9 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 					}
 					return clt.Client.Update(ctx, obj, opts...)
 				}
-				testassets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create or update the 'advanced' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
@@ -188,50 +167,23 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 					}
 					return clt.Client.Create(ctx, obj, opts...)
 				}
-				testassets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, testassets)
+				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, fmt.Sprintf("unable to create TierTemplates: unable to create the 'base1ns-dev-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
 
-		t.Run("missing asset", func(t *testing.T) {
-			// given
-			fakeAssets := func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
-					return nstemplatetiers.Asset(name)
-				}
-				return nil, fmt.Errorf("an error occurred")
-			}
-			tmplAssets := assets.NewAssets(nstemplatetiers.AssetNames, fakeAssets)
-			clt := commontest.NewFakeClient(t)
-
-			// when
-			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, tmplAssets)
-
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
-		})
-
-		t.Run("missing metadata", func(t *testing.T) {
-			// given
-			fakeAssets := func(name string) ([]byte, error) {
-				return nil, fmt.Errorf("an error occurred")
-			}
-			tmplAssets := assets.NewAssets(nstemplatetiers.AssetNames, fakeAssets)
-			clt := commontest.NewFakeClient(t)
-
-			// when
-			err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, tmplAssets)
-
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
-		})
 	})
+	t.Run("failed to load assets", func(t *testing.T) {
+		// when
+		_, _, err := nstemplatetiers.LoadFiles(deploy.NSTemplateTiersFS, "/"+nstemplatetiers.NsTemplateTierRootDir)
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "unable to load templates: open /templates/nstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
+	})
+
 }
 
 func verifyTierTemplate(t *testing.T, cl *commontest.FakeClient, namespace, tierName, typeName string) string {
