@@ -1,6 +1,7 @@
 # see go.mod
-CONTROLLER_GEN_VERSION=v0.15.0
-KUSTOMIZE_VERSION=v5.4.2
+CONTROLLER_GEN_VERSION=v0.16.5
+KUSTOMIZE_VERSION=v5.4.3
+GO_BINDATA_VERSION=v3.1.2
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
