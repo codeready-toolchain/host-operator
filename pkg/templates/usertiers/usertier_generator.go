@@ -4,11 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"io/fs"
 	"reflect"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	resource "github.com/codeready-toolchain/host-operator/pkg/templates"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 
@@ -117,7 +117,7 @@ func newUserTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namesp
 // Each `tierData` object contains template objects for the tier.
 // Each `template` object contains a `revision` (`string`) and the `content` of the template to apply (`[]byte`)
 func loadTemplatesByTiers(userTierFS embed.FS, root string) (map[string]*tierData, error) {
-	paths, err := getAllFileNames(&userTierFS, root)
+	paths, err := resource.GetAllFileNames(&userTierFS, root)
 	if err != nil {
 		return nil, err
 	}
@@ -263,19 +263,4 @@ func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTem
 		toolchainObjects[i].SetName(strings.Replace(toolchainObjects[i].GetName(), sourceTierName, tierName, 1))
 	}
 	return toolchainObjects, nil
-}
-
-func getAllFileNames(notificationFS *embed.FS, root string) (files []string, err error) {
-
-	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-		files = append(files, path)
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return files, nil
 }

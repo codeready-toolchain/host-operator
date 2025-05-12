@@ -18,10 +18,6 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Generate Assets
-      run: |
-        make generate-assets
-
     - name: Run govulncheck
       uses: golang/govulncheck-action@v1
       with:
