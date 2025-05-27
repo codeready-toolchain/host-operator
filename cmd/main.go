@@ -275,8 +275,9 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err := (&nstemplatetier.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Namespace: namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
 		os.Exit(1)

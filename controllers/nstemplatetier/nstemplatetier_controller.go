@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/deploy"
+	"github.com/codeready-toolchain/host-operator/pkg/templates"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
+	commonnstemplatetiers "github.com/codeready-toolchain/toolchain-common/pkg/template/nstemplatetiers"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 
@@ -29,6 +34,10 @@ import (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	if err := r.initBundledNsTemplateTiersKeys(); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&toolchainv1alpha1.TierTemplate{},
@@ -38,8 +47,31 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
 type Reconciler struct {
-	Client runtimeclient.Client
-	Scheme *runtime.Scheme
+	Client    runtimeclient.Client
+	Scheme    *runtime.Scheme
+	Namespace string
+	// BundledNsTemplateTierKeys is the list of the object keys of the bundled ns template tiers. This should be initialized
+	// using SetupWithManager but the field is made public so that it can be set freely during the tests.
+	BundledNsTemplateTierKeys []runtimeclient.ObjectKey
+}
+
+// initBundledNsTemplateTiersKeys initializes the internal list of the NSTemplateTiers bundled with the binary. This method
+// is only public because it is also used in the tests.
+func (r *Reconciler) initBundledNsTemplateTiersKeys() error {
+	metadata, files, err := nstemplatetiers.LoadFiles(deploy.NSTemplateTiersFS, nstemplatetiers.NsTemplateTierRootDir)
+	if err != nil {
+		return err
+	}
+
+	return commonnstemplatetiers.GenerateTiers(r.Scheme, func(obj runtimeclient.Object, _ bool, _ string) (bool, error) {
+		// the bundled annotation is ensured on the template tiers only when they are created. It may not exist in the files on the embedded
+		// filesystem. Therefore, we're adding all the tiers from the filesystem unconditionally here and only check for the annotation
+		// in the reconcile method.
+		if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+			r.BundledNsTemplateTierKeys = append(r.BundledNsTemplateTierKeys, runtimeclient.ObjectKeyFromObject(obj))
+		}
+		return true, nil
+	}, r.Namespace, metadata, files)
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
@@ -67,6 +99,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	if tier.Annotations[toolchainv1alpha1.BundledAnnotationKey] == templates.BundledWithHostOperatorAnnotationValue {
+		if !slices.Contains(r.BundledNsTemplateTierKeys, request.NamespacedName) {
+			// this tier used to be bundled with the operator but it is not anymore.
+			// if it is not used by anything, we are safe to delete it.
+			if used, err := r.isTierUsed(ctx, tier); err != nil {
+				return reconcile.Result{}, err
+			} else if !used {
+				return reconcile.Result{}, r.Client.Delete(ctx, tier)
+			}
+		}
+	}
+
 	_, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to get ToolchainConfig: %w", err)
@@ -89,6 +133,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.updateStatus(ctx, tier, ReadyCondition())
 
 	return reconcile.Result{}, err
+}
+
+func (r *Reconciler) isTierUsed(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+	list := &toolchainv1alpha1.SpaceList{}
+	if err := r.Client.List(ctx, list, runtimeclient.InNamespace(r.Namespace), runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.Name)}); err != nil {
+		return false, err
+	}
+	return len(list.Items) > 0, nil
 }
 
 // ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
@@ -183,7 +235,6 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		return false, "", err
 	}
 	return true, ttrName, nil
-
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {

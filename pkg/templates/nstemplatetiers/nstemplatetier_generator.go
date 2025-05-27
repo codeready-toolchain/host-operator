@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/templates"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
@@ -20,10 +21,13 @@ import (
 
 const NsTemplateTierRootDir = "templates/nstemplatetiers"
 
+var bundledAnnotation = map[string]string{
+	toolchainv1alpha1.BundledAnnotationKey: templates.BundledWithHostOperatorAnnotationValue,
+}
+
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string) error {
-
 	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, NsTemplateTierRootDir)
 	if err != nil {
 		return err
@@ -31,6 +35,7 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 
 	// initialize tier generator, loads templates from assets
 	return nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, canUpdate bool, _ string) (bool, error) {
+		commonclient.MergeAnnotations(toEnsure, bundledAnnotation)
 		if !canUpdate {
 			if err := client.Create(ctx, toEnsure); err != nil && !apierrors.IsAlreadyExists(err) {
 				return false, err

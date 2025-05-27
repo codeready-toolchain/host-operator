@@ -133,3 +133,5 @@ require (
 go 1.22.0
 
 toolchain go1.22.12
+
+replace github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20250604131500-1d064aa4a843
