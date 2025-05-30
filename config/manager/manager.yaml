@@ -55,6 +55,9 @@ spec:
             - "--health-probe-bind-address=:8081"
             - "--metrics-bind-address=127.0.0.1:8080"
             - "--leader-elect"
+          ports:
+            - name: health
+              containerPort: 8081
           image: REPLACE_IMAGE
           securityContext:
             allowPrivilegeEscalation: false
