@@ -11,8 +11,10 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
@@ -37,9 +39,7 @@ const (
 func TestReconcile(t *testing.T) {
 	// given
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
-
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
@@ -75,7 +75,6 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
-
 	})
 
 	t.Run("revisions management", func(t *testing.T) {
@@ -194,7 +193,6 @@ func TestReconcile(t *testing.T) {
 						require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					})
 				})
-
 			})
 
 			t.Run("revision field is set but TierTemplateRevision CRs are missing, they should be created", func(t *testing.T) {
@@ -264,7 +262,6 @@ func TestReconcile(t *testing.T) {
 			})
 
 			t.Run("errors", func(t *testing.T) {
-
 				t.Run("error when TierTemplate is missing ", func(t *testing.T) {
 					// given
 					// make sure revisions field is nill before starting the test
@@ -285,9 +282,7 @@ func TestReconcile(t *testing.T) {
 					// and the TierTemplateRevision CRs are not created
 					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
-
 			})
-
 		})
 
 		t.Run("if being deleted, then do nothing", func(t *testing.T) {
@@ -320,6 +315,94 @@ func TestReconcile(t *testing.T) {
 		})
 	})
 
+	t.Run("bundled tiers", func(t *testing.T) {
+		for _, setup := range []struct {
+			bundled          bool
+			annotatedBundled bool
+			used             bool
+		}{
+			{
+				bundled:          false,
+				annotatedBundled: false,
+				used:             false,
+			},
+			{
+				bundled:          false,
+				annotatedBundled: false,
+				used:             true,
+			},
+			{
+				bundled:          false,
+				annotatedBundled: true,
+				used:             false,
+			},
+			{
+				bundled:          false,
+				annotatedBundled: true,
+				used:             true,
+			},
+			{
+				bundled:          true,
+				annotatedBundled: false,
+				used:             false,
+			},
+			{
+				bundled:          true,
+				annotatedBundled: false,
+				used:             true,
+			},
+			{
+				bundled:          true,
+				annotatedBundled: true,
+				used:             false,
+			},
+			{
+				bundled:          true,
+				annotatedBundled: true,
+				used:             true,
+			},
+		} {
+			t.Run(fmt.Sprintf("tier: bundled=%v, annotatedBundled=%v, used=%v", setup.bundled, setup.annotatedBundled, setup.used), func(t *testing.T) {
+				// given
+				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"))
+				objs := initTierTemplates(t, withTemplateObjects(newTestCRQ("600")), base1nsTier.Name)
+				objs = append(objs, base1nsTier)
+
+				if setup.annotatedBundled {
+					if base1nsTier.Annotations == nil {
+						base1nsTier.Annotations = map[string]string{}
+					}
+					base1nsTier.Annotations[toolchainv1alpha1.BundledAnnotationKey] = templates.BundledWithHostOperatorAnnotationValue
+				}
+
+				if setup.used {
+					space := &toolchainv1alpha1.Space{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-space",
+							Namespace: base1nsTier.Namespace,
+							Labels:    map[string]string{hash.TemplateTierHashLabelKey(base1nsTier.Name): "1234"},
+						},
+					}
+					objs = append(objs, space)
+				}
+
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, objs...)
+
+				if setup.bundled {
+					r.BundledNsTemplateTierKeys = append(r.BundledNsTemplateTierKeys, runtimeclient.ObjectKeyFromObject(base1nsTier))
+				}
+
+				// when
+				_, err := r.Reconcile(context.TODO(), req)
+				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(base1nsTier), &toolchainv1alpha1.NSTemplateTier{})
+
+				// then
+				shouldBeDeleted := !setup.bundled && setup.annotatedBundled && !setup.used
+				require.NoError(t, err)
+				assert.Equal(t, shouldBeDeleted, errors.IsNotFound(gerr))
+			})
+		}
+	})
 }
 
 func TestUpdateNSTemplateTier(t *testing.T) {
@@ -454,13 +537,11 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
 			require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
 		})
-
 	})
-
 }
 
 func newTestCRQ(podsCount string) unstructured.Unstructured {
-	var crq = unstructured.Unstructured{Object: map[string]interface{}{
+	crq := unstructured.Unstructured{Object: map[string]interface{}{
 		"kind": "ClusterResourceQuota",
 		"metadata": map[string]interface{}{
 			"name": "for-{{.SPACE_NAME}}-deployments",
@@ -509,9 +590,11 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
 	r := &nstemplatetier.Reconciler{
-		Client: cl,
-		Scheme: s,
+		Client:    cl,
+		Scheme:    s,
+		Namespace: test.HostOperatorNs,
 	}
+
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,
