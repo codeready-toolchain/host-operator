@@ -11,12 +11,14 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -285,123 +288,126 @@ func TestReconcile(t *testing.T) {
 			})
 		})
 
-		t.Run("if being deleted, then do nothing", func(t *testing.T) {
-			// given
-			tierBeingDeleted := base1nsTier.DeepCopy()
-			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-			tierBeingDeleted.Finalizers = []string{"dummy"}
-			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
-			called := false
-			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
-				if called {
-					return fmt.Errorf("should not call Get more than once")
-				}
-				called = true
-				return cl.Client.Get(ctx, key, obj, opts...)
-			}
-			cl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
-				return fmt.Errorf("should not call Create")
-			}
-			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
-				return fmt.Errorf("should not call StatusUpdate")
-			}
-
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			assert.Empty(t, res.Requeue)
-		})
-	})
-
-	t.Run("bundled tiers", func(t *testing.T) {
-		for _, setup := range []struct {
-			bundled          bool
-			annotatedBundled bool
-			used             bool
-		}{
-			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             false,
-			},
-			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             true,
-			},
-			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             false,
-			},
-			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             true,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             false,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             true,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             false,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             true,
-			},
-		} {
-			t.Run(fmt.Sprintf("tier: bundled=%v, annotatedBundled=%v, used=%v", setup.bundled, setup.annotatedBundled, setup.used), func(t *testing.T) {
+		t.Run("if being deleted", func(t *testing.T) {
+			t.Run("do nothing on non-bundled tiers", func(t *testing.T) {
 				// given
-				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"))
-				objs := initTierTemplates(t, withTemplateObjects(newTestCRQ("600")), base1nsTier.Name)
-				objs = append(objs, base1nsTier)
-
-				if setup.annotatedBundled {
-					if base1nsTier.Annotations == nil {
-						base1nsTier.Annotations = map[string]string{}
-					}
-					base1nsTier.Annotations[toolchainv1alpha1.BundledAnnotationKey] = templates.BundledWithHostOperatorAnnotationValue
-				}
-
-				if setup.used {
-					space := &toolchainv1alpha1.Space{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-space",
-							Namespace: base1nsTier.Namespace,
-							Labels:    map[string]string{hash.TemplateTierHashLabelKey(base1nsTier.Name): "1234"},
-						},
-					}
-					objs = append(objs, space)
-				}
-
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, objs...)
-
-				if setup.bundled {
-					r.BundledNsTemplateTierKeys = append(r.BundledNsTemplateTierKeys, runtimeclient.ObjectKeyFromObject(base1nsTier))
-				}
+				tierBeingDeleted := base1nsTier.DeepCopy()
+				tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				controllerutil.AddFinalizer(tierBeingDeleted, "dummy") // so that the fake client allows us to create an object with non-nil deletion timestamp
+				r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
 
 				// when
-				_, err := r.Reconcile(context.TODO(), req)
-				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(base1nsTier), &toolchainv1alpha1.NSTemplateTier{})
+				res, err := r.Reconcile(context.TODO(), req)
+				inCluster := &toolchainv1alpha1.NSTemplateTier{}
+				require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster))
 
 				// then
-				shouldBeDeleted := !setup.bundled && setup.annotatedBundled && !setup.used
 				require.NoError(t, err)
-				assert.Equal(t, shouldBeDeleted, errors.IsNotFound(gerr))
+				assert.Empty(t, res.Requeue)
+				assert.Len(t, inCluster.Finalizers, 1)
+				assert.Contains(t, inCluster.Finalizers, "dummy")
 			})
-		}
+			t.Run("keep the finalizer if no-longer-bundled tier is still used", func(t *testing.T) {
+				// given
+				tierBeingDeleted := base1nsTier.DeepCopy()
+				tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				tierBeingDeleted.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
+				util.AddFinalizer(tierBeingDeleted, constants.BundledNSTemplateTierFinalizerName)
+				nstemplatetiers.BundledTierKeys = []runtimeclient.ObjectKey{}
+				space := &toolchainv1alpha1.Space{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-space",
+						Namespace: tierBeingDeleted.Namespace,
+						Labels:    map[string]string{hash.TemplateTierHashLabelKey(tierBeingDeleted.Name): "1234"},
+					},
+				}
+
+				r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted, space)
+
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				inCluster := &toolchainv1alpha1.NSTemplateTier{}
+				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+				// then
+				require.NoError(t, err)
+				require.Empty(t, res)
+				require.NoError(t, gerr)
+				require.Contains(t, inCluster.Finalizers, constants.BundledNSTemplateTierFinalizerName)
+			})
+			t.Run("remove the finalizer if no-longer-bundled tier is not used anymore", func(t *testing.T) {
+				// given
+				tierBeingDeleted := base1nsTier.DeepCopy()
+				tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				tierBeingDeleted.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
+				util.AddFinalizer(tierBeingDeleted, constants.BundledNSTemplateTierFinalizerName)
+				nstemplatetiers.BundledTierKeys = []runtimeclient.ObjectKey{}
+
+				r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
+
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				inCluster := &toolchainv1alpha1.NSTemplateTier{}
+				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+				// then
+				require.NoError(t, err)
+				require.Empty(t, res)
+				require.True(t, errors.IsNotFound(gerr))
+				require.Empty(t, inCluster.Finalizers)
+			})
+			t.Run("keep the finalizer if a bundled finalizer is still used", func(t *testing.T) {
+				// given
+				tierBeingDeleted := base1nsTier.DeepCopy()
+				tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				tierBeingDeleted.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
+				util.AddFinalizer(tierBeingDeleted, constants.BundledNSTemplateTierFinalizerName)
+				nstemplatetiers.BundledTierKeys = []runtimeclient.ObjectKey{runtimeclient.ObjectKeyFromObject(tierBeingDeleted)}
+				space := &toolchainv1alpha1.Space{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-space",
+						Namespace: tierBeingDeleted.Namespace,
+						Labels:    map[string]string{hash.TemplateTierHashLabelKey(tierBeingDeleted.Name): "1234"},
+					},
+				}
+
+				r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted, space)
+
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				inCluster := &toolchainv1alpha1.NSTemplateTier{}
+				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+				// then
+				require.NoError(t, err)
+				require.Empty(t, res)
+				require.NoError(t, gerr)
+				require.Len(t, inCluster.Finalizers, 1)
+				require.Contains(t, inCluster.Finalizers, constants.BundledNSTemplateTierFinalizerName)
+			})
+			t.Run("keep the finalizer if a bundled tier is not used", func(t *testing.T) {
+				// given
+				tierBeingDeleted := base1nsTier.DeepCopy()
+				tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				tierBeingDeleted.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
+				util.AddFinalizer(tierBeingDeleted, constants.BundledNSTemplateTierFinalizerName)
+				nstemplatetiers.BundledTierKeys = []runtimeclient.ObjectKey{runtimeclient.ObjectKeyFromObject(tierBeingDeleted)}
+
+				r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
+
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				inCluster := &toolchainv1alpha1.NSTemplateTier{}
+				gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+				// then
+				require.NoError(t, err)
+				require.Empty(t, res)
+				require.NoError(t, gerr)
+				require.Len(t, inCluster.Finalizers, 1)
+				require.Contains(t, inCluster.Finalizers, constants.BundledNSTemplateTierFinalizerName)
+			})
+		})
 	})
 }
 
@@ -590,9 +596,8 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
 	r := &nstemplatetier.Reconciler{
-		Client:    cl,
-		Scheme:    s,
-		Namespace: test.HostOperatorNs,
+		Client: cl,
+		Scheme: s,
 	}
 
 	return r, reconcile.Request{
