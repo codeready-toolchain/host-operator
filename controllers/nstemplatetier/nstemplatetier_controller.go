@@ -22,6 +22,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -119,11 +120,11 @@ func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1
 	}
 
 	if !used {
-		util.RemoveFinalizer(tier, constants.BundledNSTemplateTierFinalizerName)
-		err = r.Client.Update(ctx, tier)
+		controllerutil.RemoveFinalizer(tier, constants.BundledNSTemplateTierFinalizerName)
+		return r.Client.Update(ctx, tier)
 	}
 
-	return err
+	return nil
 }
 
 func isTierUsed(ctx context.Context, client runtimeclient.Client, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {

@@ -15,13 +15,13 @@ import (
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
-	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -183,52 +183,52 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 	})
 	t.Run("bundled tiers", func(t *testing.T) {
 		for _, setup := range []struct {
-			bundled          bool
-			annotatedBundled bool
-			used             bool
+			bundled     bool
+			markBundled bool
+			used        bool
 		}{
 			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             false,
+				bundled:     false,
+				markBundled: false,
+				used:        false,
 			},
 			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             true,
+				bundled:     false,
+				markBundled: false,
+				used:        true,
 			},
 			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             false,
+				bundled:     false,
+				markBundled: true,
+				used:        false,
 			},
 			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             true,
+				bundled:     false,
+				markBundled: true,
+				used:        true,
 			},
 			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             false,
+				bundled:     true,
+				markBundled: false,
+				used:        false,
 			},
 			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             true,
+				bundled:     true,
+				markBundled: false,
+				used:        true,
 			},
 			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             false,
+				bundled:     true,
+				markBundled: true,
+				used:        false,
 			},
 			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             true,
+				bundled:     true,
+				markBundled: true,
+				used:        true,
 			},
 		} {
-			t.Run(fmt.Sprintf("tier: bundled=%v, annotatedBundled=%v, used=%v", setup.bundled, setup.annotatedBundled, setup.used), func(t *testing.T) {
+			t.Run(fmt.Sprintf("tier: bundled=%v, annotatedBundled=%v, used=%v", setup.bundled, setup.markBundled, setup.used), func(t *testing.T) {
 				// given
 				testTier := &toolchainv1alpha1.NSTemplateTier{
 					ObjectMeta: metav1.ObjectMeta{
@@ -238,9 +238,8 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 				}
 				objs := []runtimeclient.Object{testTier}
 
-				if setup.annotatedBundled {
-					testTier.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
-					util.AddFinalizer(testTier, constants.BundledNSTemplateTierFinalizerName)
+				if setup.markBundled {
+					controllerutil.AddFinalizer(testTier, constants.BundledNSTemplateTierFinalizerName)
 				}
 
 				if setup.bundled {
@@ -266,18 +265,16 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 				gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
 
 				// then
-				shouldBeDeleted := !setup.bundled && setup.annotatedBundled && !setup.used
-				shouldBeAnnotated := setup.bundled || setup.annotatedBundled
+				shouldBeDeleted := !setup.bundled && setup.markBundled && !setup.used
+				shouldBeMarked := setup.bundled || setup.markBundled
 				require.NoError(t, err)
 				require.NoError(t, gerr)
 				if shouldBeDeleted {
 					assert.NotNil(t, inCluster.DeletionTimestamp)
 				}
-				if shouldBeAnnotated {
-					assert.Equal(t, constants.BundledWithHostOperatorAnnotationValue, inCluster.Annotations[toolchainv1alpha1.BundledAnnotationKey])
+				if shouldBeMarked {
 					assert.Contains(t, inCluster.Finalizers, constants.BundledNSTemplateTierFinalizerName)
 				} else {
-					assert.Empty(t, inCluster.Annotations)
 					assert.Empty(t, inCluster.Finalizers)
 				}
 			})
