@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"time"
 
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetierrevisioncleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
@@ -32,7 +34,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
@@ -53,6 +54,7 @@ import (
 	"k8s.io/client-go/rest"
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -279,6 +281,12 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
 		os.Exit(1)
 	}
+	if err = (&nstemplatetierrevisioncleanup.Reconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
+		os.Exit(1)
+	}
 	if err := (&toolchainconfig.Reconciler{
 		Client:         mgr.GetClient(),
 		GetMembersFunc: commoncluster.GetMemberClusters,
@@ -417,8 +425,7 @@ func main() { // nolint:gocyclo
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
-		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
+		if err := nstemplatetiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
@@ -426,8 +433,7 @@ func main() { // nolint:gocyclo
 
 		// create or update all UserTiers on the cluster at startup
 		setupLog.Info("Creating/updating the UserTier resources")
-		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
-		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+		if err := usertiers.CreateOrUpdateResources(ctx, mgr.GetScheme(), mgr.GetClient(), namespace, deploy.UserTiersFS, usertiers.UserTierRootDir); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
@@ -507,15 +513,16 @@ func (kw klogWriter) Write(p []byte) (n int, err error) {
 		klogv2.InfoDepth(OutputCallDepth, string(p))
 		return len(p), nil
 	}
-	if p[0] == 'I' {
+	switch p[0] {
+	case 'I':
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'W' {
+	case 'W':
 		klogv2.WarningDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'E' {
+	case 'E':
 		klogv2.ErrorDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else if p[0] == 'F' {
+	case 'F':
 		klogv2.FatalDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
-	} else {
+	default:
 		klogv2.InfoDepth(OutputCallDepth, string(p[DefaultPrefixLength:]))
 	}
 	return len(p), nil

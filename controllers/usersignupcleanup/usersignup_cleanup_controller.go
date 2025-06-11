@@ -37,6 +37,7 @@ type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) e
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("UserSignupCleanup").
 		For(&toolchainv1alpha1.UserSignup{}).
 		Complete(r)
 }
@@ -92,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// If the UserSignup has no previous activations (i.e. it's a new, never-provisioned UserSignup) then
 		// it should be deleted if it has been in an unverified state beyond a configured period of time
 		if !activationsAnnotationPresent || activations == "0" {
-			createdTime := instance.ObjectMeta.CreationTimestamp
+			createdTime := instance.CreationTimestamp
 
 			unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
@@ -173,7 +174,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		// Requeue this for reconciliation after the time has passed between the last transition time
 		// and the current deletion expiry threshold
-		requeueAfter := cond.LastTransitionTime.Time.Sub(deactivatedThreshold)
+		requeueAfter := cond.LastTransitionTime.Sub(deactivatedThreshold)
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{

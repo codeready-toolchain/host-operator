@@ -1640,10 +1640,11 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 
 			spc1 := hspc.NewEnabledValidTenantSPC("member1")
 			initObjs := []runtimeclient.Object{userSignup, baseNSTemplateTier, deactivate30Tier, spc1}
-			if testcase.testName == "create space error" {
+			switch testcase.testName {
+			case "create space error":
 				// mur must exist first, space is created on the reconcile after the mur is created
 				initObjs = append(initObjs, mur)
-			} else if testcase.testName == "create spacebinding error" {
+			case "create spacebinding error":
 				// mur and space must exist first, spacebinding is created on the reconcile after the space is created
 				initObjs = append(initObjs, mur, space)
 			}
@@ -2132,7 +2133,7 @@ func TestUserSignupPropagatedClaimsSynchronizedToMURWhenModified(t *testing.T) {
 	require.Equal(t, mur.Spec.PropagatedClaims, userSignup.Spec.IdentityClaims.PropagatedClaims)
 
 	// Modify one of the propagated claims
-	userSignup.Spec.IdentityClaims.PropagatedClaims.UserID = "314159265358979"
+	userSignup.Spec.IdentityClaims.UserID = "314159265358979"
 
 	// Reconcile the UserSignup again
 	r, req, _ = prepareReconcile(t, userSignup.Name, spc1, userSignup, deactivate30Tier)
@@ -4891,7 +4892,7 @@ func TestRecordProvisionTime(t *testing.T) {
 	t.Run("should be in histogram", func(t *testing.T) {
 		// given
 		t.Cleanup(metrics.Reset)
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 4000; i++ {
 			userSignup := commonsignup.NewUserSignup(
 				commonsignup.WithRequestReceivedTimeAnnotation(time.Now().Add(-time.Duration(i) * time.Second)))
 			client := test.NewFakeClient(t, userSignup)
@@ -4906,7 +4907,7 @@ func TestRecordProvisionTime(t *testing.T) {
 		for _, value := range metrics.UserSignupProvisionTimeHistogramBuckets {
 			metricstest.AssertHistogramBucketEquals(t, value, value, metrics.UserSignupProvisionTimeHistogram) // could fail when debugging
 		}
-		metricstest.AssertHistogramSampleCountEquals(t, 100, metrics.UserSignupProvisionTimeHistogram)
+		metricstest.AssertHistogramSampleCountEquals(t, 4000, metrics.UserSignupProvisionTimeHistogram)
 	})
 
 	t.Run("should not be in histogram", func(t *testing.T) {

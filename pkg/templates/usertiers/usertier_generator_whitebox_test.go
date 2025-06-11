@@ -2,14 +2,12 @@ package usertiers
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 	texttemplate "text/template"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
-	testusertiers "github.com/codeready-toolchain/host-operator/test/templates/usertiers"
 
 	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +34,10 @@ var expectedTestTiers = []string{
 	"base",
 }
 
+const (
+	testRoot = "testtemplates/testusertiers"
+)
+
 func TestLoadTemplatesByTiers(t *testing.T) {
 
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -43,10 +45,8 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
-			// given
-			assets := assets.NewAssets(AssetNames, Asset)
 			// when
-			tmpls, err := loadTemplatesByTiers(assets)
+			tmpls, err := loadTemplatesByTiers(deploy.UserTiersFS, UserTierRootDir)
 			// then
 			require.NoError(t, err)
 			require.Len(t, tmpls, len(expectedProdTiers))
@@ -64,10 +64,8 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 		})
 
 		t.Run("with test assets", func(t *testing.T) {
-			// given
-			assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
 			// when
-			tmpls, err := loadTemplatesByTiers(assets)
+			tmpls, err := loadTemplatesByTiers(TestUserTierTemplatesFS, testRoot)
 			// then
 			require.NoError(t, err)
 			require.Len(t, tmpls, 2)
@@ -91,64 +89,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			}
 		})
 	})
-
-	t.Run("failures", func(t *testing.T) {
-
-		t.Run("missing asset", func(t *testing.T) {
-			// given
-			fakeAssets := func(name string) ([]byte, error) {
-				return nil, fmt.Errorf("an error occurred")
-			}
-			assets := assets.NewAssets(testusertiers.AssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
-		})
-
-		t.Run("invalid name format", func(t *testing.T) {
-			// given
-			fakeAssetNames := func() []string {
-				return []string{`.DS_Store`} // '/advanced/foo.yaml' is not a valid filename
-			}
-			fakeAssets := func(name string) ([]byte, error) {
-				switch name {
-				case ".DS_Store":
-					return []byte(`foo:bar`), nil // just make sure the asset exists
-				default:
-					return testusertiers.Asset(name)
-				}
-			}
-			assets := assets.NewAssets(fakeAssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.EqualError(t, err, "unable to load templates: invalid name format for file '.DS_Store'")
-		})
-
-		t.Run("invalid filename scope", func(t *testing.T) {
-			// given
-			fakeAssetNames := func() []string {
-				return []string{`advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
-			}
-			fakeAssets := func(name string) ([]byte, error) {
-				switch name {
-				case "advanced/foo.yaml":
-					return []byte(`foo:bar`), nil // just make sure the asset exists
-				default:
-					return testusertiers.Asset(name)
-				}
-			}
-			assets := assets.NewAssets(fakeAssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: unknown scope for file 'advanced/foo.yaml'")
-		})
-	})
 }
 
 func TestNewUserTier(t *testing.T) {
@@ -162,9 +102,8 @@ func TestNewUserTier(t *testing.T) {
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
-			assets := assets.NewAssets(AssetNames, Asset)
 			// when
-			tc, err := newUserTierGenerator(s, nil, namespace, assets)
+			tc, err := newUserTierGenerator(s, nil, namespace, deploy.UserTiersFS, UserTierRootDir)
 			require.NoError(t, err)
 			// then
 			require.Len(t, tc.templatesByTier, len(expectedProdTiers))
@@ -175,8 +114,8 @@ func TestNewUserTier(t *testing.T) {
 				tier := runtimeObjectToUserTier(t, s, tierObjs[0])
 
 				// require.True(t, found)
-				assert.Equal(t, name, tier.ObjectMeta.Name)
-				assert.Equal(t, namespace, tier.ObjectMeta.Namespace)
+				assert.Equal(t, name, tier.Name)
+				assert.Equal(t, namespace, tier.Namespace)
 
 				switch name {
 				case "nodeactivation":
@@ -202,8 +141,7 @@ func TestNewUserTier(t *testing.T) {
 		t.Run("with test assets", func(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
-			assets := assets.NewAssets(testusertiers.AssetNames, testusertiers.Asset)
-			tc, err := newUserTierGenerator(s, nil, namespace, assets)
+			tc, err := newUserTierGenerator(s, nil, namespace, TestUserTierTemplatesFS, testRoot)
 			require.NoError(t, err)
 
 			for _, tier := range expectedTestTiers {

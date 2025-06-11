@@ -64,7 +64,7 @@ func (a *Assertion) Exists() *Assertion {
 func (a *Assertion) DoesNotExist() *Assertion {
 	err := a.loadResource()
 	require.Error(a.t, err)
-	assert.EqualError(a.t, err, "no spacebinding found")
+	require.EqualError(a.t, err, "no spacebinding found")
 	return a
 }
 

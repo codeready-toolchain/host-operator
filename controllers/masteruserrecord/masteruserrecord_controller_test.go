@@ -845,7 +845,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			if ua, ok := obj.(*toolchainv1alpha1.UserAccount); ok {
 				return fmt.Errorf("unable to update user account %s", ua.Name)
 			}
-			return memberClient.Client.Update(ctx, obj, opts...)
+			return memberClient.Update(ctx, obj, opts...)
 		}
 		otherTier := tiertest.OtherTier(t)
 		modifiedMur := murtest.NewMasterUserRecord(t, "john",
@@ -1257,7 +1257,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		// remove finalizer on UserAcc to delete
 		userAcc.SetFinalizers(nil)
-		err = memberClient.Client.Update(context.TODO(), userAcc)
+		err = memberClient.Update(context.TODO(), userAcc)
 		require.NoError(t, err)
 
 		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -1445,7 +1445,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
 	return reconcile.Request{
-		NamespacedName: namespacedName(mur.ObjectMeta.Namespace, mur.ObjectMeta.Name),
+		NamespacedName: namespacedName(mur.Namespace, mur.Name),
 	}
 }
 

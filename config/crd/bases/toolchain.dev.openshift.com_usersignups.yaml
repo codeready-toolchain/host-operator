@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: usersignups.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -64,14 +64,19 @@ spec:
         description: UserSignup registers a user in the CodeReady Toolchain
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -101,9 +106,9 @@ spec:
                       claim
                     type: string
                   originalSub:
-                    description: OriginalSub is an optional property temporarily introduced
-                      for the purpose of migrating the users to a new IdP provider
-                      client, and contains the user's "original-sub" claim
+                    description: |-
+                      OriginalSub is an optional property temporarily introduced for the purpose of migrating the users to
+                      a new IdP provider client, and contains the user's "original-sub" claim
                     type: string
                   preferredUsername:
                     description: PreferredUsername contains the user's username
@@ -127,8 +132,9 @@ spec:
                 type: array
                 x-kubernetes-list-type: atomic
               targetCluster:
-                description: The cluster in which the user is provisioned in If not
-                  set then the target cluster will be picked automatically
+                description: |-
+                  The cluster in which the user is provisioned in
+                  If not set then the target cluster will be picked automatically
                 type: string
             required:
             - identityClaims
@@ -141,8 +147,10 @@ spec:
                   compliant username
                 type: string
               conditions:
-                description: 'Conditions is an array of current UserSignup conditions
-                  Supported condition types: PendingApproval, Provisioning, Complete'
+                description: |-
+                  Conditions is an array of current UserSignup conditions
+                  Supported condition types:
+                  PendingApproval, Provisioning, Complete
                 items:
                   properties:
                     lastTransitionTime:
@@ -176,18 +184,17 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               homeSpace:
-                description: HomeSpace is the name of the Space that is created for
-                  the user immediately after their account is approved. This is used
-                  by the proxy when no workspace context is provided.
+                description: |-
+                  HomeSpace is the name of the Space that is created for the user
+                  immediately after their account is approved.
+                  This is used by the proxy when no workspace context is provided.
                 type: string
               scheduledDeactivationTimestamp:
-                description: ScheduledDeactivationTimestamp is the calculated timestamp
-                  after which the user's account will be deactivated, typically after
-                  the expiry of their trial and based on the term specific by their
-                  UserTier.  This property may be used as a convenience to determine
-                  the amount of time an account has left before deactivation, without
-                  requiring a separate lookup for the UserTier and subsequent calculation.  It
-                  is managed by the Deactivation controller in the host operator.
+                description: |-
+                  ScheduledDeactivationTimestamp is the calculated timestamp after which the user's account will be deactivated, typically
+                  after the expiry of their trial and based on the term specific by their UserTier.  This property may be used as
+                  a convenience to determine the amount of time an account has left before deactivation, without requiring a separate
+                  lookup for the UserTier and subsequent calculation.  It is managed by the Deactivation controller in the host operator.
                 format: date-time
                 type: string
             type: object

@@ -1,6 +1,7 @@
 package registrationservice
 
 import (
+	"github.com/codeready-toolchain/host-operator/deploy"
 	templatev1 "github.com/openshift/api/template/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -13,7 +14,7 @@ const ResourceName = "registration-service"
 const ProxyRouteName = "api"
 
 func GetDeploymentTemplate() (*templatev1.Template, error) {
-	deployment, err := Asset("registration-service.yaml")
+	deployment, err := deploy.RegistrationServiceFS.ReadFile("templates/registration-service/registration-service.yaml")
 	if err != nil {
 		return nil, err
 	}

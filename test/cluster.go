@@ -39,7 +39,7 @@ type Modifier func(toolchainCluster *cluster.CachedToolchainCluster)
 
 func WithClusterRoleLabel(labelKey string) Modifier {
 	return func(cluster *cluster.CachedToolchainCluster) {
-		cluster.Config.Labels[labelKey] = "" // we don't care about the label value, only the key is used
+		cluster.Labels[labelKey] = "" // we don't care about the label value, only the key is used
 	}
 }
 

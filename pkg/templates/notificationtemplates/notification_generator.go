@@ -50,7 +50,7 @@ func templatesForAssets(notificationFS embed.FS, root string, setName string) (m
 		return nil, err
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", setName)
+		return nil, fmt.Errorf("could not find any emails templates for the environment %v", setName)
 	}
 	notificationTemplates = make(map[string]NotificationTemplate)
 	for _, path := range paths {

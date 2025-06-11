@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -60,9 +59,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// Watch SpaceRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
 		b = b.WatchesRawSource(
-			source.Kind(memberCluster.Cache, &toolchainv1alpha1.SpaceRequest{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+			source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.SpaceRequest{},
+				&handler.EnqueueRequestForObject{},
+				predicate.GenerationChangedPredicate{}))
 	}
 	return b.Complete(r)
 }
@@ -571,7 +570,7 @@ func (r *Reconciler) generateKubeConfig(ctx context.Context, subSpaceTargetClust
 	// create apiConfig based on the secret content
 	clusters := make(map[string]*api.Cluster, 1)
 	clusters["default-cluster"] = &api.Cluster{
-		Server:                   subSpaceTargetCluster.Config.APIEndpoint,
+		Server:                   subSpaceTargetCluster.APIEndpoint,
 		CertificateAuthorityData: subSpaceTargetCluster.RestConfig.CAData,
 		InsecureSkipTLSVerify:    subSpaceTargetCluster.RestConfig.Insecure,
 	}

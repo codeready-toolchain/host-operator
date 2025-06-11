@@ -1,15 +1,11 @@
 # see go.mod
-CONTROLLER_GEN_VERSION=v0.14.0
-KUSTOMIZE_VERSION=v5.0.1
+CONTROLLER_GEN_VERSION=v0.16.5
+KUSTOMIZE_VERSION=v5.4.3
 GO_BINDATA_VERSION=v3.1.2
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,${CONTROLLER_GEN_VERSION})
-
-GO_BINDATA = $(shell pwd)/bin/go-bindata
-go-bindata: ## Download go-bindata locally if necessary.
-	$(call go-get-tool,$(GO_BINDATA),github.com/go-bindata/go-bindata/go-bindata,${GO_BINDATA_VERSION})
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.

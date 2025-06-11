@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: masteruserrecords.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -44,14 +44,19 @@ spec:
           and namespaces provisioned in CodeReady Toolchain
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -59,14 +64,14 @@ spec:
             description: MasterUserRecordSpec defines the desired state of MasterUserRecord
             properties:
               disabled:
-                description: If set to true then the corresponding user should not
-                  be able to login (but the underlying UserAccounts still exists)
+                description: |-
+                  If set to true then the corresponding user should not be able to login (but the underlying UserAccounts still exists)
                   "false" is assumed by default
                 type: boolean
               propagatedClaims:
-                description: PropagatedClaims contains a selection of claim values
-                  from the SSO Identity Provider which are intended to be "propagated"
-                  down the resource dependency chain
+                description: |-
+                  PropagatedClaims contains a selection of claim values from the SSO Identity Provider which are intended to
+                  be "propagated" down the resource dependency chain
                 properties:
                   accountID:
                     description: AccountID contains the value of the 'account_id'
@@ -76,9 +81,9 @@ spec:
                     description: Email contains the user's email address
                     type: string
                   originalSub:
-                    description: OriginalSub is an optional property temporarily introduced
-                      for the purpose of migrating the users to a new IdP provider
-                      client, and contains the user's "original-sub" claim
+                    description: |-
+                      OriginalSub is an optional property temporarily introduced for the purpose of migrating the users to
+                      a new IdP provider client, and contains the user's "original-sub" claim
                     type: string
                   sub:
                     description: Sub contains the value of the 'sub' claim
@@ -91,11 +96,11 @@ spec:
                 - sub
                 type: object
               tierName:
-                description: TierName is an optional property introduced to retain
-                  the name of the tier for which the Dev Sandbox user is provisioned,
-                  so we can still deal with deactivation once the NSTemplateSet field
-                  has been removed from `[]spec.UserAccounts` temporarily marked as
-                  optional until the migration took place (CRT-1321)
+                description: |-
+                  TierName is an optional property introduced to retain the name of the tier
+                  for which the Dev Sandbox user is provisioned, so we can still deal with deactivation
+                  once the NSTemplateSet field has been removed from `[]spec.UserAccounts`
+                  temporarily marked as optional until the migration took place (CRT-1321)
                 type: string
               userAccounts:
                 description: The list of user accounts in the member clusters which
@@ -117,9 +122,10 @@ spec:
             description: MasterUserRecordStatus defines the observed state of MasterUserRecord
             properties:
               conditions:
-                description: 'Conditions is an array of current Master User Record
-                  conditions Supported condition types: Provisioning, UserAccountNotReady
-                  and Ready'
+                description: |-
+                  Conditions is an array of current Master User Record conditions
+                  Supported condition types:
+                  Provisioning, UserAccountNotReady and Ready
                 items:
                   properties:
                     lastTransitionTime:
@@ -172,8 +178,9 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: 'Conditions is an array of current User Account
-                        conditions Supported condition types: ConditionReady'
+                      description: |-
+                        Conditions is an array of current User Account conditions
+                        Supported condition types: ConditionReady
                       items:
                         properties:
                           lastTransitionTime:

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: tiertemplaterevisions.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -25,14 +25,19 @@ spec:
           API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -44,16 +49,19 @@ spec:
                   be used to replace the variables present in the TemplateObjects
                   list when provisioning a Space.
                 items:
-                  description: Parameter defines a name/value variable that is to
-                    be processed during TierTemplate creation.
+                  description: |-
+                    Parameter defines a name/value variable that is to be processed during
+                    TierTemplate creation.
                   properties:
                     name:
-                      description: Name must be set and it can be referenced in the
-                        TierTemplate content using {{.NAME}}
+                      description: |-
+                        Name must be set and it can be referenced in the TierTemplate
+                        content using {{.NAME}}
                       type: string
                     value:
-                      description: Value holds the Parameter data. The value replaces
-                        all occurrences of the Parameter {{.NAME}}.
+                      description: |-
+                        Value holds the Parameter data.
+                        The value replaces all occurrences of the Parameter {{.NAME}}.
                       type: string
                   required:
                   - name
@@ -64,10 +72,9 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               templateObjects:
-                description: TemplateObjects contains list of Unstructured Objects
-                  that can be parsed at runtime and will be applied as part of the
-                  tier provisioning. The template parameters values will be defined
-                  in the NSTemplateTier CRD.
+                description: |-
+                  TemplateObjects contains list of Unstructured Objects that can be parsed at runtime and will be applied as part of the tier provisioning.
+                  The template parameters values will be defined in the NSTemplateTier CRD.
                 items:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true

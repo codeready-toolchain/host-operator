@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,9 +48,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// Watch SpaceBindingRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
 		b = b.WatchesRawSource(
-			source.Kind(memberCluster.Cache, &toolchainv1alpha1.SpaceBindingRequest{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+			source.Kind[runtimeclient.Object](memberCluster.Cache, &toolchainv1alpha1.SpaceBindingRequest{},
+				&handler.EnqueueRequestForObject{},
+				predicate.GenerationChangedPredicate{}))
 	}
 	return b.Complete(r)
 }
@@ -230,7 +229,7 @@ func (r *Reconciler) ensureSpaceBinding(ctx context.Context, memberCluster clust
 	// check if existing spacebinding was created from spaceBindingRequest
 	// and return an error in case it was not.
 	if spaceBinding != nil && !sbrOwnsSpaceBinding(spaceBinding, spaceBindingRequest) {
-		return fmt.Errorf("A SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
+		return fmt.Errorf("a SpaceBinding for Space '%s' and MUR '%s' already exists, but it's not managed by this SpaceBindingRequest CR. It's not allowed to create multiple SpaceBindings for the same combination of Space and MasterUserRecord", space.GetName(), spaceBindingRequest.Spec.MasterUserRecord)
 	}
 
 	// space is being deleted
