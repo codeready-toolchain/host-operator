@@ -10,7 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/codeready-toolchain/toolchain-common/pkg/finalizers"
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +29,10 @@ import (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	if err := r.RegisterFinalizers(); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&toolchainv1alpha1.TierTemplate{},
@@ -38,14 +42,23 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
 type Reconciler struct {
-	Client runtimeclient.Client
-	Scheme *runtime.Scheme
+	Client     runtimeclient.Client
+	Scheme     *runtime.Scheme
+	finalizers finalizers.Finalizers
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
+
+// RegisterFinalizers should only be called from the unit tests. At runtime, it is called during SetupWithManager.
+func (r *Reconciler) RegisterFinalizers() error {
+	if err := r.finalizers.RegisterWithStandardName(&nsTemplateTierUsedFinalizer{Client: r.Client}); err != nil {
+		return fmt.Errorf("failed to register the NSTemplateTier finalizer (this should not happen): %w", err)
+	}
+	return nil
+}
 
 // Reconcile takes care of fetching the NSTemplateTier
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -62,9 +75,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, fmt.Errorf("unable to get the current NSTemplateTier: %w", err)
 	}
-	// if the NSTemplateTier is being deleted, then do nothing
-	if util.IsBeingDeleted(tier) {
-		return reconcile.Result{}, nil
+	if updated, err := r.finalizers.FinalizeAndUpdate(ctx, r.Client, tier); updated || err != nil {
+		return reconcile.Result{}, err
 	}
 
 	_, err := toolchainconfig.GetToolchainConfig(r.Client)
@@ -183,7 +195,6 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		return false, "", err
 	}
 	return true, ttrName, nil
-
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {

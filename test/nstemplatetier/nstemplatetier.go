@@ -8,6 +8,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -242,6 +243,12 @@ func WithParameter(name, value string) TierOption {
 				Value: value,
 			},
 		)
+	}
+}
+
+func WithFinalizer() TierOption {
+	return func(nt *toolchainv1alpha1.NSTemplateTier) {
+		controllerutil.AddFinalizer(nt, toolchainv1alpha1.FinalizerName)
 	}
 }
 
