@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -242,6 +244,16 @@ func WithParameter(name, value string) TierOption {
 				Value: value,
 			},
 		)
+	}
+}
+
+func MarkedBundled() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		if tier.Annotations == nil {
+			tier.Annotations = map[string]string{}
+		}
+		tier.Annotations[toolchainv1alpha1.BundledAnnotationKey] = constants.BundledWithHostOperatorAnnotationValue
+		util.AddFinalizer(tier, constants.BundledNSTemplateTierFinalizerName)
 	}
 }
 

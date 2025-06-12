@@ -8,8 +8,10 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 
@@ -20,6 +22,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -64,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	// if the NSTemplateTier is being deleted, then do nothing
 	if util.IsBeingDeleted(tier) {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.handleDeletion(ctx, tier)
 	}
 
 	_, err := toolchainconfig.GetToolchainConfig(r.Client)
@@ -89,6 +92,47 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.updateStatus(ctx, tier, ReadyCondition())
 
 	return reconcile.Result{}, err
+}
+
+func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) error {
+	if !util.HasFinalizer(tier, constants.BundledNSTemplateTierFinalizerName) {
+		// no special handling required for "ordinary" nstemplatetiers
+		return nil
+	}
+
+	bundled, err := nstemplatetiers.IsBundled(runtimeclient.ObjectKeyFromObject(tier))
+	if err != nil {
+		return fmt.Errorf("failed to find if a tier is bundled or not (this shouldn't happen): %w", err)
+	}
+
+	if bundled {
+		// let's just keep the bundled tier around even if someone wants to delete it. It'd be recreated at
+		// the next start of the operator anyway.
+		return nil
+	}
+
+	// We have a tier with a "bundled" finalizer that is not bundled - i.e. a tier that used to be bundled
+	// but is not anymore and that is being deleted. We allow such deletion only when the tier is not used
+	// by any space.
+	used, err := isTierUsed(ctx, r.Client, tier)
+	if err != nil {
+		return err
+	}
+
+	if !used {
+		controllerutil.RemoveFinalizer(tier, constants.BundledNSTemplateTierFinalizerName)
+		return r.Client.Update(ctx, tier)
+	}
+
+	return nil
+}
+
+func isTierUsed(ctx context.Context, client runtimeclient.Client, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+	list := &toolchainv1alpha1.SpaceList{}
+	if err := client.List(ctx, list, runtimeclient.InNamespace(tier.Namespace), runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.Name)}); err != nil {
+		return false, err
+	}
+	return len(list.Items) > 0, nil
 }
 
 // ensureRevision ensures that there is a TierTemplateRevision CR for each of the TierTemplate.
@@ -183,7 +227,6 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		return false, "", err
 	}
 	return true, ttrName, nil
-
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {
