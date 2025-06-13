@@ -92,8 +92,7 @@ func TestReconcile(t *testing.T) {
 			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
 			t.Run("add revisions when they are missing", func(t *testing.T) {
 				// given
-				testTier := base1nsTier.DeepCopy()
-				r, req, cl := prepareReconcile(t, testTier.Name, append(tierTemplates, testTier)...)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -103,7 +102,7 @@ func TestReconcile(t *testing.T) {
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were NOT created when using TierTemplates as revisions
-				tiertemplaterevision.AssertThatTTRs(t, cl, testTier.GetNamespace()).DoNotExist()
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
 					// the NSTemplateTier already has the revisions from previous test
@@ -120,7 +119,7 @@ func TestReconcile(t *testing.T) {
 						).
 						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// no TierTemplateRevision CRs were created
-					tiertemplaterevision.AssertThatTTRs(t, cl, testTier.GetNamespace()).DoNotExist()
+					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
 			})
 		})
@@ -131,9 +130,8 @@ func TestReconcile(t *testing.T) {
 			crq := newTestCRQ("600")
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
-				testTier := base1nsTier.DeepCopy()
-				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), testTier.Name)
-				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, testTier)...)
+				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -143,16 +141,16 @@ func TestReconcile(t *testing.T) {
 				tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 					HasStatusTierTemplateRevisions(tierTemplatesRefs)
 				// check that expected TierTemplateRevision CRs were created
-				tiertemplaterevision.AssertThatTTRs(t, cl, testTier.GetNamespace()).
+				tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).
 					ExistFor("base1ns", tierTemplatesRefs...).ForEach(func(ttr *toolchainv1alpha1.TierTemplateRevision) {
 					// verify the content of the TierTemplate matches the one of the TTR
 					templateRef, ok := ttr.GetLabels()[toolchainv1alpha1.TemplateRefLabelKey]
 					assert.True(t, ok)
 					tierTemplate := toolchainv1alpha1.TierTemplate{}
-					err := cl.Get(context.TODO(), types.NamespacedName{Name: templateRef, Namespace: testTier.GetNamespace()}, &tierTemplate)
+					err := cl.Get(context.TODO(), types.NamespacedName{Name: templateRef, Namespace: base1nsTier.GetNamespace()}, &tierTemplate)
 					require.NoError(t, err)
 					assert.Equal(t, tierTemplate.Spec.TemplateObjects, ttr.Spec.TemplateObjects)
-					assert.Equal(t, ttr.Spec.Parameters, testTier.Spec.Parameters)
+					assert.Equal(t, ttr.Spec.Parameters, base1nsTier.Spec.Parameters)
 				})
 				t.Run("don't add revisions when they are up to date", func(t *testing.T) {
 					// given
@@ -171,7 +169,7 @@ func TestReconcile(t *testing.T) {
 						HasStatusTierTemplateRevisions(tierTemplatesRefs)
 					// expected TierTemplateRevision CRs are still there
 					ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(testTier.GetNamespace()))
+					err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 					require.NoError(t, err)
 					require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					t.Run("revision field is set but some TierTemplateRevision is missing, status should be updated", func(t *testing.T) {
@@ -190,7 +188,7 @@ func TestReconcile(t *testing.T) {
 							HasStatusTierTemplateRevisions(tierTemplatesRefs)
 						// expected TierTemplateRevision CRs are there
 						ttrs := toolchainv1alpha1.TierTemplateRevisionList{}
-						err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(testTier.GetNamespace()))
+						err = cl.List(context.TODO(), &ttrs, runtimeclient.InNamespace(base1nsTier.GetNamespace()))
 						require.NoError(t, err)
 						require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					})
