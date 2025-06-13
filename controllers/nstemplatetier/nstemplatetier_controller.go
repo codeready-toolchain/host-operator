@@ -10,9 +10,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/finalizers"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,10 +30,6 @@ import (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	if err := r.RegisterFinalizers(); err != nil {
-		return err
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&toolchainv1alpha1.TierTemplate{},
@@ -42,23 +39,14 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
 type Reconciler struct {
-	Client     runtimeclient.Client
-	Scheme     *runtime.Scheme
-	finalizers finalizers.Finalizers
+	Client runtimeclient.Client
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
-
-// RegisterFinalizers should only be called from the unit tests. At runtime, it is called during SetupWithManager.
-func (r *Reconciler) RegisterFinalizers() error {
-	if err := r.finalizers.RegisterWithStandardName(&nsTemplateTierUsedFinalizer{Client: r.Client}); err != nil {
-		return fmt.Errorf("failed to register the NSTemplateTier finalizer (this should not happen): %w", err)
-	}
-	return nil
-}
 
 // Reconcile takes care of fetching the NSTemplateTier
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -75,7 +63,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, fmt.Errorf("unable to get the current NSTemplateTier: %w", err)
 	}
-	if updated, err := r.finalizers.FinalizeAndUpdate(ctx, r.Client, tier); updated || err != nil {
+	if util.IsBeingDeleted(tier) {
+		return reconcile.Result{}, r.handleDeletion(ctx, tier)
+	}
+	if err := r.addFinalizer(ctx, tier); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -264,6 +255,39 @@ func (r *Reconciler) updateStatus(ctx context.Context, tmplTier *toolchainv1alph
 		return nil
 	}
 	return r.Client.Status().Update(ctx, tmplTier)
+}
+
+func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) error {
+	list := &toolchainv1alpha1.SpaceList{}
+	if err := r.Client.List(ctx, list,
+		runtimeclient.InNamespace(tier.GetNamespace()),
+		runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.GetName())},
+		runtimeclient.Limit(1)); err != nil {
+		return err
+	}
+
+	if len(list.Items) > 0 {
+		// leave the finalizer in place - it's still being used
+		return nil
+	}
+
+	// Remove finalizer from the NSTemplateTier, it's no longer used anywhere
+	// so we can let the cluster proceed with the deletion.
+	util.RemoveFinalizer(tier, toolchainv1alpha1.FinalizerName)
+	return r.Client.Update(ctx, tier)
+}
+
+func (r *Reconciler) addFinalizer(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) error {
+	// Add the finalizer if it is not present
+	if !util.HasFinalizer(tier, toolchainv1alpha1.FinalizerName) {
+		logger := log.FromContext(ctx)
+		logger.Info("adding finalizer on NSTemplateTier")
+		util.AddFinalizer(tier, toolchainv1alpha1.FinalizerName)
+		if err := r.Client.Update(ctx, tier); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func FailedCondition(reason string, cause string) toolchainv1alpha1.Condition {

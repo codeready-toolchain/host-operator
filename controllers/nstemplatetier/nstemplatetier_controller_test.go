@@ -308,7 +308,7 @@ func TestReconcile(t *testing.T) {
 			gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
 
 			// then
-			require.Error(t, err)
+			require.NoError(t, err)
 			require.Empty(t, res)
 			require.NoError(t, gerr)
 			require.Len(t, inCluster.Finalizers, 1)
@@ -505,8 +505,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 		Client: cl,
 		Scheme: s,
 	}
-
-	require.NoError(t, r.RegisterFinalizers())
 
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
