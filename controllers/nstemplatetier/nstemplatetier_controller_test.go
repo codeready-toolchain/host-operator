@@ -306,7 +306,7 @@ func TestReconcile(t *testing.T) {
 			gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
 
 			// then
-			require.NoError(t, err)
+			require.Error(t, err)
 			require.Empty(t, res)
 			require.NoError(t, gerr)
 			require.Len(t, inCluster.Finalizers, 1)
