@@ -268,7 +268,7 @@ func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1
 
 	if len(list.Items) > 0 {
 		// leave the finalizer in place - it's still being used
-		return nil
+		return fmt.Errorf("NSTemplateTier is still used by some spaces")
 	}
 
 	// Remove finalizer from the NSTemplateTier, it's no longer used anywhere
