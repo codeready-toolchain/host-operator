@@ -261,12 +261,29 @@ func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1
 	list := &toolchainv1alpha1.SpaceList{}
 	if err := r.Client.List(ctx, list,
 		runtimeclient.InNamespace(tier.GetNamespace()),
-		runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.GetName())},
-		runtimeclient.Limit(1)); err != nil {
+		runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.GetName())}); err != nil {
 		return err
 	}
 
-	if len(list.Items) > 0 {
+	hasSpaces := false
+
+	for _, s := range list.Items {
+		if util.IsBeingDeleted(&s) {
+			// As an optimization, we skip the spaces that are being deleted.
+			// There is no functional relationship between the spaces and the tier, we just don't want
+			// there to be spaces that refer to a non-existing tier. So if the space is being deleted,
+			// we can pretend like it doesn't already exist.
+			//
+			// This speeds up the deletion of the tier because it doesn't linger around for the spaces
+			// that are being deleted (which can take a good amount of time).
+			continue
+		}
+		// we found a space that is not being deleted and that references our tier.
+		hasSpaces = true
+		break
+	}
+
+	if hasSpaces {
 		// leave the finalizer in place - it's still being used
 		return fmt.Errorf("NSTemplateTier is still used by some spaces")
 	}

@@ -312,6 +312,33 @@ func TestReconcile(t *testing.T) {
 			require.Len(t, inCluster.Finalizers, 1)
 			require.Contains(t, inCluster.Finalizers, toolchainv1alpha1.FinalizerName)
 		})
+		t.Run("space being deleted doesn't block tier deletion", func(t *testing.T) {
+			// given
+			tierBeingDeleted := base1nsTier.DeepCopy()
+			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			controllerutil.AddFinalizer(tierBeingDeleted, toolchainv1alpha1.FinalizerName)
+			space := &toolchainv1alpha1.Space{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-space",
+					Namespace:         tierBeingDeleted.Namespace,
+					Labels:            map[string]string{hash.TemplateTierHashLabelKey(tierBeingDeleted.Name): "1234"},
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+					Finalizers:        []string{"dummy"},
+				},
+			}
+
+			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted, space)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+			inCluster := &toolchainv1alpha1.NSTemplateTier{}
+			gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+			// then
+			require.NoError(t, err)
+			require.Empty(t, res)
+			require.True(t, errors.IsNotFound(gerr))
+		})
 	})
 }
 
