@@ -10,9 +10,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,9 +63,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, fmt.Errorf("unable to get the current NSTemplateTier: %w", err)
 	}
-	// if the NSTemplateTier is being deleted, then do nothing
 	if util.IsBeingDeleted(tier) {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.handleDeletion(ctx, tier)
+	}
+	if err := r.addFinalizer(ctx, tier); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	_, err := toolchainconfig.GetToolchainConfig(r.Client)
@@ -183,7 +186,6 @@ func (r *Reconciler) ensureTTRforTemplate(ctx context.Context, nsTmplTier *toolc
 		return false, "", err
 	}
 	return true, ttrName, nil
-
 }
 
 func (r *Reconciler) createNewTierTemplateRevision(ctx context.Context, nsTmplTier *toolchainv1alpha1.NSTemplateTier, tierTemplate *toolchainv1alpha1.TierTemplate) (string, error) {
@@ -253,6 +255,56 @@ func (r *Reconciler) updateStatus(ctx context.Context, tmplTier *toolchainv1alph
 		return nil
 	}
 	return r.Client.Status().Update(ctx, tmplTier)
+}
+
+func (r *Reconciler) handleDeletion(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) error {
+	list := &toolchainv1alpha1.SpaceList{}
+	if err := r.Client.List(ctx, list,
+		runtimeclient.InNamespace(tier.GetNamespace()),
+		runtimeclient.HasLabels{hash.TemplateTierHashLabelKey(tier.GetName())}); err != nil {
+		return err
+	}
+
+	hasSpaces := false
+
+	for _, s := range list.Items {
+		if util.IsBeingDeleted(&s) {
+			// As an optimization, we skip the spaces that are being deleted.
+			// There is no functional relationship between the spaces and the tier, we just don't want
+			// there to be spaces that refer to a non-existing tier. So if the space is being deleted,
+			// we can pretend like it doesn't already exist.
+			//
+			// This speeds up the deletion of the tier because it doesn't linger around for the spaces
+			// that are being deleted (which can take a good amount of time).
+			continue
+		}
+		// we found a space that is not being deleted and that references our tier.
+		hasSpaces = true
+		break
+	}
+
+	if hasSpaces {
+		// leave the finalizer in place - it's still being used
+		return fmt.Errorf("NSTemplateTier is still used by some spaces")
+	}
+
+	// Remove finalizer from the NSTemplateTier, it's no longer used anywhere
+	// so we can let the cluster proceed with the deletion.
+	util.RemoveFinalizer(tier, toolchainv1alpha1.FinalizerName)
+	return r.Client.Update(ctx, tier)
+}
+
+func (r *Reconciler) addFinalizer(ctx context.Context, tier *toolchainv1alpha1.NSTemplateTier) error {
+	// Add the finalizer if it is not present
+	if !util.HasFinalizer(tier, toolchainv1alpha1.FinalizerName) {
+		logger := log.FromContext(ctx)
+		logger.Info("adding finalizer on NSTemplateTier")
+		util.AddFinalizer(tier, toolchainv1alpha1.FinalizerName)
+		if err := r.Client.Update(ctx, tier); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func FailedCondition(reason string, cause string) toolchainv1alpha1.Condition {
