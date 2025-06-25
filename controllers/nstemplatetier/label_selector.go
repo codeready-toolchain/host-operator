@@ -37,6 +37,7 @@ func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (runtimeclient
 		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector = selector.Add(*templateHashLabel)
+
 	return runtimeclient.MatchingLabelsSelector{
 		Selector: selector,
 	}, nil
