@@ -11,10 +11,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
-	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -180,107 +180,44 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "unable to load templates: open /templates/nstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
 	})
-	t.Run("bundled tiers", func(t *testing.T) {
-		for _, setup := range []struct {
-			bundled          bool
-			annotatedBundled bool
-			used             bool
-		}{
-			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             false,
+	t.Run("tier that is no longer bundled is deleted", func(t *testing.T) {
+		// given
+		testTier := &toolchainv1alpha1.NSTemplateTier{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "not-bundled",
+				Namespace: namespace,
+				// add the annotation marking the tier as bundled - in production, this might happen after an operator
+				// upgrade, where we removed a tier from the binary.
+				Annotations: map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue},
 			},
-			{
-				bundled:          false,
-				annotatedBundled: false,
-				used:             true,
-			},
-			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             false,
-			},
-			{
-				bundled:          false,
-				annotatedBundled: true,
-				used:             true,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             false,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: false,
-				used:             true,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             false,
-			},
-			{
-				bundled:          true,
-				annotatedBundled: true,
-				used:             true,
-			},
-		} {
-			t.Run(fmt.Sprintf("tier: bundled=%v, annotatedBundled=%v, used=%v", setup.bundled, setup.annotatedBundled, setup.used), func(t *testing.T) {
-				// given
-				testTier := &toolchainv1alpha1.NSTemplateTier{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "testTier",
-						Namespace: namespace,
-						// in production, the finalizer is added by the controller.
-						// Here we add it manually to be able to test the annotation removal.
-						Finalizers: []string{"dummy"},
-					},
-				}
-				objs := []runtimeclient.Object{testTier}
-
-				if setup.annotatedBundled {
-					testTier.Annotations = map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue}
-				}
-
-				if setup.bundled {
-					testTier.Name = "base" // use the name of the tier that we know is bundled
-				}
-
-				if setup.used {
-					space := &toolchainv1alpha1.Space{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-space",
-							Namespace: testTier.Namespace,
-							Labels:    map[string]string{hash.TemplateTierHashLabelKey(testTier.Name): "1234"},
-						},
-					}
-					objs = append(objs, space)
-				}
-
-				clt := commontest.NewFakeClient(t, objs...)
-
-				// when
-				err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
-				inCluster := &toolchainv1alpha1.NSTemplateTier{}
-				gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
-
-				// then
-				shouldBeDeleted := !setup.bundled && setup.annotatedBundled && !setup.used
-				shouldBeAnnotated := setup.bundled || setup.annotatedBundled
-				require.NoError(t, err)
-				require.NoError(t, gerr)
-				if shouldBeDeleted {
-					assert.NotNil(t, inCluster.DeletionTimestamp)
-				}
-				if shouldBeAnnotated {
-					assert.Equal(t, constants.BundledWithHostOperatorAnnotationValue, inCluster.Annotations[toolchainv1alpha1.BundledAnnotationKey])
-				} else {
-					assert.Empty(t, inCluster.Annotations)
-				}
-			})
 		}
+		objs := []runtimeclient.Object{testTier}
+
+		clt := commontest.NewFakeClient(t, objs...)
+
+		// when
+		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
+		inCluster := &toolchainv1alpha1.NSTemplateTier{}
+		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
+
+		// then
+		require.NoError(t, err)
+		require.True(t, apierrors.IsNotFound(gerr))
+	})
+	t.Run("bundled tiers are created with an annotation", func(t *testing.T) {
+		// given
+		clt := commontest.NewFakeClient(t)
+
+		// when
+		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
+		inCluster := &toolchainv1alpha1.NSTemplateTier{}
+		// we know that the "base" tier is bundled
+		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKey{Name: "base", Namespace: namespace}, inCluster)
+
+		// then
+		require.NoError(t, err)
+		require.NoError(t, gerr)
+		assert.Equal(t, constants.BundledWithHostOperatorAnnotationValue, inCluster.Annotations[toolchainv1alpha1.BundledAnnotationKey])
 	})
 }
 
