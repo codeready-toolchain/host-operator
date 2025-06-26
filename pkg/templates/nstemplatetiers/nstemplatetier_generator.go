@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/codeready-toolchain/host-operator/deploy"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template/nstemplatetiers"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,22 +23,15 @@ const NsTemplateTierRootDir = "templates/nstemplatetiers"
 // CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string) error {
-
 	metadata, files, err := LoadFiles(deploy.NSTemplateTiersFS, NsTemplateTierRootDir)
 	if err != nil {
 		return err
 	}
 
 	// initialize tier generator, loads templates from assets
-	return nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, canUpdate bool, _ string) (bool, error) {
-		if !canUpdate {
-			if err := client.Create(ctx, toEnsure); err != nil && !apierrors.IsAlreadyExists(err) {
-				return false, err
-			}
-			return true, nil
-		}
-		applyCl := commonclient.NewApplyClient(client)
-		return applyCl.ApplyObject(ctx, toEnsure, commonclient.ForceUpdate(true))
+	return nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, _ string) error {
+		applyCl := commonclient.NewSSAApplyClient(client, constants.HostOperatorFieldManager)
+		return applyCl.ApplyObject(ctx, toEnsure)
 	}, namespace, metadata, files)
 }
 

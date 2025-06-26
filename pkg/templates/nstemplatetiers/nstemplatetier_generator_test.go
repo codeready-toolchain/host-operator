@@ -16,7 +16,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,7 +50,6 @@ func roles(_ string) []string {
 }
 
 func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
-
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -109,63 +107,36 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	}
 
 	t.Run("failures", func(t *testing.T) {
-
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 		t.Run("nstemplatetiers", func(t *testing.T) {
-
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to patch nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "base" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
 				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
-			})
-
-			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
-				// given
-				// initialize the client with an existing `advanced` NSTemplatetier
-				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      "advanced",
-					},
-				})
-				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "advanced" {
-						// simulate a client/server error
-						return errors.Errorf("an error")
-					}
-					return clt.Client.Update(ctx, obj, opts...)
-				}
-
-				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
-				// then
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create or update the 'advanced' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
+				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to patch 'toolchain.dev.openshift.com/v1alpha1, Kind=NSTemplateTier' called 'base' in namespace '[a-zA-Z0-9-]+': an error", err.Error())
 			})
 		})
 
 		t.Run("tiertemplates", func(t *testing.T) {
-
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to create tiertemplate", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if strings.HasPrefix(obj.GetName(), "base1ns-dev-") {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
 				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
@@ -174,7 +145,6 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 				assert.Regexp(t, fmt.Sprintf("unable to create TierTemplates: unable to create the 'base1ns-dev-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
-
 	})
 	t.Run("failed to load assets", func(t *testing.T) {
 		// when
@@ -183,7 +153,6 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "unable to load templates: open /templates/nstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
 	})
-
 }
 
 func verifyTierTemplate(t *testing.T, cl *commontest.FakeClient, namespace, tierName, typeName string) string {
