@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
@@ -246,9 +247,20 @@ func WithParameter(name, value string) TierOption {
 	}
 }
 
+// WithFinalizer adds the finalizer to the tier
 func WithFinalizer() TierOption {
 	return func(nt *toolchainv1alpha1.NSTemplateTier) {
 		controllerutil.AddFinalizer(nt, toolchainv1alpha1.FinalizerName)
+	}
+}
+
+// MarkedBundled marks the tier as bundled by adding the appropriate annotation
+func MarkedBundled() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		if tier.Annotations == nil {
+			tier.Annotations = map[string]string{}
+		}
+		tier.Annotations[toolchainv1alpha1.BundledAnnotationKey] = constants.BundledWithHostOperatorAnnotationValue
 	}
 }
 
