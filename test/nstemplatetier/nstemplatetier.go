@@ -177,9 +177,13 @@ func AppStudioEnvTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, o
 }
 
 func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return TierInNamespace(t, name, "toolchain-host-operator", spec, options...)
+}
+
+func TierInNamespace(t *testing.T, name, namespace string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	tier := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "toolchain-host-operator",
+			Namespace: namespace,
 			Name:      name,
 		},
 		Spec: spec,

@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -132,12 +132,7 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
 				// given
 				// initialize the client with an existing `advanced` NSTemplatetier
-				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      "advanced",
-					},
-				})
+				clt := commontest.NewFakeClient(t, tiertest.TierInNamespace(t, "advanced", namespace, toolchainv1alpha1.NSTemplateTierSpec{}))
 				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "advanced" {
 						// simulate a client/server error
@@ -182,18 +177,13 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 	})
 	t.Run("tier that is no longer bundled is deleted", func(t *testing.T) {
 		// given
-		testTier := &toolchainv1alpha1.NSTemplateTier{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "not-bundled",
-				Namespace: namespace,
-				// add the annotation marking the tier as bundled - in production, this might happen after an operator
-				// upgrade, where we removed a tier from the binary.
-				Annotations: map[string]string{toolchainv1alpha1.BundledAnnotationKey: constants.BundledWithHostOperatorAnnotationValue},
-			},
-		}
-		objs := []runtimeclient.Object{testTier}
+		testTier := tiertest.TierInNamespace(t,
+			"not-bundled",
+			namespace,
+			toolchainv1alpha1.NSTemplateTierSpec{},
+			tiertest.MarkedBundled())
 
-		clt := commontest.NewFakeClient(t, objs...)
+		clt := commontest.NewFakeClient(t, testTier)
 
 		// when
 		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
