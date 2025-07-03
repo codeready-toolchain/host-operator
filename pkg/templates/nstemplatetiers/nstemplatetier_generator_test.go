@@ -112,53 +112,34 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 		t.Run("nstemplatetiers", func(t *testing.T) {
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to patch nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "base" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
 				err := nstemplatetiers.SyncResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
-			})
-
-			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
-				// given
-				// initialize the client with an existing `advanced` NSTemplatetier
-				clt := commontest.NewFakeClient(t, tiertest.TierInNamespace(t, "advanced", namespace, toolchainv1alpha1.NSTemplateTierSpec{}))
-				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "advanced" {
-						// simulate a client/server error
-						return errors.Errorf("an error")
-					}
-					return clt.Client.Update(ctx, obj, opts...)
-				}
-
-				// when
-				err := nstemplatetiers.SyncResources(context.TODO(), s, clt, namespace)
-				// then
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create or update the 'advanced' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
+				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to patch 'toolchain.dev.openshift.com/v1alpha1, Kind=NSTemplateTier' called 'base' in namespace '[a-zA-Z0-9-]+': an error", err.Error())
 			})
 		})
 
 		t.Run("tiertemplates", func(t *testing.T) {
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to create tiertemplate", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if strings.HasPrefix(obj.GetName(), "base1ns-dev-") {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
 				err := nstemplatetiers.SyncResources(context.TODO(), s, clt, namespace)
