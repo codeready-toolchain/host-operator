@@ -16,7 +16,6 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template/nstemplatetiers"
 	"gopkg.in/yaml.v2"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,19 +38,13 @@ func SyncResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.
 	var bundledTierKeys []runtimeclient.ObjectKey
 
 	// initialize tier generator, loads templates from assets
-	err = nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, canUpdate bool, _ string) (bool, error) {
+	err = nstemplatetiers.GenerateTiers(s, func(toEnsure runtimeclient.Object, _ string) error {
 		commonclient.MergeAnnotations(toEnsure, bundledAnnotation)
 
 		bundledTierKeys = append(bundledTierKeys, runtimeclient.ObjectKeyFromObject(toEnsure))
 
-		if !canUpdate {
-			if err := client.Create(ctx, toEnsure); err != nil && !apierrors.IsAlreadyExists(err) {
-				return false, err
-			}
-			return true, nil
-		}
-		applyCl := commonclient.NewApplyClient(client)
-		return applyCl.ApplyObject(ctx, toEnsure, commonclient.ForceUpdate(true))
+		applyCl := commonclient.NewSSAApplyClient(client, constants.HostOperatorFieldManager)
+		return applyCl.ApplyObject(ctx, toEnsure)
 	}, namespace, metadata, files)
 	if err != nil {
 		return err
