@@ -21,7 +21,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -35,7 +34,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			// we need to know about the deletions so that we can remove the finalizer
-			predicate.Funcs{DeleteFunc: func(event.TypedDeleteEvent[runtimeclient.Object]) bool { return true }}))).
+			IsBeingDeletedPredicate{}))).
 		Watches(&toolchainv1alpha1.TierTemplate{},
 			handler.EnqueueRequestsFromMapFunc(MapTierTemplateToNSTemplateTier(r.Client))).
 		Complete(r)
