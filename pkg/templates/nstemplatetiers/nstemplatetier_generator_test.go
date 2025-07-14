@@ -9,14 +9,16 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,7 +51,7 @@ func roles(_ string) []string {
 	return []string{"admin"}
 }
 
-func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
+func TestSyncResourcesWitProdAssets(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -58,7 +60,7 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	cl := commontest.NewFakeClient(t)
 
 	// when
-	err = nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, cl, namespace)
+	err = nstemplatetiers.SyncResources(context.TODO(), s, cl, namespace)
 
 	// then
 	require.NoError(t, err)
@@ -109,61 +111,37 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 		t.Run("nstemplatetiers", func(t *testing.T) {
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to patch nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "base" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
+				err := nstemplatetiers.SyncResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error", err.Error())
-			})
-
-			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
-				// given
-				// initialize the client with an existing `advanced` NSTemplatetier
-				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      "base",
-					},
-				})
-				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" && obj.GetName() == "base" {
-						// simulate a client/server error
-						return errors.Errorf("an error")
-					}
-					return clt.Client.Update(ctx, obj, opts...)
-				}
-
-				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
-				// then
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
+				assert.Regexp(t, "unable to create NSTemplateTiers: unable to create or update the 'base' NSTemplateTier: unable to patch 'toolchain.dev.openshift.com/v1alpha1, Kind=NSTemplateTier' called 'base' in namespace '[a-zA-Z0-9-]+': an error", err.Error())
 			})
 		})
 
 		t.Run("tiertemplates", func(t *testing.T) {
-			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
+			t.Run("failed to create tiertemplate", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if strings.HasPrefix(obj.GetName(), "base1ns-dev-") {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return commontest.Patch(ctx, clt, obj, patch, opts...)
 				}
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace)
+				err := nstemplatetiers.SyncResources(context.TODO(), s, clt, namespace)
 				// then
 				require.Error(t, err)
 				assert.Regexp(t, fmt.Sprintf("unable to create TierTemplates: unable to create the 'base1ns-dev-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
@@ -176,6 +154,40 @@ func TestCreateOrUpdateResourcesWitProdAssets(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, "unable to load templates: open /templates/nstemplatetiers/metadata.yaml: file does not exist", err.Error()) // error occurred while creating TierTemplate resources
+	})
+	t.Run("tier that is no longer bundled is deleted", func(t *testing.T) {
+		// given
+		testTier := tiertest.TierInNamespace(t,
+			"not-bundled",
+			namespace,
+			toolchainv1alpha1.NSTemplateTierSpec{},
+			tiertest.MarkedBundled())
+
+		clt := commontest.NewFakeClient(t, testTier)
+
+		// when
+		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
+		inCluster := &toolchainv1alpha1.NSTemplateTier{}
+		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
+
+		// then
+		require.NoError(t, err)
+		require.True(t, apierrors.IsNotFound(gerr))
+	})
+	t.Run("bundled tiers are created with an annotation", func(t *testing.T) {
+		// given
+		clt := commontest.NewFakeClient(t)
+
+		// when
+		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
+		inCluster := &toolchainv1alpha1.NSTemplateTier{}
+		// we know that the "base" tier is bundled
+		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKey{Name: "base", Namespace: namespace}, inCluster)
+
+		// then
+		require.NoError(t, err)
+		require.NoError(t, gerr)
+		assert.Equal(t, constants.BundledWithHostOperatorAnnotationValue, inCluster.Annotations[toolchainv1alpha1.BundledAnnotationKey])
 	})
 }
 
