@@ -311,9 +311,9 @@ func main() { // nolint:gocyclo
 		StatusUpdater: &usersignup.StatusUpdater{
 			Client: mgr.GetClient(),
 		},
-		Namespace:      namespace,
-		Scheme:         mgr.GetScheme(),
-		SegmentClient:  segmentClient,
+		Namespace: namespace,
+		Scheme:    mgr.GetScheme(),
+		// SegmentClient:  segmentClient,
 		ClusterManager: capacity.NewClusterManager(namespace, mgr.GetClient()),
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
