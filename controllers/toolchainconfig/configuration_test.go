@@ -3,9 +3,10 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -455,14 +456,14 @@ func TestTiers(t *testing.T) {
 		weight10 := uint(10)
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
 			DefaultUserTier("deactivate90").
-			DefaultSpaceTier("advanced").
+			DefaultSpaceTier("ourtier").
 			DurationBeforeChangeTierRequestDeletion("48h").
 			FeatureToggle("feature-1", nil). // With default weight
 			FeatureToggle("feature-2", &weight10))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "deactivate90", toolchainCfg.Tiers().DefaultUserTier())
-		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
+		assert.Equal(t, "ourtier", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 		assert.Len(t, toolchainCfg.Tiers().FeatureToggles(), 2)
 		assert.Equal(t, "feature-1", toolchainCfg.Tiers().FeatureToggles()[0].Name())

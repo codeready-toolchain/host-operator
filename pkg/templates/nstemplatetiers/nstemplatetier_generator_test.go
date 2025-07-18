@@ -26,7 +26,6 @@ import (
 )
 
 var expectedProdTiers = []string{
-	"advanced",
 	"base",
 	"base1ns",
 	"base1nsnoidling",

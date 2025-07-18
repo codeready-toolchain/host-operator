@@ -22,11 +22,11 @@ func TestNewSpace(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	// when
-	space := NewSpace(userSignup, test.MemberClusterName, "johny", "advanced")
+	space := NewSpace(userSignup, test.MemberClusterName, "johny", "ourtier")
 
 	// then
 	expectedSpace := spacetest.NewSpace(test.HostOperatorNs, "johny",
-		spacetest.WithTierName("advanced"),
+		spacetest.WithTierName("ourtier"),
 		spacetest.WithSpecTargetCluster("member-cluster"),
 		spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
 		spacetest.WithCreatorLabel(userSignup.Name))
@@ -60,11 +60,11 @@ func TestNewSpaceWithFeatureToggles(t *testing.T) {
 	// and the feature with weight 50 is added at least once and not added at least once too
 	var myCoolFeatureCount, myNotSoCoolFeatureCount, mySoSoFeatureCount int
 	for i := 0; i < 100; i++ {
-		space := NewSpaceWithFeatureToggles(userSignup, test.MemberClusterName, "johny", "advanced", featureToggles)
+		space := NewSpaceWithFeatureToggles(userSignup, test.MemberClusterName, "johny", "ourtier", featureToggles)
 
 		// then
 		expectedSpace := spacetest.NewSpace(test.HostOperatorNs, "johny",
-			spacetest.WithTierName("advanced"),
+			spacetest.WithTierName("ourtier"),
 			spacetest.WithSpecTargetCluster("member-cluster"),
 			spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
 			spacetest.WithCreatorLabel(userSignup.Name))
