@@ -31,7 +31,6 @@ var expectedProdTiers = []string{
 	"base1nsnoidling",
 	"base1ns6didler",
 	"baselarge",
-	"baseextendedidling",
 	"intelmedium",
 	"intellarge",
 	"intelxlarge",
