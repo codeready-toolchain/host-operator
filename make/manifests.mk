@@ -46,6 +46,7 @@ bundle: clean-bundle generate-rbac kustomize ## Generate bundle manifests and me
 	operator-sdk generate kustomize manifests -q
 	$(eval TMP_MANIFEST_FILE := $(shell mktemp))
 	@echo "generating manifests to temporary file: ${TMP_MANIFEST_FILE}"
+	echo $(KUSTOMIZE)
 	$(KUSTOMIZE) build config/manifests -o ${TMP_MANIFEST_FILE}
 	cat ${TMP_MANIFEST_FILE} | operator-sdk generate bundle --overwrite --version=${NEXT_VERSION} --channels ${CHANNEL} --default-channel ${CHANNEL} --package toolchain-host-operator
 	operator-sdk bundle validate ./bundle
@@ -60,5 +61,6 @@ CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	GOBIN=$(PROJECT_DIR)/bin $(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen
 
+KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	GOBIN=$(PROJECT_DIR)/bin $(GO) install sigs.k8s.io/kustomize/kustomize/v5
