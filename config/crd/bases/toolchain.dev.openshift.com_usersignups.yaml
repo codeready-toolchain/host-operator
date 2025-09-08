@@ -91,6 +91,10 @@ spec:
                     description: AccountID contains the value of the 'account_id'
                       claim
                     type: string
+                  accountNumber:
+                    description: AccountNumber contains the value of the 'account_number'
+                      claim
+                    type: string
                   company:
                     description: Company contains the value of the 'company' claim
                     type: string
