@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,12 +17,24 @@ import (
 
 func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
 	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
+	ttrs := map[string]string{}
 	for i, nsType := range nsTypes {
 		revision := fmt.Sprintf("123abc%d", i+1)
+		templateRefName := nstemplateset.NewTierTemplateName(tierName, nsType, revision)
+
 		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
-			TemplateRef: nstemplateset.NewTierTemplateName(tierName, nsType, revision),
+			TemplateRef: templateRefName,
 		}
+		ttrs[templateRefName] = templateRefName + "-ttr"
 	}
+
+	clusterResourcesTemplateName := nstemplateset.NewTierTemplateName(tierName, "clusterresources", "654321b")
+	adminTemplateRef := tierName + "-admin-123abc1"
+	viewerTemplateRef := tierName + "-viewer-123abc2"
+
+	ttrs[clusterResourcesTemplateName] = clusterResourcesTemplateName + "-ttr"
+	ttrs[adminTemplateRef] = adminTemplateRef + "-ttr"
+	ttrs[viewerTemplateRef] = viewerTemplateRef + "-ttr"
 
 	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,25 +44,19 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
 			Namespaces: namespaces,
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplateset.NewTierTemplateName(tierName, "clusterresources", "654321b"),
+				TemplateRef: clusterResourcesTemplateName,
 			},
 			SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 				"admin": {
-					TemplateRef: tierName + "-admin-123abc1",
+					TemplateRef: adminTemplateRef,
 				},
 				"viewer": {
-					TemplateRef: tierName + "-viewer-123abc2",
+					TemplateRef: viewerTemplateRef,
 				},
 			},
 		},
 		Status: toolchainv1alpha1.NSTemplateTierStatus{
-			Revisions: map[string]string{
-				"advanced-dev-123abc1":              "advanced-dev-123abc1-ttr",
-				"advanced-stage-123abc2":            "advanced-stage-123abc2-ttr",
-				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-ttr",
-				"advanced-admin-123abc1":            "advanced-admin-123abc1-ttr",
-				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-ttr",
-			},
+			Revisions: ttrs,
 		},
 	}
 }
@@ -175,9 +183,13 @@ func AppStudioEnvTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, o
 }
 
 func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return TierInNamespace(t, name, "toolchain-host-operator", spec, options...)
+}
+
+func TierInNamespace(t *testing.T, name, namespace string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	tier := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "toolchain-host-operator",
+			Namespace: namespace,
 			Name:      name,
 		},
 		Spec: spec,
@@ -242,6 +254,23 @@ func WithParameter(name, value string) TierOption {
 				Value: value,
 			},
 		)
+	}
+}
+
+// WithFinalizer adds the finalizer to the tier
+func WithFinalizer() TierOption {
+	return func(nt *toolchainv1alpha1.NSTemplateTier) {
+		controllerutil.AddFinalizer(nt, toolchainv1alpha1.FinalizerName)
+	}
+}
+
+// MarkedBundled marks the tier as bundled by adding the appropriate annotation
+func MarkedBundled() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		if tier.Annotations == nil {
+			tier.Annotations = map[string]string{}
+		}
+		tier.Annotations[toolchainv1alpha1.BundledAnnotationKey] = constants.BundledWithHostOperatorAnnotationValue
 	}
 }
 

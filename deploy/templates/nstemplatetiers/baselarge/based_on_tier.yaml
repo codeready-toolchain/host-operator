@@ -1,6 +1,0 @@
-from: base
-parameters:
-- name: MEMORY_LIMIT
-  value: "32Gi"
-- name: MEMORY_REQUEST
-  value: "32Gi"

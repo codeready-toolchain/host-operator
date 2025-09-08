@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -37,9 +39,7 @@ const (
 func TestReconcile(t *testing.T) {
 	// given
 	t.Run("failures", func(t *testing.T) {
-
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
-
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates)
@@ -75,12 +75,11 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
-
 	})
 
 	t.Run("revisions management", func(t *testing.T) {
 		// given
-		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+		base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithFinalizer(),
 			// the tiertemplate revision CR should have a copy of those parameters
 			tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 		)
@@ -194,7 +193,6 @@ func TestReconcile(t *testing.T) {
 						require.Len(t, ttrs.Items, len(tierTemplatesRefs)) // it's one TTR per each tiertemplate in the NSTemplateTier
 					})
 				})
-
 			})
 
 			t.Run("revision field is set but TierTemplateRevision CRs are missing, they should be created", func(t *testing.T) {
@@ -202,7 +200,7 @@ func TestReconcile(t *testing.T) {
 				// the NSTemplateTier has already the status.revisions field populated
 				// but the TierTemplateRevision CRs are missing
 				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
-				base1nsTierWithRevisions := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+				base1nsTierWithRevisions := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithFinalizer(),
 					// the tiertemplate revision CR should have a copy of those parameters
 					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 				)
@@ -240,7 +238,7 @@ func TestReconcile(t *testing.T) {
 				// the TierTemplateRevision CRs are missing, and their name are based on the tier name.
 				// Making the TierName already 63chars long we test that the TTR name stays within 63 chars
 				veryLongTierName := "somerandomstringtomakethenamelongerthan63chars12345678912345678"
-				tierWithVeryLongName := tiertest.Tier(t, veryLongTierName, tiertest.NSTemplateTierSpecWithTierName(veryLongTierName),
+				tierWithVeryLongName := tiertest.Tier(t, veryLongTierName, tiertest.NSTemplateTierSpecWithTierName(veryLongTierName), tiertest.WithFinalizer(),
 					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 				)
 				tierTemplatesWithLongNames := initTierTemplates(t, withTemplateObjects(crq), tierWithVeryLongName.Name)
@@ -264,7 +262,6 @@ func TestReconcile(t *testing.T) {
 			})
 
 			t.Run("errors", func(t *testing.T) {
-
 				t.Run("error when TierTemplate is missing ", func(t *testing.T) {
 					// given
 					// make sure revisions field is nill before starting the test
@@ -285,46 +282,69 @@ func TestReconcile(t *testing.T) {
 					// and the TierTemplateRevision CRs are not created
 					tiertemplaterevision.AssertThatTTRs(t, cl, base1nsTier.GetNamespace()).DoNotExist()
 				})
-
 			})
-
 		})
 
-		t.Run("if being deleted, then do nothing", func(t *testing.T) {
+		t.Run("block deletion if used", func(t *testing.T) {
 			// given
 			tierBeingDeleted := base1nsTier.DeepCopy()
 			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-			tierBeingDeleted.Finalizers = []string{"dummy"}
-			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted)
-			called := false
-			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
-				if called {
-					return fmt.Errorf("should not call Get more than once")
-				}
-				called = true
-				return cl.Client.Get(ctx, key, obj, opts...)
+			controllerutil.AddFinalizer(tierBeingDeleted, toolchainv1alpha1.FinalizerName)
+			space := &toolchainv1alpha1.Space{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-space",
+					Namespace: tierBeingDeleted.Namespace,
+					Labels:    map[string]string{hash.TemplateTierHashLabelKey(tierBeingDeleted.Name): "1234"},
+				},
 			}
-			cl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
-				return fmt.Errorf("should not call Create")
-			}
-			cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
-				return fmt.Errorf("should not call StatusUpdate")
-			}
+
+			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted, space)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
+			inCluster := &toolchainv1alpha1.NSTemplateTier{}
+			gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
+
+			// then
+			require.Error(t, err)
+			require.Empty(t, res)
+			require.NoError(t, gerr)
+			require.Len(t, inCluster.Finalizers, 1)
+			require.Contains(t, inCluster.Finalizers, toolchainv1alpha1.FinalizerName)
+		})
+		t.Run("space being deleted doesn't block tier deletion", func(t *testing.T) {
+			// given
+			tierBeingDeleted := base1nsTier.DeepCopy()
+			tierBeingDeleted.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			controllerutil.AddFinalizer(tierBeingDeleted, toolchainv1alpha1.FinalizerName)
+			space := &toolchainv1alpha1.Space{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-space",
+					Namespace:         tierBeingDeleted.Namespace,
+					Labels:            map[string]string{hash.TemplateTierHashLabelKey(tierBeingDeleted.Name): "1234"},
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+					Finalizers:        []string{"dummy"},
+				},
+			}
+
+			r, req, cl := prepareReconcile(t, tierBeingDeleted.Name, tierBeingDeleted, space)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+			inCluster := &toolchainv1alpha1.NSTemplateTier{}
+			gerr := cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierBeingDeleted), inCluster)
 
 			// then
 			require.NoError(t, err)
-			assert.Empty(t, res.Requeue)
+			require.Empty(t, res)
+			require.True(t, errors.IsNotFound(gerr))
 		})
 	})
-
 }
 
 func TestUpdateNSTemplateTier(t *testing.T) {
 	// given
-	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates,
+	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithFinalizer(),
 		// the tiertemplate revision CR should have a copy of those parameters
 		tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 	)
@@ -454,13 +474,11 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 				HasStatusTierTemplateRevisions(tierTemplatesRefs).Tier()
 			require.NotEqual(t, tierBeingUpdated.Status.Revisions, newNSTmplTier.Status.Revisions)
 		})
-
 	})
-
 }
 
 func newTestCRQ(podsCount string) unstructured.Unstructured {
-	var crq = unstructured.Unstructured{Object: map[string]interface{}{
+	crq := unstructured.Unstructured{Object: map[string]interface{}{
 		"kind": "ClusterResourceQuota",
 		"metadata": map[string]interface{}{
 			"name": "for-{{.SPACE_NAME}}-deployments",
@@ -512,6 +530,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 		Client: cl,
 		Scheme: s,
 	}
+
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

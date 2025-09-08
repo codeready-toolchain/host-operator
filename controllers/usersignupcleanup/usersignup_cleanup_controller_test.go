@@ -168,7 +168,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(days(8)),
 			commonsignup.VerificationRequiredAgo(days(8)),
-			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
+			commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserPhoneHashLabelKey, "12345"),
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when

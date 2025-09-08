@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,14 +26,12 @@ const (
 )
 
 func TestCreateOrUpdateResources(t *testing.T) {
-
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	t.Run("ok", func(t *testing.T) {
-
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
@@ -104,50 +101,24 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	})
 
 	t.Run("failures", func(t *testing.T) {
-
 		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 
 		t.Run("usertiers", func(t *testing.T) {
-
-			t.Run("failed to create usertiers", func(t *testing.T) {
+			t.Run("failed to patch usertiers", func(t *testing.T) {
 				// given
 				clt := commontest.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
+				clt.MockPatch = func(ctx context.Context, obj runtimeclient.Object, patch runtimeclient.Patch, opts ...runtimeclient.PatchOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "UserTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
-					return clt.Client.Create(ctx, obj, opts...)
+					return clt.Client.Patch(ctx, obj, patch, opts...)
 				}
 				// when
 				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, "unable to create UserTiers: unable to create or update the '\\w+' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: an error", err.Error())
-			})
-
-			t.Run("failed to update usertiers", func(t *testing.T) {
-				// given
-				// initialize the client with an existing `advanced` UserTier
-				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.UserTier{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      "advanced",
-					},
-				})
-				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
-					if obj.GetObjectKind().GroupVersionKind().Kind == "UserTier" {
-						// simulate a client/server error
-						return errors.Errorf("an error")
-					}
-					return clt.Client.Update(ctx, obj, opts...)
-				}
-
-				// when
-				err := usertiers.CreateOrUpdateResources(context.TODO(), s, clt, namespace, usertiers.TestUserTierTemplatesFS, testRoot)
-				// then
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unable to create UserTiers: unable to create or update the 'advanced' UserTier: unable to create resource of kind: UserTier, version: v1alpha1: unable to update the resource")
+				assert.Regexp(t, "unable to create UserTiers: unable to patch the '\\w+' UserTier: unable to patch 'toolchain\\.dev\\.openshift\\.com\\/v1alpha1, Kind=UserTier' called '\\w+' in namespace '[a-z0-9-]+': an error", err.Error())
 			})
 		})
 	})

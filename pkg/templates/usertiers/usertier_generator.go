@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	resource "github.com/codeready-toolchain/host-operator/pkg/templates"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
@@ -29,7 +30,6 @@ var log = logf.Log.WithName("usertiers")
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.Client, namespace string, userTiersFS embed.FS, root string) error {
-
 	// initialize tier generator, loads templates from assets
 	generator, err := newUserTierGenerator(s, client, namespace, userTiersFS, root)
 	if err != nil {
@@ -173,7 +173,6 @@ func setParams(parametersToSet []templatev1.Parameter, tmpl *templatev1.Template
 
 // initUserTiers generates all UserTier resources and adds them to the tier map
 func (t *tierGenerator) initUserTiers() error {
-
 	for tierName, tierData := range t.templatesByTier {
 		userTier := tierData.rawTemplates.userTier
 		sourceTierName := tierName
@@ -190,7 +189,7 @@ func (t *tierGenerator) initUserTiers() error {
 
 // createUserTiers creates the UserTier resources from the tier map
 func (t *tierGenerator) createUserTiers(ctx context.Context) error {
-	applyCl := commonclient.NewApplyClient(t.client)
+	applyCl := commonclient.NewSSAApplyClient(t.client, constants.HostOperatorFieldManager)
 
 	for tierName, tierData := range t.templatesByTier {
 		if len(tierData.objects) != 1 {
@@ -212,17 +211,12 @@ func (t *tierGenerator) createUserTiers(ctx context.Context) error {
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
 
-		updated, err := applyCl.ApplyObject(ctx, tier, commonclient.ForceUpdate(true))
-		if err != nil {
-			return errors.Wrapf(err, "unable to create or update the '%s' UserTier", tierName)
+		if err := applyCl.ApplyObject(ctx, tier); err != nil {
+			return fmt.Errorf("unable to patch the '%s' UserTier: %w", tierName, err)
 		}
 		tierLog := log.WithValues("name", tierName)
 		tierLog = tierLog.WithValues("DeactivationTimeoutDays", tier.Spec.DeactivationTimeoutDays)
-		if updated {
-			tierLog.Info("UserTier was either updated or created")
-		} else {
-			tierLog.Info("UserTier wasn't updated nor created: the spec was already set as expected")
-		}
+		tierLog.Info("UserTier was patched")
 	}
 	return nil
 }
