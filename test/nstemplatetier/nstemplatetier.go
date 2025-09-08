@@ -17,12 +17,24 @@ import (
 
 func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
 	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
+	ttrs := map[string]string{}
 	for i, nsType := range nsTypes {
 		revision := fmt.Sprintf("123abc%d", i+1)
+		templateRefName := nstemplateset.NewTierTemplateName(tierName, nsType, revision)
+
 		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
-			TemplateRef: nstemplateset.NewTierTemplateName(tierName, nsType, revision),
+			TemplateRef: templateRefName,
 		}
+		ttrs[templateRefName] = templateRefName + "-ttr"
 	}
+
+	clusterResourcesTemplateName := nstemplateset.NewTierTemplateName(tierName, "clusterresources", "654321b")
+	adminTemplateRef := tierName + "-admin-123abc1"
+	viewerTemplateRef := tierName + "-viewer-123abc2"
+
+	ttrs[clusterResourcesTemplateName] = clusterResourcesTemplateName + "-ttr"
+	ttrs[adminTemplateRef] = adminTemplateRef + "-ttr"
+	ttrs[viewerTemplateRef] = viewerTemplateRef + "-ttr"
 
 	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
@@ -32,25 +44,19 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
 			Namespaces: namespaces,
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplateset.NewTierTemplateName(tierName, "clusterresources", "654321b"),
+				TemplateRef: clusterResourcesTemplateName,
 			},
 			SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
 				"admin": {
-					TemplateRef: tierName + "-admin-123abc1",
+					TemplateRef: adminTemplateRef,
 				},
 				"viewer": {
-					TemplateRef: tierName + "-viewer-123abc2",
+					TemplateRef: viewerTemplateRef,
 				},
 			},
 		},
 		Status: toolchainv1alpha1.NSTemplateTierStatus{
-			Revisions: map[string]string{
-				"advanced-dev-123abc1":              "advanced-dev-123abc1-ttr",
-				"advanced-stage-123abc2":            "advanced-stage-123abc2-ttr",
-				"advanced-clusterresources-654321b": "advanced-clusterresources-654321b-ttr",
-				"advanced-admin-123abc1":            "advanced-admin-123abc1-ttr",
-				"advanced-viewer-123abc2":           "advanced-viewer-123abc2-ttr",
-			},
+			Revisions: ttrs,
 		},
 	}
 }

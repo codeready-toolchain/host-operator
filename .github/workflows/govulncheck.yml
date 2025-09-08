@@ -11,11 +11,11 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Run govulncheck
-      uses: golang/govulncheck-action@v1
+      uses: codeready-toolchain/toolchain-cicd/govulncheck-action@master
       with:
-        go-version-input: ${{ steps.install-go.outputs.go-version }}
-        go-package: ./...
-        repo-checkout: false
+        go-version-file: go.mod
+        cache: false
+        config: .govulncheck.yaml 

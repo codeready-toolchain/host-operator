@@ -31,7 +31,15 @@ import (
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			// This is not necessary for any logic in this controller.
+			// We use the annotations to speed up the cleanup of the NSTemplateTiers in the e2e tests.
+			// If it was not for this predicate, we would have to employ some logic that would re-trigger
+			// the reconciles rapidly during the deletion process and this would negatively affect the
+			// performance in production. So instead we just listen for annotation updates here which should
+			// not really happen in production and use them to force reconciles in e2e tests cleanup.
+			predicate.AnnotationChangedPredicate{}))).
 		Watches(&toolchainv1alpha1.TierTemplate{},
 			handler.EnqueueRequestsFromMapFunc(MapTierTemplateToNSTemplateTier(r.Client))).
 		Complete(r)
