@@ -13,11 +13,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
     - name: Run govulncheck
       uses: codeready-toolchain/toolchain-cicd/govulncheck-action@master
       with:
