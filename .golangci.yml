@@ -30,6 +30,7 @@ linters:
     - testifylint
     - unparam
     - zerologlint
+    - copyloopvar
   disable:
     - contextcheck
     - noctx

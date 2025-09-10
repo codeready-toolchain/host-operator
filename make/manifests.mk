@@ -10,6 +10,9 @@ OTHER_REPO_PATH=""
 BUNDLE_TAG=""
 REPLACE_OPERATOR_VERSION=""
 
+PROJECT_DIR := $(shell pwd)
+GO?=go
+
 .PHONY: push-to-quay-staging
 ## Creates a new version of operator bundle, adds it into an index and pushes it to quay
 push-to-quay-staging: generate-cd-release-manifests push-bundle-and-index-image
@@ -52,3 +55,11 @@ bundle: clean-bundle generate-rbac kustomize ## Generate bundle manifests and me
 publish-current-bundle: FIRST_RELEASE=true
 publish-current-bundle: CHANNEL=alpha
 publish-current-bundle: generate-cd-release-manifests push-bundle-and-index-image
+
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
+controller-gen: ## Download controller-gen locally if necessary.
+	GOBIN=$(PROJECT_DIR)/bin $(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen
+
+KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
+kustomize: ## Download kustomize locally if necessary.
+	GOBIN=$(PROJECT_DIR)/bin $(GO) install sigs.k8s.io/kustomize/kustomize/v5
