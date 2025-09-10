@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
-	github.com/codeready-toolchain/api v0.0.0-20250605152105-383ffe6cac27
+	github.com/codeready-toolchain/api v0.0.0-20250909075145-ca043a618f0f
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20250708104334-c3ec13e2e8da
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-logr/logr v1.4.2
@@ -21,14 +21,14 @@ require (
 	go.uber.org/zap v1.27.0
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.32.1
-	k8s.io/apiextensions-apiserver v0.32.1
-	k8s.io/apimachinery v0.32.1
-	k8s.io/client-go v0.32.1
+	k8s.io/api v0.32.2
+	k8s.io/apiextensions-apiserver v0.32.2
+	k8s.io/apimachinery v0.32.2
+	k8s.io/client-go v0.32.2
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/controller-runtime v0.20.4
-	sigs.k8s.io/controller-tools v0.17.2
+	sigs.k8s.io/controller-tools v0.17.3
 	sigs.k8s.io/kustomize/kustomize/v5 v5.5.0
 )
 
@@ -39,7 +39,7 @@ require (
 
 require (
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	k8s.io/code-generator v0.32.1
+	k8s.io/code-generator v0.32.2
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 )
@@ -76,7 +76,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-github/v52 v52.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -110,7 +110,7 @@ require (
 	github.com/segmentio/backo-go v1.0.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
+	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
@@ -122,7 +122,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
@@ -130,7 +130,7 @@ require (
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/tools v0.30.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/api v0.177.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240826202546-f6391c0de4c7 // indirect
@@ -150,9 +150,9 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20250908100603-312ce7567dd1
+replace github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20250910155735-270447f471cd
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20250903095154-769c1bbc2835
+replace github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20250910164142-aabf15684683
 
 go 1.23.0
 
