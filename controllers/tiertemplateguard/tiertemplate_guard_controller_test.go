@@ -1,4 +1,4 @@
-package tiertemplatecleanup
+package tiertemplateguard
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,85 +132,6 @@ func TestCleanup(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-	})
-}
-
-func TestAutomaticDeletion(t *testing.T) {
-	t.Run("should automatically delete unused TierTemplate", func(t *testing.T) {
-		// given
-		tierTemplate := newTierTemplate(withFinalizer())
-		nsTemplateTier := newNSTemplateTier("other-tier")
-		r, cl := prepareReconcile(t, tierTemplate, nsTemplateTier)
-
-		// when
-		_, err := r.Reconcile(context.TODO(), reconcileRequestFor(tierTemplate))
-		require.NoError(t, err)
-		updatedTierTemplate := &toolchainv1alpha1.TierTemplate{}
-		err = cl.Get(context.TODO(), client.ObjectKeyFromObject(tierTemplate), updatedTierTemplate)
-
-		// then
-		require.NoError(t, err)
-		assert.NotNil(t, updatedTierTemplate.DeletionTimestamp)
-	})
-
-	t.Run("should not automatically delete TierTemplate when used in namespace template", func(t *testing.T) {
-		// given
-		tierTemplate := newTierTemplate(withFinalizer())
-		nsTemplateTier := newNSTemplateTier("basic-tier", withNamespaceTemplate())
-		r, cl := prepareReconcile(t, tierTemplate, nsTemplateTier)
-
-		// when
-		_, err := r.Reconcile(context.TODO(), reconcileRequestFor(tierTemplate))
-
-		// then
-		require.NoError(t, err)
-
-		// verify TierTemplate still exists
-		updatedTierTemplate := &toolchainv1alpha1.TierTemplate{}
-		err = cl.Get(context.TODO(), client.ObjectKeyFromObject(tierTemplate), updatedTierTemplate)
-		require.NoError(t, err)
-		assert.Contains(t, updatedTierTemplate.Finalizers, toolchainv1alpha1.FinalizerName)
-		assert.Nil(t, updatedTierTemplate.DeletionTimestamp)
-	})
-
-	t.Run("should not automatically delete TierTemplate when used in cluster resources", func(t *testing.T) {
-		// given
-		tierTemplate := newTierTemplate(withFinalizer())
-		nsTemplateTier := newNSTemplateTier("basic-tier", withClusterResourceTemplate())
-		r, cl := prepareReconcile(t, tierTemplate, nsTemplateTier)
-
-		// when
-		_, err := r.Reconcile(context.TODO(), reconcileRequestFor(tierTemplate))
-
-		// then
-		require.NoError(t, err)
-
-		// verify TierTemplate still exists
-		updatedTierTemplate := &toolchainv1alpha1.TierTemplate{}
-		err = cl.Get(context.TODO(), client.ObjectKeyFromObject(tierTemplate), updatedTierTemplate)
-		require.NoError(t, err)
-		assert.Contains(t, updatedTierTemplate.Finalizers, toolchainv1alpha1.FinalizerName)
-		assert.Nil(t, updatedTierTemplate.DeletionTimestamp)
-	})
-
-	t.Run("should not automatically delete TierTemplate when used in space roles", func(t *testing.T) {
-		// given
-		tierTemplate := newTierTemplate(withFinalizer())
-		nsTemplateTier := newNSTemplateTier("basic-tier", withSpaceRoleTemplate("admin"))
-		r, cl := prepareReconcile(t, tierTemplate, nsTemplateTier)
-
-		// when
-		_, err := r.Reconcile(context.TODO(), reconcileRequestFor(tierTemplate))
-
-		// then
-		require.NoError(t, err)
-
-		// verify TierTemplate still exists
-		updatedTierTemplate := &toolchainv1alpha1.TierTemplate{}
-		err = cl.Get(context.TODO(), client.ObjectKeyFromObject(tierTemplate), updatedTierTemplate)
-		require.NoError(t, err)
-		assert.Contains(t, updatedTierTemplate.Finalizers, toolchainv1alpha1.FinalizerName)
-		assert.Nil(t, updatedTierTemplate.DeletionTimestamp)
 	})
 }
 

@@ -1,4 +1,4 @@
-package tiertemplatecleanup
+package tiertemplateguard
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -23,7 +22,6 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.TierTemplate{}).
-		Watches(&toolchainv1alpha1.NSTemplateTier{}, handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToTierTemplates)).
 		Complete(r)
 }
 
@@ -48,16 +46,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if err := r.addFinalizer(ctx, tt); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to add the finalizer: %w", err)
-	}
-
-	used, err := r.isUsed(ctx, tt)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to determine whether the TierTemplate is used: %w", err)
-	}
-	if !used {
-		if err := r.Client.Delete(ctx, tt); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to delete unused TierTemplate: %w", err)
-		}
 	}
 
 	return reconcile.Result{}, nil
