@@ -24,7 +24,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/controllers/spaceprovisionerconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
-	"github.com/codeready-toolchain/host-operator/controllers/tiertemplatecleanup"
+	"github.com/codeready-toolchain/host-operator/controllers/tiertemplateguard"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
@@ -288,7 +288,7 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplatTierRevisionCleanup")
 		os.Exit(1)
 	}
-	if err = (&tiertemplatecleanup.Reconciler{
+	if err = (&tiertemplateguard.Reconciler{
 		Client: mgr.GetClient(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TierTemplateCleanup")
