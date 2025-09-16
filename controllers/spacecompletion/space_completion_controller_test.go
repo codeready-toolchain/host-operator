@@ -46,7 +46,7 @@ func TestCreateSpace(t *testing.T) {
 	t.Run("with tierName but without targetCluster - only targetCluster should be set", func(t *testing.T) {
 		// given
 		space := spacetest.NewSpace(test.HostOperatorNs, "without-targetCluster",
-			spacetest.WithTierName("advanced"))
+			spacetest.WithTierName("ourtier"))
 		r, req, cl := prepareReconcile(t, space, spc)
 
 		// when
@@ -55,7 +55,7 @@ func TestCreateSpace(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
-			HasTier("advanced").
+			HasTier("ourtier").
 			HasSpecTargetCluster("member1")
 	})
 
@@ -80,7 +80,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("with both fields set", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "with-fields",
-				spacetest.WithTierName("advanced"),
+				spacetest.WithTierName("ourtier"),
 				spacetest.WithSpecTargetCluster("member2"))
 			r, req, cl := prepareReconcile(t, space, spc)
 
@@ -90,7 +90,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
-				HasTier("advanced").
+				HasTier("ourtier").
 				HasSpecTargetCluster("member2")
 		})
 
@@ -115,7 +115,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("when no member cluster available and when tierName is set", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "without-members",
-				spacetest.WithTierName("advanced"))
+				spacetest.WithTierName("ourtier"))
 			r, req, cl := prepareReconcile(t, space, nil)
 
 			// when
@@ -124,14 +124,14 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
-				HasTier("advanced").
+				HasTier("ourtier").
 				HasSpecTargetCluster("")
 		})
 
 		t.Run("when the space is not there, then just skip it", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "not-found",
-				spacetest.WithTierName("advanced"))
+				spacetest.WithTierName("ourtier"))
 			r, req, _ := prepareReconcile(t, space, nil)
 			empty := test.NewFakeClient(t)
 			empty.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
@@ -149,7 +149,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("when getting space fails", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "get-fails",
-				spacetest.WithTierName("advanced"))
+				spacetest.WithTierName("ourtier"))
 			r, req, cl := prepareReconcile(t, space, nil)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
@@ -162,7 +162,7 @@ func TestCreateSpace(t *testing.T) {
 			require.Error(t, err)
 			cl.MockGet = nil
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
-				HasTier("advanced").
+				HasTier("ourtier").
 				HasSpecTargetCluster("")
 		})
 
@@ -191,7 +191,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("when listing SpaceProvisionerConfig fails and only targetCluster is missing", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
-				spacetest.WithTierName("advanced"))
+				spacetest.WithTierName("ourtier"))
 			r, req, cl := prepareReconcile(t, space, nil)
 			cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
@@ -206,7 +206,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.Error(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
-				HasTier("advanced").
+				HasTier("ourtier").
 				HasSpecTargetCluster("")
 		})
 	})
