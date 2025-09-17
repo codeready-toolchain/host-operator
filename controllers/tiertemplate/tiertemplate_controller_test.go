@@ -2,12 +2,14 @@ package tiertemplate
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +74,29 @@ func TestAddFinalizer(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+	})
+
+	t.Run("should fail if unable to add the finalizer", func(t *testing.T) {
+		// given
+		tierTemplate := newTierTemplate()
+		r, cl := prepareReconcile(t, tierTemplate)
+		request := controllerruntime.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      tierTemplateName,
+				Namespace: test.HostOperatorNs,
+			},
+		}
+
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("intentional fail to update")
+		}
+
+		// when
+		_, err := r.Reconcile(context.TODO(), request)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "failed to add the finalizer: intentional fail to update", err.Error())
 	})
 }
 
