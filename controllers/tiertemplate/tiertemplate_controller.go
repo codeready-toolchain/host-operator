@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,6 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/finalizers,verbs=update
 
 type Reconciler struct {
 	Client client.Client
@@ -83,19 +87,16 @@ func (r *Reconciler) isUsed(ctx context.Context, tt *toolchainv1alpha1.TierTempl
 		return false, err
 	}
 
+	var used bool
 	for _, nstt := range list.Items {
-		if nstt.Spec.ClusterResources != nil && nstt.Spec.ClusterResources.TemplateRef == tt.Name {
+		nstemplatetiers.ForAllNSTemplateTierRefs(&nstt, func(ref string) {
+			if tt.Name == ref {
+				used = true
+			}
+		})
+
+		if used {
 			return true, nil
-		}
-		for _, ns := range nstt.Spec.Namespaces {
-			if ns.TemplateRef == tt.Name {
-				return true, nil
-			}
-		}
-		for _, sr := range nstt.Spec.SpaceRoles {
-			if sr.TemplateRef == tt.Name {
-				return true, nil
-			}
 		}
 	}
 	return false, nil
