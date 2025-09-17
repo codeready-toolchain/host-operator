@@ -1,4 +1,4 @@
-package tiertemplateguard
+package tiertemplate
 
 import (
 	"context"

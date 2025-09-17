@@ -1,4 +1,4 @@
-package tiertemplateguard
+package tiertemplate
 
 import (
 	"context"
@@ -57,9 +57,7 @@ func (r *Reconciler) addFinalizer(ctx context.Context, tt *toolchainv1alpha1.Tie
 		logger := log.FromContext(ctx)
 		logger.Info("adding finalizer on TierTemplate")
 		controllerutil.AddFinalizer(tt, toolchainv1alpha1.FinalizerName)
-		if err := r.Client.Update(ctx, tt); err != nil {
-			return err
-		}
+		return r.Client.Update(ctx, tt)
 	}
 	return nil
 }
