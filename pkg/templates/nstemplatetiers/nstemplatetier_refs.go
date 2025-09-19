@@ -4,22 +4,26 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 )
 
-// getNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
+// GetNSTemplateTierRefs returns a list with all the refs from the NSTemplateTier
 func GetNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier) []string {
 	var refs []string
+	ForAllNSTemplateTierRefs(tmplTier, func(ref string) {
+		refs = append(refs, ref)
+	})
+	return refs
+}
+
+// ForAllNSTemplateTierRefs iterates over all the tier templates referenced by the ns template tier
+// and calls a function for each of them.
+func ForAllNSTemplateTierRefs(tmplTier *toolchainv1alpha1.NSTemplateTier, visitor func(string)) {
 	for _, ns := range tmplTier.Spec.Namespaces {
-		refs = append(refs, ns.TemplateRef)
+		visitor(ns.TemplateRef)
 	}
 	if tmplTier.Spec.ClusterResources != nil {
-		refs = append(refs, tmplTier.Spec.ClusterResources.TemplateRef)
+		visitor(tmplTier.Spec.ClusterResources.TemplateRef)
 	}
 
-	roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
-	for r := range tmplTier.Spec.SpaceRoles {
-		roles = append(roles, r)
+	for _, r := range tmplTier.Spec.SpaceRoles {
+		visitor(r.TemplateRef)
 	}
-	for _, r := range roles {
-		refs = append(refs, tmplTier.Spec.SpaceRoles[r].TemplateRef)
-	}
-	return refs
 }

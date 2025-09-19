@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestGetTierRefs(t *testing.T) {
+func TestTierRefs(t *testing.T) {
 	// given
 	Base1nsTemplates := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,9 +44,19 @@ func TestGetTierRefs(t *testing.T) {
 			},
 		},
 	}
-	expectedRefs := []string{"base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new", "base1ns-clusterresources-123456new", "base1ns-admin-123456new", "base1ns-edit-123456new", "base1ns-viewer-123456new"}
-	if refs := GetNSTemplateTierRefs(Base1nsTemplates); refs != nil {
+
+	t.Run("collect", func(t *testing.T) {
+		expectedRefs := []string{"base1ns-code-123456new", "base1ns-dev-123456new", "base1ns-stage-123456new", "base1ns-clusterresources-123456new", "base1ns-admin-123456new", "base1ns-edit-123456new", "base1ns-viewer-123456new"}
+		refs := GetNSTemplateTierRefs(Base1nsTemplates)
 		require.Len(t, refs, 7)
 		assert.ElementsMatch(t, expectedRefs, refs)
-	}
+	})
+
+	t.Run("any fn", func(t *testing.T) {
+		var cnt int
+		ForAllNSTemplateTierRefs(Base1nsTemplates, func(s string) {
+			cnt++
+		})
+		require.Equal(t, 7, cnt)
+	})
 }
