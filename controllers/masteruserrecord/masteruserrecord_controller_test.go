@@ -265,7 +265,7 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 
 	toolchainStatus := NewToolchainStatus(
 		WithMember(commontest.MemberClusterName,
-			WithRoutes("https://console.foo.com", "https://che.foo.com", toolchainv1alpha1.Condition{
+			WithRoutes("https://console.foo.com", toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.ConditionReady,
 				Status: corev1.ConditionTrue,
 			})),
@@ -403,8 +403,8 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacetest.WithSpecTargetCluster(commontest.Member2ClusterName))
 
 	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
+		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -634,9 +634,9 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
-		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
+		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
+		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -882,7 +882,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -994,9 +994,9 @@ func TestModifyUserAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
-		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
+		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
+		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -1064,8 +1064,8 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		memberClient2 := commontest.NewFakeClient(t, userAccount2)
 
 		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
+			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
+			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -1128,9 +1128,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 
 		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
-			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
+			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
+			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
+			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -1184,7 +1184,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"1,external": 1,
@@ -1419,7 +1419,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := commontest.NewFakeClient(t, userAccount)
 	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
