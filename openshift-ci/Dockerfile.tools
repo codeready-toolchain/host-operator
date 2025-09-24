@@ -11,7 +11,7 @@ ENV LANG=en_US.utf8 \
     GOLANG_VERSION=go1.23.12 \
     GOLANG_SHA256=d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90
 
-    ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
+ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
 RUN yum install -y \
     findutils \
