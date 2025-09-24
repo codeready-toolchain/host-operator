@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest as build-tools
+FROM registry.access.redhat.com/ubi9/ubi:latest as build-tools
 
 LABEL maintainer "KubeSaw <devsandbox@redhat.com>"
 LABEL author "KubeSaw <devsandbox@redhat.com>"
@@ -11,7 +11,7 @@ ENV LANG=en_US.utf8 \
     GOLANG_VERSION=go1.23.12 \
     GOLANG_SHA256=d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90
 
-ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
+    ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
 RUN yum install -y \
     findutils \
@@ -24,7 +24,35 @@ RUN yum install -y \
     bc \
     jq \
     gcc \
+    gettext \
+    gcc-c++ \
+    python3 \
+    python3-devel \
+    sqlite-devel \
     && yum clean all
+
+# Install Firefox required dependencies
+RUN yum install -y \
+        libxcb \
+        libX11 \
+        libXext \
+        libXrandr \
+        libXcomposite \
+        libXcursor \
+        libXdamage \
+        libXfixes \
+        libXi \
+        gtk3 \
+        pango \
+        atk \
+        cairo \
+        gdk-pixbuf2 \
+        libXrender \
+        alsa-lib \
+        freetype \
+        fontconfig \
+        libX11-xcb && \
+    yum clean all
 
 WORKDIR /tmp
 
@@ -39,6 +67,9 @@ RUN curl -Lo ${GOLANG_VERSION}.linux-amd64.tar.gz https://dl.google.com/go/${GOL
     && go version
 
 RUN mkdir -p ${GOPATH}/src/${GO_PACKAGE_PATH}/
+
+# Increase shared memory for browsers (recommended for Playwright)
+RUN mkdir -p /dev/shm && chmod 1777 /dev/shm
 
 WORKDIR ${GOPATH}/src/${GO_PACKAGE_PATH}
 
