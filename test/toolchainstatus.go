@@ -103,13 +103,12 @@ func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	}
 }
 
-func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition) MemberToolchainStatusOption {
+func WithRoutes(consoleURL string, condition toolchainv1alpha1.Condition) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		if status.MemberStatus.Routes == nil {
 			status.MemberStatus.Routes = &toolchainv1alpha1.Routes{}
 		}
 		status.MemberStatus.Routes.ConsoleURL = consoleURL
-		status.MemberStatus.Routes.CheDashboardURL = cheURL
 		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
 	}
 }

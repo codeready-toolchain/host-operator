@@ -652,8 +652,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 						Reason:        cond.Reason,
 						Message:       cond.Message,
 						Details: map[string]string{
-							"Che dashboard URL": member.MemberStatus.Routes.CheDashboardURL,
-							"Console URL":       member.MemberStatus.Routes.ConsoleURL,
+							"Console URL": member.MemberStatus.Routes.ConsoleURL,
 						},
 					})
 				}
