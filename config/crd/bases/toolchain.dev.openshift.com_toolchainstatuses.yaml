@@ -542,10 +542,6 @@ spec:
                           description: Routes/URLs of the cluster, such as Console
                             and Che Dashboard URLs
                           properties:
-                            cheDashboardURL:
-                              description: CheDashboardURL is the Che Dashboard URL
-                                of the cluster if Che is installed
-                              type: string
                             conditions:
                               description: |-
                                 Conditions is an array of current member operator status conditions
