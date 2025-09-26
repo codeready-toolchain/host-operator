@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -154,19 +155,27 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 		testTier := tiertest.TierInNamespace(t,
 			"not-bundled",
 			namespace,
-			toolchainv1alpha1.NSTemplateTierSpec{},
+			toolchainv1alpha1.NSTemplateTierSpec{
+				ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+					TemplateRef: "cluster-resources",
+				},
+			},
 			tiertest.MarkedBundled())
+		tierTemplate := newTierTemplate("cluster-resources", namespace)
 
-		clt := commontest.NewFakeClient(t, testTier)
+		clt := commontest.NewFakeClient(t, testTier, tierTemplate)
 
 		// when
 		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
-		inCluster := &toolchainv1alpha1.NSTemplateTier{}
-		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
+		inClusterNSTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+		gnstterr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inClusterNSTemplateTier)
+		inClusterTierTemplate := &toolchainv1alpha1.TierTemplate{}
+		gtterr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierTemplate), inClusterTierTemplate)
 
 		// then
 		require.NoError(t, err)
-		require.True(t, apierrors.IsNotFound(gerr))
+		require.True(t, apierrors.IsNotFound(gnstterr))
+		require.True(t, apierrors.IsNotFound(gtterr))
 	})
 	t.Run("bundled tiers are created with an annotation", func(t *testing.T) {
 		// given
@@ -205,4 +214,13 @@ func verifyTierTemplate(t *testing.T, cl *commontest.FakeClient, namespace, tier
 	}
 	require.Fail(t, fmt.Sprintf("the TierTemplate for NSTemplateTier '%s' and of the type '%s' wasn't found", tierName, typeName))
 	return ""
+}
+
+func newTierTemplate(name, ns string) *toolchainv1alpha1.TierTemplate {
+	return &toolchainv1alpha1.TierTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+	}
 }
