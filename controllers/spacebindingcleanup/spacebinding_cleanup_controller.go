@@ -24,6 +24,7 @@ import (
 
 const norequeue = 0 * time.Second
 const requeueDelay = 10 * time.Second
+const deletionDelay = 30 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -79,11 +80,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	space := &toolchainv1alpha1.Space{}
 	if err := r.Get(ctx, spaceName, space); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("the Space was not found", "Space", spaceBinding.Spec.Space)
+			withinDelayPeriod, age, timeLeft := checkSpaceBindingDeletionDelay(spaceBinding)
+			if withinDelayPeriod {
+				logger.Info("Space not found, SpaceBinding too young - waiting", "space", spaceBinding.Spec.Space, "age", age.String(), "timeLeft", timeLeft.String())
+				return ctrl.Result{RequeueAfter: timeLeft}, nil
+			}
+			logger.Info("Space not found, SpaceBinding old enough - deleting", "space", spaceBinding.Spec.Space, "age", age.String())
 			requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
-			return ctrl.Result{
-				RequeueAfter: requeueAfter,
-			}, err
+			return ctrl.Result{RequeueAfter: requeueAfter}, err
 		}
 		// error while reading space
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
@@ -199,6 +203,19 @@ type SpaceBindingRequestAssociated struct {
 	found bool
 	// spaceBinding is the resource that is being reconciled
 	spaceBinding *toolchainv1alpha1.SpaceBinding
+}
+
+// checkSpaceBindingDeletionDelay checks if the SpaceBinding is within the deletion delay period.
+// Returns true if still in delay period (should wait), false if delay period has passed (can delete).
+// Also returns the age and time left in delay period for logging.
+func checkSpaceBindingDeletionDelay(spaceBinding *toolchainv1alpha1.SpaceBinding) (withinDelayPeriod bool, age time.Duration, timeLeft time.Duration) {
+	spaceBindingAge := time.Since(spaceBinding.CreationTimestamp.Time)
+	if spaceBindingAge <= deletionDelay {
+		// Calculate how much time is left in the deletion delay period
+		timeLeft := deletionDelay - spaceBindingAge
+		return true, spaceBindingAge, timeLeft
+	}
+	return false, spaceBindingAge, 0
 }
 
 func checkSpaceBindingRequestAssociated(spaceBinding *toolchainv1alpha1.SpaceBinding) *SpaceBindingRequestAssociated {
