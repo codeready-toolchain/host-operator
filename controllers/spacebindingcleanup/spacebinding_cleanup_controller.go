@@ -80,12 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	space := &toolchainv1alpha1.Space{}
 	if err := r.Get(ctx, spaceName, space); err != nil {
 		if errors.IsNotFound(err) {
-			withinDelayPeriod, age, timeLeft := checkSpaceBindingDeletionDelay(spaceBinding)
-			if withinDelayPeriod {
-				logger.Info("Space not found, SpaceBinding too young - waiting", "space", spaceBinding.Spec.Space, "age", age.String(), "timeLeft", timeLeft.String())
-				return ctrl.Result{RequeueAfter: timeLeft}, nil
-			}
-			logger.Info("Space not found, SpaceBinding old enough - deleting", "space", spaceBinding.Spec.Space, "age", age.String())
+			logger.Info("Space not found", "space", spaceBinding.Spec.Space)
 			requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
 			return ctrl.Result{RequeueAfter: requeueAfter}, err
 		}
@@ -128,7 +123,15 @@ func (r *Reconciler) ensureMURExists(ctx context.Context, spaceBinding *toolchai
 
 func (r *Reconciler) deleteSpaceBinding(ctx context.Context, spaceBinding *toolchainv1alpha1.SpaceBinding) (time.Duration, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("deleting the SpaceBinding")
+
+	// Check deletion delay - only proceed if SpaceBinding is old enough
+	withinDelayPeriod, age, timeLeft := checkSpaceBindingDeletionDelay(spaceBinding)
+	if withinDelayPeriod {
+		logger.Info("SpaceBinding too young - waiting", "age", age.String(), "timeLeft", timeLeft.String())
+		return timeLeft, nil
+	}
+
+	logger.Info("deleting the SpaceBinding", "age", age.String())
 
 	// check if spaceBinding was created from SpaceBindingRequest,
 	// in that case we must delete the SBR and then the SBR controller will take care of deleting the SpaceBinding
@@ -210,7 +213,7 @@ type SpaceBindingRequestAssociated struct {
 // Also returns the age and time left in delay period for logging.
 func checkSpaceBindingDeletionDelay(spaceBinding *toolchainv1alpha1.SpaceBinding) (withinDelayPeriod bool, age time.Duration, timeLeft time.Duration) {
 	spaceBindingAge := time.Since(spaceBinding.CreationTimestamp.Time)
-	if spaceBindingAge <= deletionDelay {
+	if spaceBindingAge < deletionDelay {
 		// Calculate how much time is left in the deletion delay period
 		timeLeft := deletionDelay - spaceBindingAge
 		return true, spaceBindingAge, timeLeft

@@ -185,13 +185,33 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 			})
 
-			t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
-
-				fakeClient := test.NewFakeClient(t, sbJoeRedhatView, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
+			t.Run("joe-redhat SpaceBinding requeues when joe MUR is missing and SpaceBinding is too young", func(t *testing.T) {
+				// given
+				sbYoung := sbJoeRedhatView.DeepCopy()
+				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-10 * time.Second))
+				fakeClient := test.NewFakeClient(t, sbYoung, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
 				// when
-				res, err := reconciler.Reconcile(context.TODO(), requestFor(sbJoeRedhatView))
+				res, err := reconciler.Reconcile(context.TODO(), requestFor(sbYoung))
+
+				// then
+				require.NoError(t, err)
+				require.True(t, res.RequeueAfter > 19*time.Second && res.RequeueAfter <= 20*time.Second) // approximately 20 seconds left
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists() // not deleted yet
+				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
+			})
+
+			t.Run("joe-redhat SpaceBinding removed when joe MUR is missing and SpaceBinding is old enough", func(t *testing.T) {
+				// given
+				sbOld := sbJoeRedhatView.DeepCopy()
+				sbOld.CreationTimestamp = metav1.NewTime(time.Now().Add(-35 * time.Second))
+				fakeClient := test.NewFakeClient(t, sbOld, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
+				reconciler := prepareReconciler(t, fakeClient)
+
+				// when
+				res, err := reconciler.Reconcile(context.TODO(), requestFor(sbOld))
 
 				// then
 				require.Equal(t, res.RequeueAfter, time.Duration(0)) // no requeue
