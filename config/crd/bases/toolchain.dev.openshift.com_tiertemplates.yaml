@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: tiertemplates.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -113,14 +113,14 @@ spec:
                         the Template to Config transformation.
                       properties:
                         description:
-                          description: Description of a parameter. Optional.
+                          description: description of a parameter. Optional.
                           type: string
                         displayName:
                           description: 'Optional: The name that will show in UI instead
                             of parameter ''Name'''
                           type: string
                         from:
-                          description: From is an input value for the generator. Optional.
+                          description: from is an input value for the generator. Optional.
                           type: string
                         generate:
                           description: |-
@@ -139,7 +139,7 @@ spec:
                           type: string
                         name:
                           description: |-
-                            Name must be set and it can be referenced in Template
+                            name must be set and it can be referenced in Template
                             Items using ${PARAMETER_NAME}. Required.
                           type: string
                         required:
@@ -148,7 +148,7 @@ spec:
                           type: boolean
                         value:
                           description: |-
-                            Value holds the Parameter data. If specified, the generator will be
+                            value holds the Parameter data. If specified, the generator will be
                             ignored. The value replaces all occurrences of the Parameter ${Name}
                             expression during the Template to Config transformation. Optional.
                           type: string
