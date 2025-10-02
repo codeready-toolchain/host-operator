@@ -10,7 +10,7 @@ import (
 )
 
 // OutdatedTierSelector creates a label selector to find MasterUserRecords or Spaces which are not up-to-date with
-// the templateRefs of the given NSTemplateTier.
+// the templateRefs of the given NSTemplateTier
 //
 // (longer explanation)
 // newLabelSelector creates a selector to find MasterUserRecords which have a label with key
