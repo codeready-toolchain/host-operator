@@ -1631,7 +1631,7 @@ func TestExtractStatusMetadata(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
 			WithMember("member-sandbox.aaa.openshiftapps.com",
-				WithRoutes("http://console.url", "http://che.dashboard.url",
+				WithRoutes("http://console.url",
 					toolchainv1alpha1.Condition{
 						Type:    toolchainv1alpha1.ConditionReady,
 						Status:  corev1.ConditionFalse,
@@ -1658,15 +1658,14 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "RoutesNotReadyReason", meta[1].Reason)
 		require.Equal(t, "Member routes error message", meta[1].Message)
 
-		require.Equal(t, "http://che.dashboard.url", meta[1].Details["Che dashboard URL"])
 		require.Equal(t, "http://console.url", meta[1].Details["Console URL"])
-		require.Len(t, meta[1].Details, 2)
+		require.Len(t, meta[1].Details, 1)
 	})
 
 	t.Run("test status metadata for member route not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(WithMember("member-sandbox.ccc.openshiftapps.com",
-			WithRoutes("https://console.url", "https://che.url",
+			WithRoutes("https://console.url",
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
@@ -1769,7 +1768,7 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 		toolchainStatus := NewToolchainStatus(
 			WithHost(),
 			WithMember("member-sandbox.ccc.openshiftapps.com",
-				WithRoutes("https://console.url", "https://che.url",
+				WithRoutes("https://console.url",
 					toolchainv1alpha1.Condition{
 						Type:    toolchainv1alpha1.ConditionReady,
 						Status:  corev1.ConditionFalse,
@@ -1937,9 +1936,8 @@ func newMemberStatus(options ...memberstatusOptions) *toolchainv1alpha1.MemberSt
 				},
 			},
 			Routes: &toolchainv1alpha1.Routes{
-				ConsoleURL:      "http://console.openshift.com/url",
-				CheDashboardURL: "http://console.openshift.com/url",
-				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
+				ConsoleURL: "http://console.openshift.com/url",
+				Conditions: []toolchainv1alpha1.Condition{ToBeReady()},
 			},
 		},
 	}
@@ -2107,9 +2105,8 @@ func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha
 				},
 			},
 			Routes: &toolchainv1alpha1.Routes{
-				ConsoleURL:      "http://console.openshift.com/url",
-				CheDashboardURL: "http://console.openshift.com/url",
-				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
+				ConsoleURL: "http://console.openshift.com/url",
+				Conditions: []toolchainv1alpha1.Condition{ToBeReady()},
 			},
 		},
 		SpaceCount: 0,
