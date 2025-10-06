@@ -125,13 +125,15 @@ func (r *Reconciler) deleteSpaceBinding(ctx context.Context, spaceBinding *toolc
 	logger := log.FromContext(ctx)
 
 	// Check deletion delay - only proceed if SpaceBinding is old enough
-	withinDelayPeriod, age, timeLeft := checkSpaceBindingDeletionDelay(spaceBinding)
-	if withinDelayPeriod {
-		logger.Info("SpaceBinding too young - waiting", "age", age.String(), "timeLeft", timeLeft.String())
+	spaceBindingAge := time.Since(spaceBinding.CreationTimestamp.Time)
+	if spaceBindingAge < deletionDelay {
+		// Calculate how much time is left in the deletion delay period
+		timeLeft := deletionDelay - spaceBindingAge
+		logger.Info("SpaceBinding too young - waiting", "age", spaceBindingAge.String(), "timeLeft", timeLeft.String())
 		return timeLeft, nil
 	}
 
-	logger.Info("deleting the SpaceBinding", "age", age.String())
+	logger.Info("deleting the SpaceBinding", "age", spaceBindingAge.String())
 
 	// check if spaceBinding was created from SpaceBindingRequest,
 	// in that case we must delete the SBR and then the SBR controller will take care of deleting the SpaceBinding
@@ -206,19 +208,6 @@ type SpaceBindingRequestAssociated struct {
 	found bool
 	// spaceBinding is the resource that is being reconciled
 	spaceBinding *toolchainv1alpha1.SpaceBinding
-}
-
-// checkSpaceBindingDeletionDelay checks if the SpaceBinding is within the deletion delay period.
-// Returns true if still in delay period (should wait), false if delay period has passed (can delete).
-// Also returns the age and time left in delay period for logging.
-func checkSpaceBindingDeletionDelay(spaceBinding *toolchainv1alpha1.SpaceBinding) (withinDelayPeriod bool, age time.Duration, timeLeft time.Duration) {
-	spaceBindingAge := time.Since(spaceBinding.CreationTimestamp.Time)
-	if spaceBindingAge < deletionDelay {
-		// Calculate how much time is left in the deletion delay period
-		timeLeft := deletionDelay - spaceBindingAge
-		return true, spaceBindingAge, timeLeft
-	}
-	return false, spaceBindingAge, 0
 }
 
 func checkSpaceBindingRequestAssociated(spaceBinding *toolchainv1alpha1.SpaceBinding) *SpaceBindingRequestAssociated {

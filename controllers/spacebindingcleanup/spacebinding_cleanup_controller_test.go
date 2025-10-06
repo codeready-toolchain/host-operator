@@ -129,7 +129,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.True(t, res.RequeueAfter > 24*time.Second && res.RequeueAfter <= 25*time.Second) // approximately 25 seconds left
+				require.Greater(t, res.RequeueAfter, 24*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 25*time.Second) // approximately 25 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).Exists()
 			})
 
@@ -161,7 +162,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.True(t, res.RequeueAfter > 19*time.Second && res.RequeueAfter <= 20*time.Second)           // approximately 20 seconds left
+				require.Greater(t, res.RequeueAfter, 19*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 20*time.Second)                                           // approximately 20 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
@@ -197,7 +199,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.True(t, res.RequeueAfter > 19*time.Second && res.RequeueAfter <= 20*time.Second) // approximately 20 seconds left
+				require.Greater(t, res.RequeueAfter, 19*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 20*time.Second) // approximately 20 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
