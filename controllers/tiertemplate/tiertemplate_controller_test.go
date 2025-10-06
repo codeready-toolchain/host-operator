@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/test/tiertemplate"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ const tierTemplateName = "test-tier-template"
 func TestAddFinalizer(t *testing.T) {
 	t.Run("should add finalizer when not present", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate()
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs)
 		r, cl := prepareReconcile(t, tierTemplate)
 
 		// when
@@ -42,7 +42,7 @@ func TestAddFinalizer(t *testing.T) {
 
 	t.Run("should not duplicate finalizer when already present", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate(withFinalizer())
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs, tiertemplate.WithFinalizer())
 		r, cl := prepareReconcile(t, tierTemplate)
 
 		// when
@@ -78,7 +78,7 @@ func TestAddFinalizer(t *testing.T) {
 
 	t.Run("should fail if unable to add the finalizer", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate()
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs)
 		r, cl := prepareReconcile(t, tierTemplate)
 		request := controllerruntime.Request{
 			NamespacedName: types.NamespacedName{
@@ -103,7 +103,7 @@ func TestAddFinalizer(t *testing.T) {
 func TestCleanup(t *testing.T) {
 	t.Run("should remove finalizer when TierTemplate is not used", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate(withFinalizer(), withDeletionTimestamp())
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs, tiertemplate.WithFinalizer(), tiertemplate.WithDeletionTimestamp())
 		nsTemplateTier := newNSTemplateTier("other-tier")
 		r, cl := prepareReconcile(t, tierTemplate, nsTemplateTier)
 
@@ -121,7 +121,7 @@ func TestCleanup(t *testing.T) {
 
 	t.Run("should not remove finalizer when TierTemplate is used in namespace template", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate(withFinalizer(), withDeletionTimestamp())
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs, tiertemplate.WithFinalizer(), tiertemplate.WithDeletionTimestamp())
 		nsTemplateTier := newNSTemplateTier("basic-tier", withNamespaceTemplate())
 		r, _ := prepareReconcile(t, tierTemplate, nsTemplateTier)
 
@@ -135,7 +135,7 @@ func TestCleanup(t *testing.T) {
 
 	t.Run("should not remove finalizer when TierTemplate is used in cluster resources", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate(withFinalizer(), withDeletionTimestamp())
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs, tiertemplate.WithFinalizer(), tiertemplate.WithDeletionTimestamp())
 		nsTemplateTier := newNSTemplateTier("basic-tier", withClusterResourceTemplate())
 		r, _ := prepareReconcile(t, tierTemplate, nsTemplateTier)
 
@@ -148,7 +148,7 @@ func TestCleanup(t *testing.T) {
 
 	t.Run("should not remove finalizer when TierTemplate is used in space roles", func(t *testing.T) {
 		// given
-		tierTemplate := newTierTemplate(withFinalizer(), withDeletionTimestamp())
+		tierTemplate := tiertemplate.NewTierTemplate(t, tierTemplateName, test.HostOperatorNs, tiertemplate.WithFinalizer(), tiertemplate.WithDeletionTimestamp())
 		nsTemplateTier := newNSTemplateTier("basic-tier", withSpaceRoleTemplate("admin"))
 		r, _ := prepareReconcile(t, tierTemplate, nsTemplateTier)
 
@@ -158,33 +158,6 @@ func TestCleanup(t *testing.T) {
 		// then
 		require.Error(t, err)
 	})
-}
-
-func newTierTemplate(options ...tierTemplateOption) *toolchainv1alpha1.TierTemplate {
-	tt := &toolchainv1alpha1.TierTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      tierTemplateName,
-			Namespace: test.HostOperatorNs,
-		},
-	}
-	for _, apply := range options {
-		apply(tt)
-	}
-	return tt
-}
-
-type tierTemplateOption func(*toolchainv1alpha1.TierTemplate)
-
-func withFinalizer() tierTemplateOption {
-	return func(tt *toolchainv1alpha1.TierTemplate) {
-		tt.Finalizers = []string{toolchainv1alpha1.FinalizerName}
-	}
-}
-
-func withDeletionTimestamp() tierTemplateOption {
-	return func(tt *toolchainv1alpha1.TierTemplate) {
-		tt.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-	}
 }
 
 func newNSTemplateTier(name string, options ...nsTemplateTierOption) *toolchainv1alpha1.NSTemplateTier {

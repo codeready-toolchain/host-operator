@@ -12,6 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/test/tiertemplate"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -161,7 +161,7 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 				},
 			},
 			tiertest.MarkedBundled())
-		tierTemplate := newTierTemplate("cluster-resources", namespace)
+		tierTemplate := tiertemplate.NewTierTemplate(t, "cluster-resources", namespace)
 
 		clt := commontest.NewFakeClient(t, testTier, tierTemplate)
 
@@ -214,13 +214,4 @@ func verifyTierTemplate(t *testing.T, cl *commontest.FakeClient, namespace, tier
 	}
 	require.Fail(t, fmt.Sprintf("the TierTemplate for NSTemplateTier '%s' and of the type '%s' wasn't found", tierName, typeName))
 	return ""
-}
-
-func newTierTemplate(name, ns string) *toolchainv1alpha1.TierTemplate {
-	return &toolchainv1alpha1.TierTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
 }
