@@ -497,7 +497,6 @@ spec:
                           type: object
                         routes:
                           description: Routes/URLs of the cluster, such as Console
-                            and Che Dashboard URLs
                           properties:
                             conditions:
                               description: |-
