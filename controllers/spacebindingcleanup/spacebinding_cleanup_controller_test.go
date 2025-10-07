@@ -120,7 +120,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			t.Run("kubesaw-authenticated SpaceBinding requeues when redhat space is missing and SpaceBinding is too young", func(t *testing.T) {
 				// given
 				sbYoung := sbPublicViewerRedhatView.DeepCopy()
-				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-5 * time.Second))
+				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-1 * time.Second))
 				fakeClient := test.NewFakeClient(t, sbYoung, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -129,8 +129,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.Greater(t, res.RequeueAfter, 24*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 25*time.Second) // approximately 25 seconds left
+				require.Greater(t, res.RequeueAfter, 0*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second) // approximately 1 second left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).Exists()
 			})
 
@@ -153,7 +153,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			t.Run("lara-redhat SpaceBinding requeues when redhat space is missing and SpaceBinding is too young", func(t *testing.T) {
 				// given
 				sbYoung := sbLaraRedhatAdmin.DeepCopy()
-				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-10 * time.Second))
+				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-1 * time.Second))
 				fakeClient := test.NewFakeClient(t, sbYoung, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -162,8 +162,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.Greater(t, res.RequeueAfter, 19*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 20*time.Second)                                           // approximately 20 seconds left
+				require.Greater(t, res.RequeueAfter, 0*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second)                                            // approximately 1 second left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
@@ -190,7 +190,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			t.Run("joe-redhat SpaceBinding requeues when joe MUR is missing and SpaceBinding is too young", func(t *testing.T) {
 				// given
 				sbYoung := sbJoeRedhatView.DeepCopy()
-				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-10 * time.Second))
+				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-1 * time.Second))
 				fakeClient := test.NewFakeClient(t, sbYoung, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -199,8 +199,8 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.Greater(t, res.RequeueAfter, 19*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 20*time.Second) // approximately 20 seconds left
+				require.Greater(t, res.RequeueAfter, 0*time.Second)
+				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second) // approximately 1 second left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()

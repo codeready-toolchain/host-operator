@@ -24,7 +24,7 @@ import (
 
 const norequeue = 0 * time.Second
 const requeueDelay = 10 * time.Second
-const deletionDelay = 30 * time.Second
+const deletionDelay = 2 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
