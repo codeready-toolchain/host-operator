@@ -11,11 +11,14 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
@@ -105,13 +108,115 @@ func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.Toolcha
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	counter.Reset()
 	t.Cleanup(counter.Reset)
-	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
+
+	// Only create resources if none are provided (for ForceSynchronization=true scenarios)
+	var allInitObjs []runtimeclient.Object
+	allInitObjs = append(allInitObjs, initObjs...)
+
+	// Only create additional resources if no test resources were provided
+	if len(initObjs) == 0 {
+		// Create Space resources based on member space counts
+		for _, member := range toolchainStatus.Status.Members {
+			for i := 0; i < member.SpaceCount; i++ {
+				space := &toolchainv1alpha1.Space{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("space-%s-%d", member.ClusterName, i),
+						Namespace: commontest.HostOperatorNs,
+					},
+					Spec: toolchainv1alpha1.SpaceSpec{
+						TierName:      "base1ns",
+						TargetCluster: member.ClusterName,
+					},
+				}
+				allInitObjs = append(allInitObjs, space)
+			}
+		}
+
+		// Create MasterUserRecord resources based on metrics
+		if toolchainStatus.Status.Metrics != nil {
+			if murMetrics, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]; exists {
+				murIndex := 0
+				for domain, count := range murMetrics {
+					for i := 0; i < count; i++ {
+						mur := &toolchainv1alpha1.MasterUserRecord{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace:   commontest.HostOperatorNs,
+								Name:        fmt.Sprintf("mur-%s-%d", domain, i),
+								Labels:      map[string]string{},
+								Annotations: map[string]string{},
+							},
+							Spec: toolchainv1alpha1.MasterUserRecordSpec{
+								TierName: "deactivate30",
+								PropagatedClaims: toolchainv1alpha1.PropagatedClaims{
+									Sub:         "UserID123",
+									UserID:      "135246",
+									AccountID:   "357468",
+									OriginalSub: "11223344",
+								},
+							},
+						}
+						if domain == string(metrics.Internal) {
+							mur.Spec.PropagatedClaims.Email = fmt.Sprintf("mur-%s-%d@redhat.com", domain, i)
+						} else {
+							mur.Spec.PropagatedClaims.Email = fmt.Sprintf("mur-%s-%d@external.com", domain, i)
+						}
+						allInitObjs = append(allInitObjs, mur)
+						murIndex++
+					}
+				}
+			}
+
+			// Create UserSignup resources based on metrics
+			if userSignupMetrics, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey]; exists {
+				userIndex := 0
+				for activationDomain, count := range userSignupMetrics {
+					parts := strings.Split(activationDomain, ",")
+					if len(parts) == 2 {
+						activations := parts[0]
+						domain := parts[1]
+						for i := 0; i < count; i++ {
+							userSignup := &toolchainv1alpha1.UserSignup{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      fmt.Sprintf("usersignup-%s-%s-%d", activations, domain, i),
+									Namespace: commontest.HostOperatorNs,
+									Annotations: map[string]string{
+										toolchainv1alpha1.UserSignupActivationCounterAnnotationKey: activations,
+									},
+								},
+								Spec: toolchainv1alpha1.UserSignupSpec{
+									IdentityClaims: toolchainv1alpha1.IdentityClaimsEmbedded{
+										PreferredUsername: fmt.Sprintf("user-%d", userIndex),
+									},
+								},
+							}
+							// Set email to determine domain
+							if domain == string(metrics.Internal) {
+								userSignup.Spec.IdentityClaims.Email = fmt.Sprintf("user%d@redhat.com", userIndex)
+							} else {
+								userSignup.Spec.IdentityClaims.Email = fmt.Sprintf("user%d@external.com", userIndex)
+							}
+							allInitObjs = append(allInitObjs, userSignup)
+							userIndex++
+						}
+					}
+				}
+			}
+		}
+	}
+
+	initializeCounters(t, commontest.NewFakeClient(t, allInitObjs...), toolchainStatus)
 }
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	t.Cleanup(counter.Reset)
-	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+	t.Cleanup(func() {
+		counter.Reset()
+	})
+
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
+
+	initializeCounters(t, fakeClient, toolchainStatus)
 }
 
 // InitializeCountersWith initializes the count cache from the counts parameter.
@@ -128,12 +233,30 @@ func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
 	}
 
+	// Create actual Space resources for ForceSynchronization=true scenarios
+	var initObjs []runtimeclient.Object
 	for _, count := range counts {
 		options = append(options, WithMember(count.clusterName, WithSpaceCount(count.count)))
+
+		// Create Space resources that match the count
+		for i := 0; i < count.count; i++ {
+			space := &toolchainv1alpha1.Space{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("space-%s-%d", count.clusterName, i),
+					Namespace: commontest.HostOperatorNs,
+				},
+				Spec: toolchainv1alpha1.SpaceSpec{
+					TierName: "base1ns",
+
+					TargetCluster: count.clusterName,
+				},
+			}
+			initObjs = append(initObjs, space)
+		}
 	}
 
 	toolchainStatus := NewToolchainStatus(options...)
-	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
