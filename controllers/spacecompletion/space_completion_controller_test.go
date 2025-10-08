@@ -17,6 +17,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -221,7 +223,8 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 	t.Cleanup(counter.Reset)
-	InitializeCounters(t, toolchainStatus)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 	objs := []runtimeclient.Object{toolchainStatus, space}
 	if member1SpaceProvisionerConfig != nil {
