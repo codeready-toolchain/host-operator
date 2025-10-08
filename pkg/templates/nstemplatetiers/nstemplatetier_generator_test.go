@@ -12,6 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/test/tiertemplate"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
@@ -154,19 +155,27 @@ func TestSyncResourcesWitProdAssets(t *testing.T) {
 		testTier := tiertest.TierInNamespace(t,
 			"not-bundled",
 			namespace,
-			toolchainv1alpha1.NSTemplateTierSpec{},
+			toolchainv1alpha1.NSTemplateTierSpec{
+				ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+					TemplateRef: "cluster-resources",
+				},
+			},
 			tiertest.MarkedBundled())
+		tierTemplate := tiertemplate.NewTierTemplate(t, "cluster-resources", namespace)
 
-		clt := commontest.NewFakeClient(t, testTier)
+		clt := commontest.NewFakeClient(t, testTier, tierTemplate)
 
 		// when
 		err := nstemplatetiers.SyncResources(context.TODO(), clt.Scheme(), clt, namespace)
-		inCluster := &toolchainv1alpha1.NSTemplateTier{}
-		gerr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inCluster)
+		inClusterNSTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+		gnstterr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(testTier), inClusterNSTemplateTier)
+		inClusterTierTemplate := &toolchainv1alpha1.TierTemplate{}
+		gtterr := clt.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(tierTemplate), inClusterTierTemplate)
 
 		// then
 		require.NoError(t, err)
-		require.True(t, apierrors.IsNotFound(gerr))
+		require.True(t, apierrors.IsNotFound(gnstterr))
+		require.True(t, apierrors.IsNotFound(gtterr))
 	})
 	t.Run("bundled tiers are created with an annotation", func(t *testing.T) {
 		// given

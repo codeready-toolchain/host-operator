@@ -12,18 +12,16 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/test/tiertemplate"
 	"github.com/codeready-toolchain/host-operator/test/tiertemplaterevision"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -89,7 +87,7 @@ func TestReconcile(t *testing.T) {
 
 		// TODO remove this subtest once we completely switch to using TTRs
 		t.Run("using tiertemplates as revisions", func(t *testing.T) {
-			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
+			tierTemplates := initTierTemplates(t, base1nsTier.Name)
 			t.Run("add revisions when they are missing", func(t *testing.T) {
 				// given
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
@@ -130,7 +128,7 @@ func TestReconcile(t *testing.T) {
 			crq := newTestCRQ("600")
 			t.Run("add revisions when they are missing ", func(t *testing.T) {
 				// given
-				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+				tierTemplates := initTierTemplates(t, base1nsTier.Name, crq)
 				r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -199,7 +197,7 @@ func TestReconcile(t *testing.T) {
 				// given
 				// the NSTemplateTier has already the status.revisions field populated
 				// but the TierTemplateRevision CRs are missing
-				tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+				tierTemplates := initTierTemplates(t, base1nsTier.Name, crq)
 				base1nsTierWithRevisions := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithFinalizer(),
 					// the tiertemplate revision CR should have a copy of those parameters
 					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
@@ -241,7 +239,7 @@ func TestReconcile(t *testing.T) {
 				tierWithVeryLongName := tiertest.Tier(t, veryLongTierName, tiertest.NSTemplateTierSpecWithTierName(veryLongTierName), tiertest.WithFinalizer(),
 					tiertest.WithParameter("DEPLOYMENT_QUOTA", "60"),
 				)
-				tierTemplatesWithLongNames := initTierTemplates(t, withTemplateObjects(crq), tierWithVeryLongName.Name)
+				tierTemplatesWithLongNames := initTierTemplates(t, tierWithVeryLongName.Name, crq)
 				r, req, cl := prepareReconcile(t, tierWithVeryLongName.Name, append(tierTemplatesWithLongNames, tierWithVeryLongName)...)
 				// when
 				// check no TTR is present before reconciling
@@ -329,7 +327,7 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 	// for simplicity we initialize all of them with the same objects
 	crq := newTestCRQ("600")
 	// given
-	tierTemplates := initTierTemplates(t, withTemplateObjects(crq), base1nsTier.Name)
+	tierTemplates := initTierTemplates(t, base1nsTier.Name, crq)
 	r, req, cl := prepareReconcile(t, base1nsTier.Name, append(tierTemplates, base1nsTier)...)
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -347,8 +345,7 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		tierTemplate := &toolchainv1alpha1.TierTemplate{}
 		err = cl.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: "base1ns-clusterresources-123456new"}, tierTemplate)
 		require.NoError(t, err)
-		updatedCRQ := newTestCRQ("700")
-		tierTemplate.Spec.TemplateObjects = withTemplateObjects(updatedCRQ)
+		tiertemplate.WithTemplateObjects(newTestCRQ("700"))(tierTemplate)
 		err = cl.Update(context.TODO(), tierTemplate)
 		require.NoError(t, err)
 
@@ -404,7 +401,7 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		tierBeingUpdated := oldNSTemplateTier.DeepCopy()
 		tierBeingUpdated.Name = "base1nsupdate"
 		// we update the reference of one tierTemplate
-		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects(crq), tierBeingUpdated.Name)
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", tierBeingUpdated.Name, crq)
 		clusterResourceTierTemplate.Name = "clusterresource-template-updated"
 		tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplate.GetName()
 		r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplate)...)
@@ -426,11 +423,11 @@ func TestUpdateNSTemplateTier(t *testing.T) {
 		// TODO remove this test as soon as we start relying on TTRs in the revisions field
 		t.Run("when not using TTRs", func(t *testing.T) {
 			// given
-			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", nil, tierBeingUpdated.Name)
+			clusterResourceTierTemplateNoTTR := createTierTemplate(t, "clusterresources", tierBeingUpdated.Name)
 			clusterResourceTierTemplateNoTTR.Name = "clusterresource-template-nottr"
 			tierBeingUpdated.Spec.ClusterResources.TemplateRef = clusterResourceTierTemplateNoTTR.GetName()
 			// existing tiertemplates have no TTRs associated
-			tierTemplates := initTierTemplates(t, nil, base1nsTier.Name)
+			tierTemplates := initTierTemplates(t, base1nsTier.Name)
 			r, req, cl := prepareReconcile(t, tierBeingUpdated.Name, append(tierTemplates, tierBeingUpdated, clusterResourceTierTemplateNoTTR)...)
 
 			// when
@@ -478,17 +475,17 @@ func newTestCRQ(podsCount string) unstructured.Unstructured {
 }
 
 // initTierTemplates creates the TierTemplates objects for the base1ns tier
-func initTierTemplates(t *testing.T, withTemplateObjects []runtime.RawExtension, tierName string) []runtimeclient.Object {
+func initTierTemplates(t *testing.T, tierName string, templateObjects ...unstructured.Unstructured) []runtimeclient.Object {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", withTemplateObjects, tierName)
-	codeNsTierTemplate := createTierTemplate(t, "code", withTemplateObjects, tierName)
-	devNsTierTemplate := createTierTemplate(t, "dev", withTemplateObjects, tierName)
-	stageNsTierTemplate := createTierTemplate(t, "stage", withTemplateObjects, tierName)
-	adminRoleTierTemplate := createTierTemplate(t, "admin", withTemplateObjects, tierName)
-	viewerRoleTierTemplate := createTierTemplate(t, "viewer", withTemplateObjects, tierName)
-	editRoleTierTemplate := createTierTemplate(t, "edit", withTemplateObjects, tierName)
+	clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", tierName, templateObjects...)
+	codeNsTierTemplate := createTierTemplate(t, "code", tierName, templateObjects...)
+	devNsTierTemplate := createTierTemplate(t, "dev", tierName, templateObjects...)
+	stageNsTierTemplate := createTierTemplate(t, "stage", tierName, templateObjects...)
+	adminRoleTierTemplate := createTierTemplate(t, "admin", tierName, templateObjects...)
+	viewerRoleTierTemplate := createTierTemplate(t, "viewer", tierName, templateObjects...)
+	editRoleTierTemplate := createTierTemplate(t, "edit", tierName, templateObjects...)
 	tierTemplates := []runtimeclient.Object{clusterResourceTierTemplate, codeNsTierTemplate, devNsTierTemplate, stageNsTierTemplate, adminRoleTierTemplate, viewerRoleTierTemplate, editRoleTierTemplate}
 	return tierTemplates
 }
@@ -512,62 +509,17 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	}, cl
 }
 
-func createTierTemplate(t *testing.T, typeName string, withTemplateObjects []runtime.RawExtension, tierName string) *toolchainv1alpha1.TierTemplate {
-	tmpl := testTierTemplate(t)
-	return newTierTemplate(tierName, typeName, tmpl, withTemplateObjects)
-}
-
-func testTierTemplate(t *testing.T) templatev1.Template {
-	var (
-		ns test.TemplateObject = `
-- apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: ${SPACE_NAME}
-`
-		spacename test.TemplateParam = `
-- name: SPACE_NAME
-  value: johnsmith`
-	)
-	s := scheme.Scheme
-	err := apis.AddToScheme(s)
-	require.NoError(t, err)
-	codecFactory := serializer.NewCodecFactory(s)
-	decoder := codecFactory.UniversalDeserializer()
-	tmpl := templatev1.Template{}
-	_, _, err = decoder.Decode([]byte(test.CreateTemplate(test.WithObjects(ns), test.WithParams(spacename))), nil, &tmpl)
-	require.NoError(t, err)
-	return tmpl
-}
-
-func newTierTemplate(tierName, typeName string, tmpl templatev1.Template, withTemplateObjects []runtime.RawExtension) *toolchainv1alpha1.TierTemplate {
-	// we can set the template field to something empty as it is not relevant for the tests
+func createTierTemplate(t *testing.T, typeName string, tierName string, templateObjects ...unstructured.Unstructured) *toolchainv1alpha1.TierTemplate {
+	t.Helper()
 	revision := "123456new"
-	tt := &toolchainv1alpha1.TierTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      strings.ToLower(fmt.Sprintf("%s-%s-%s", tierName, typeName, revision)),
-			Namespace: test.HostOperatorNs,
+	return tiertemplate.NewTierTemplate(t, "overridden-below", test.HostOperatorNs,
+		tiertemplate.WithRevision(revision),
+		tiertemplate.WithTypeName(typeName),
+		tiertemplate.WithTierName(tierName),
+		tiertemplate.WithTestTierTemplate(t),
+		tiertemplate.WithTemplateObjects(templateObjects...),
+		func(tt *toolchainv1alpha1.TierTemplate) {
+			tt.Name = strings.ToLower(fmt.Sprintf("%s-%s-%s", tierName, typeName, revision))
 		},
-		Spec: toolchainv1alpha1.TierTemplateSpec{
-			TierName: tierName,
-			Type:     typeName,
-			Revision: revision,
-			Template: tmpl,
-		},
-	}
-
-	// just copy the raw objects to the templateObjects field
-	// TODO this will be removed once we switch on using templateObjects only in the TierTemplates
-	if withTemplateObjects != nil {
-		tt.Spec.TemplateObjects = withTemplateObjects
-	}
-	return tt
-}
-
-func withTemplateObjects(templates ...unstructured.Unstructured) []runtime.RawExtension {
-	var templateObjects []runtime.RawExtension
-	for i := range templates {
-		templateObjects = append(templateObjects, runtime.RawExtension{Object: &templates[i]})
-	}
-	return templateObjects
+	)
 }
