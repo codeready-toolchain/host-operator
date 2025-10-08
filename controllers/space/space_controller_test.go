@@ -16,8 +16,10 @@ import (
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
@@ -67,8 +69,10 @@ func TestCreateSpace(t *testing.T) {
 				hostClient := test.NewFakeClient(t, s, base1nsTier)
 				member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 				member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
+				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 				InitializeCounters(t,
-					NewToolchainStatus())
+					NewToolchainStatus(),
+					toolchainConfig)
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
@@ -195,8 +199,10 @@ func TestCreateSpace(t *testing.T) {
 					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 					ctrl := newReconciler(hostClient, member1, member2)
+					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 					InitializeCounters(t,
-						NewToolchainStatus())
+						NewToolchainStatus(),
+						toolchainConfig)
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -220,8 +226,10 @@ func TestCreateSpace(t *testing.T) {
 					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 					ctrl := newReconciler(hostClient, member1, member2)
+					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 					InitializeCounters(t,
-						NewToolchainStatus())
+						NewToolchainStatus(),
+						toolchainConfig)
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -250,6 +258,10 @@ func TestCreateSpace(t *testing.T) {
 					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
 					ctrl := newReconciler(hostClient, member)
+					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+					InitializeCounters(t,
+						NewToolchainStatus(),
+						toolchainConfig)
 
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -277,6 +289,10 @@ func TestCreateSpace(t *testing.T) {
 					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
 					ctrl := newReconciler(hostClient, member)
+					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+					InitializeCounters(t,
+						NewToolchainStatus(),
+						toolchainConfig)
 
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -302,8 +318,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(nil))
@@ -329,8 +347,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -356,8 +376,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -377,8 +399,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -410,8 +434,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -443,8 +469,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -476,8 +504,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -508,8 +538,10 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -585,7 +617,8 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("Space controller deletes NSTemplateSet", func(t *testing.T) {
 			// given
-			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))), toolchainConfig)
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			memberClient := test.NewFakeClient(t, nsTmplSet)
 			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
@@ -610,7 +643,8 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("when NSTemplateSet is being deleted and in terminating state", func(t *testing.T) {
 			// given
-			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))), toolchainConfig)
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now()), func(templateSet *toolchainv1alpha1.NSTemplateSet) {
 				templateSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Terminating(),
@@ -656,7 +690,8 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCounters(t, NewToolchainStatus())
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -683,7 +718,8 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithDeletionTimestamp())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			ctrl := newReconciler(hostClient)
-			InitializeCounters(t, NewToolchainStatus())
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(), toolchainConfig)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -714,7 +750,8 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))), toolchainConfig)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -747,8 +784,10 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -778,8 +817,10 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -821,8 +862,10 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus())
+				NewToolchainStatus(),
+				toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -855,6 +898,7 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
 				NewToolchainStatus(
 					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -864,7 +908,7 @@ func TestDeleteSpace(t *testing.T) {
 						string(metrics.Internal): 1,
 					}),
 					WithMember("member-1", WithSpaceCount(1)),
-				))
+				), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -912,6 +956,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -921,7 +966,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			),
+			toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1053,6 +1099,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1062,7 +1109,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1131,6 +1178,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet(s.Name,
 			nstemplatetsettest.WithReferencesFor(olderbase1nsTier), // NSTemplateSet has references to old base1ns tier
 			nstemplatetsettest.WithReadyCondition())
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1140,7 +1188,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		t.Run("postponed by two seconds from now", func(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
@@ -1301,6 +1349,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1310,7 +1359,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1343,6 +1392,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1352,7 +1402,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
@@ -1384,6 +1434,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1393,7 +1444,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
@@ -1432,6 +1483,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
 				NewToolchainStatus(
 					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1441,7 +1493,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 						string(metrics.Internal): 1,
 					}),
 					WithMember("member-1", WithSpaceCount(1)),
-				))
+				), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1474,6 +1526,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
 				NewToolchainStatus(
 					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1483,7 +1536,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 						string(metrics.Internal): 1,
 					}),
 					WithMember("member-1", WithSpaceCount(1)),
-				))
+				), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1524,7 +1577,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
-			InitializeCounters(t, NewToolchainStatus())
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, NewToolchainStatus(), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1580,6 +1634,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1589,7 +1644,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1643,6 +1698,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1652,7 +1708,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1699,6 +1755,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1708,7 +1765,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1758,6 +1815,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1767,7 +1825,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 					string(metrics.Internal): 1,
 				}),
 				WithMember("member-1", WithSpaceCount(1)),
-			))
+			), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1809,10 +1867,11 @@ func TestRetargetSpace(t *testing.T) {
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(WithEmptyMetrics(),
 				WithMember("member-1", WithSpaceCount(1)),
-				WithMember("member-2", WithSpaceCount(0))))
+				WithMember("member-2", WithSpaceCount(0))), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1864,10 +1923,11 @@ func TestRetargetSpace(t *testing.T) {
 		member2Client := test.NewFakeClient(t)
 		member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t,
 			NewToolchainStatus(WithEmptyMetrics(),
 				WithMember("member-1", WithSpaceCount(1)),
-				WithMember("member-2", WithSpaceCount(0))))
+				WithMember("member-2", WithSpaceCount(0))), toolchainConfig)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1921,6 +1981,7 @@ func TestRetargetSpace(t *testing.T) {
 			member2Client := test.NewFakeClient(t)
 			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
 				NewToolchainStatus(
 					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1930,7 +1991,7 @@ func TestRetargetSpace(t *testing.T) {
 						string(metrics.Internal): 1,
 					}),
 					WithMember("member-1", WithSpaceCount(1)),
-				))
+				), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1962,8 +2023,9 @@ func TestRetargetSpace(t *testing.T) {
 			member2Client := test.NewFakeClient(t)
 			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t,
-				NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+				NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))), toolchainConfig)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))

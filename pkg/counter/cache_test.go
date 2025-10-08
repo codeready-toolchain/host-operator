@@ -27,7 +27,8 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus())
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	InitializeCounters(t, NewToolchainStatus(), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -40,6 +41,7 @@ func TestAddMurToCounter(t *testing.T) {
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
@@ -48,7 +50,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
-		})))
+		})), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -64,7 +66,8 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus())
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	InitializeCounters(t, NewToolchainStatus(), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -91,6 +94,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 
 func TestAddSpaceToCounter(t *testing.T) {
 	// given
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
@@ -98,7 +102,7 @@ func TestAddSpaceToCounter(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 		}),
-	))
+	), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -114,6 +118,7 @@ func TestAddSpaceToCounter(t *testing.T) {
 
 func TestRemoveSpaceFromCounter(t *testing.T) {
 	// given
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t,
 		NewToolchainStatus(
 			WithMember("member-1", WithSpaceCount(2)),
@@ -123,7 +128,7 @@ func TestRemoveSpaceFromCounter(t *testing.T) {
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}),
-		))
+		), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -136,6 +141,7 @@ func TestRemoveSpaceFromCounter(t *testing.T) {
 
 func TestRemoveSpaceFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t,
 		NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -147,7 +153,7 @@ func TestRemoveSpaceFromCounterWhenIsAlreadyZero(t *testing.T) {
 				string(metrics.External): 1,
 			}),
 			WithMember("member-1", WithSpaceCount(0)),
-			WithMember("member-2", WithSpaceCount(2))))
+			WithMember("member-2", WithSpaceCount(2))), toolchainconfig)
 	defer counter.Reset()
 
 	// when
@@ -176,7 +182,8 @@ func TestRemoveSpaceFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) 
 func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	// given
 	toolchainStatus := NewToolchainStatus()
-	InitializeCounters(t, toolchainStatus)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 	// when
 	counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
@@ -314,6 +321,8 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	initObjs = append(initObjs, spaces...)
 
 	// when
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	initObjs = append(initObjs, toolchainconfig)
 	InitializeCounters(t, toolchainStatus, initObjs...)
 
 	// then
@@ -412,6 +421,8 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 		WithMember("member-1", WithSpaceCount(0)))
 	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	initObjs = append(initObjs, toolchainconfig)
 	InitializeCounters(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
@@ -445,6 +456,8 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		WithMember("member-2", WithSpaceCount(0)))
 	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	initObjs = append(initObjs, toolchainConfig)
 	InitializeCounters(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	var latch sync.WaitGroup

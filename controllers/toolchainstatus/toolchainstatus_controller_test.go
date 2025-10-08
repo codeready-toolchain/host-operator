@@ -702,7 +702,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			)
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -739,7 +740,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -775,7 +777,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -803,7 +806,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -824,7 +828,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			emptyToolchainStatus := NewToolchainStatus()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
-			InitializeCounters(t, emptyToolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, emptyToolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -849,7 +854,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
-			InitializeCounters(t, emptyToolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, emptyToolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -902,7 +908,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -924,7 +931,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			toolchainStatus := NewToolchainStatus()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -955,7 +963,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-				InitializeCounters(t, toolchainStatus)
+				toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+				InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 				// when
 				res, err := reconciler.Reconcile(context.TODO(), req)
@@ -982,7 +991,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-				InitializeCounters(t, toolchainStatus)
+				toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+				InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 				// when
 				res, err := reconciler.Reconcile(context.TODO(), req)
@@ -1014,7 +1024,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			)
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-			InitializeCounters(t, toolchainStatus)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+			InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -1511,6 +1522,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	t.Run("initialize the cache using the ToolchainStatus resource", func(t *testing.T) {
 		// given
 		defer counter.Reset()
+
+		toolchainConfig := testconfig.NewToolchainConfigObj(t, testconfig.Metrics().ForceSynchronization(false))
+
 		toolchainStatus := NewToolchainStatus(
 			WithMember("member-1", WithSpaceCount(6)), // will increase
 			WithMember("member-2", WithSpaceCount(2)), // will remain the same
@@ -1525,8 +1539,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				string(metrics.External): 8,
 			}),
 		)
+
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
-			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig)
 
 		// when
 		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
@@ -1563,7 +1578,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"2,internal": 2, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
 				"2,external": 1, // unchanged
 				"3,internal": 1, // unchanged
-			})
+			}).
+			HaveSpacesForCluster("member-1", 7). // 6 from resources + 1 from increment
+			HaveSpacesForCluster("member-2", 2)  // 2 from resources
 	})
 }
 
