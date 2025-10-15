@@ -24,6 +24,7 @@ import (
 
 const norequeue = 0 * time.Second
 const requeueDelay = 10 * time.Second
+const deletionDelay = 2 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -79,11 +80,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	space := &toolchainv1alpha1.Space{}
 	if err := r.Get(ctx, spaceName, space); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("the Space was not found", "Space", spaceBinding.Spec.Space)
+			logger.Info("Space not found", "space", spaceBinding.Spec.Space)
 			requeueAfter, err := r.deleteSpaceBinding(ctx, spaceBinding)
-			return ctrl.Result{
-				RequeueAfter: requeueAfter,
-			}, err
+			return ctrl.Result{RequeueAfter: requeueAfter}, err
 		}
 		// error while reading space
 		return ctrl.Result{}, errs.Wrapf(err, "unable to get the bound Space")
@@ -124,7 +123,17 @@ func (r *Reconciler) ensureMURExists(ctx context.Context, spaceBinding *toolchai
 
 func (r *Reconciler) deleteSpaceBinding(ctx context.Context, spaceBinding *toolchainv1alpha1.SpaceBinding) (time.Duration, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("deleting the SpaceBinding")
+
+	// Check deletion delay - only proceed if SpaceBinding is old enough
+	spaceBindingAge := time.Since(spaceBinding.CreationTimestamp.Time)
+	if spaceBindingAge < deletionDelay {
+		// Calculate how much time is left in the deletion delay period
+		timeLeft := deletionDelay - spaceBindingAge
+		logger.Info("SpaceBinding too young - waiting", "age", spaceBindingAge.String(), "timeLeft", timeLeft.String())
+		return timeLeft, nil
+	}
+
+	logger.Info("deleting the SpaceBinding", "age", spaceBindingAge.String())
 
 	// check if spaceBinding was created from SpaceBindingRequest,
 	// in that case we must delete the SBR and then the SBR controller will take care of deleting the SpaceBinding
