@@ -113,8 +113,11 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
+			config := commonconfig.NewToolchainConfigObjWithReset(t,
+				testconfig.AutomaticApproval().Enabled(true),
+				testconfig.Metrics().ForceSynchronization(false))
 			r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, config, userSignup, baseNSTemplateTier, deactivate30Tier, deactivate80Tier, event)
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,internal": 0,
@@ -123,7 +126,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 				}),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
-				})))
+				})), toolchainConfig)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -338,6 +341,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		commonsignup.WithRequestReceivedTimeAnnotation(time.Now()))
 	controllerutil.AddFinalizer(userSignup, toolchainv1alpha1.FinalizerName)
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
@@ -347,7 +351,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
-		})))
+		})), toolchainConfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -424,6 +428,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
@@ -431,7 +436,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when - The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(context.TODO(), req)
@@ -569,6 +574,7 @@ func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup,
 		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
@@ -576,7 +582,7 @@ func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -618,6 +624,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
@@ -625,7 +632,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -660,10 +667,11 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Metrics().ForceSynchronization(false)), baseNSTemplateTier)
 	fakeClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 0, // no user approved yet
@@ -671,7 +679,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -709,6 +717,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
@@ -716,7 +725,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -756,6 +765,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, spaceProvisionerConfig, userSignup, config, customNSTemplateTier, customUserTier) // use custom tier
 
 	commonconfig.ResetCache() // reset the config cache so that the update config is picked up
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -763,7 +773,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -844,25 +854,25 @@ func TestUserSignupFailedMissingTier(t *testing.T) {
 	variations := []variation{
 		{
 			description:    "default spacetier",
-			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Metrics().ForceSynchronization(false)),
 			expectedReason: "NoTemplateTierAvailable",
 			expectedMsg:    "nstemplatetiers.toolchain.dev.openshift.com \"base\" not found",
 		},
 		{
 			description:    "non-default spacetier",
-			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultSpaceTier("nonexistent")),
+			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultSpaceTier("nonexistent"), testconfig.Metrics().ForceSynchronization(false)),
 			expectedReason: "NoTemplateTierAvailable",
 			expectedMsg:    "nstemplatetiers.toolchain.dev.openshift.com \"nonexistent\" not found",
 		},
 		{
 			description:    "default usertier",
-			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Metrics().ForceSynchronization(false)),
 			expectedReason: "NoUserTierAvailable",
 			expectedMsg:    "usertiers.toolchain.dev.openshift.com \"deactivate30\" not found",
 		},
 		{
 			description:    "non-default usertier",
-			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultUserTier("nonexistent")),
+			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultUserTier("nonexistent"), testconfig.Metrics().ForceSynchronization(false)),
 			expectedReason: "NoUserTierAvailable",
 			expectedMsg:    "usertiers.toolchain.dev.openshift.com \"nonexistent\" not found",
 		},
@@ -955,6 +965,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, config, baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 2,
@@ -962,7 +973,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 2,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1018,6 +1029,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t,
 		testconfig.AutomaticApproval().Enabled(true))
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, spc2, userSignup, config, baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1025,7 +1037,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1080,6 +1092,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1087,7 +1100,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1218,6 +1231,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, baseNSTemplateTier, config, deactivate30Tier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1225,7 +1239,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1356,6 +1370,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t), baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1363,7 +1378,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1418,6 +1433,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1425,7 +1441,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1556,6 +1572,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup(commonsignup.WithTargetCluster("east"))
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, baseNSTemplateTier)
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1563,7 +1580,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainConfig)
 
 	// when
 	res, err := r.Reconcile(context.TODO(), req)
@@ -1649,6 +1666,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 				initObjs = append(initObjs, mur, space)
 			}
 			r, req, fakeClient := prepareReconcile(t, userSignup.Name, initObjs...)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
@@ -1656,7 +1674,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 1,
 				}),
-			))
+			), toolchainconfig)
 
 			fakeClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.CreateOption) error {
 				switch obj.(type) {
@@ -1711,6 +1729,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, spc1, userSignup)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1718,7 +1737,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 		switch obj.(type) {
@@ -1757,6 +1776,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, spc1, userSignup)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1764,7 +1784,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, _ ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
@@ -1803,6 +1823,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1810,7 +1831,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
@@ -1848,6 +1869,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1855,7 +1877,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj := obj.(type) {
@@ -1920,6 +1942,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1927,7 +1950,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -1998,6 +2021,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2005,7 +2029,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -2155,6 +2179,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2162,7 +2187,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -2226,6 +2251,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding,
 			commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
@@ -2233,7 +2259,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 1,
 			}),
-		))
+		), toolchainconfig)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -2283,6 +2309,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 2,
@@ -2290,7 +2317,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 2,
 			}),
-		))
+		), toolchainconfig)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -2462,6 +2489,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		// given
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup,
 			commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 2,
@@ -2469,7 +2497,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 2,
 			}),
-		))
+		), toolchainconfig)
 
 		fakeClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 			switch obj.(type) {
@@ -2574,6 +2602,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		}
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"2,internal": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
@@ -2582,7 +2611,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 21,
 			}),
-		))
+		), toolchainconfig)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -2663,6 +2692,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			},
 		}
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 2,
@@ -2670,7 +2700,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 2,
 			}),
-		))
+		), toolchainconfig)
 
 		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			switch obj.(type) {
@@ -2827,6 +2857,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 		states.SetDeactivated(userSignup, true)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
@@ -2834,7 +2865,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 1,
 			}),
-		))
+		), toolchainconfig)
 
 		t.Run("first reconcile - status should be deactivating and mur should be deleted", func(t *testing.T) {
 			// when
@@ -3098,6 +3129,7 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 	}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, bannedUser, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3105,7 +3137,7 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -3149,6 +3181,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup(commonsignup.VerificationRequired())
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3156,7 +3189,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -3245,6 +3278,7 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, bannedUser, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3252,7 +3286,7 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -3348,6 +3382,7 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3355,7 +3390,7 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 		return errors.New("err happened")
@@ -3410,6 +3445,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		spacebinding := spacebindingtest.NewSpaceBinding("john-doe", "john-doe", "admin", userSignup.Name)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+		toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
@@ -3417,7 +3453,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,external": 1,
 			}),
-		))
+		), toolchainconfig)
 
 		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			switch obj.(type) {
@@ -3563,6 +3599,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3570,7 +3607,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 		switch obj.(type) {
@@ -3663,6 +3700,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			}
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, initObjs...)
+			toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 100,
@@ -3670,7 +3708,7 @@ func TestDeathBy100Signups(t *testing.T) {
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 100,
 				}),
-			))
+			), toolchainconfig)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -3842,6 +3880,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 	spc1 := hspc.NewEnabledValidTenantSPC("member1")
 	r, req, _ := prepareReconcile(t, userSignup.Name, spc1, userSignup, mur, mur2, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3849,7 +3888,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -3900,6 +3939,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3907,7 +3947,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 		}),
-	))
+	), toolchainconfig)
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
@@ -4096,7 +4136,8 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtimeclient.Objec
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 
-	InitializeCounters(t, toolchainStatus)
+	toolchainconfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	InitializeCounters(t, toolchainStatus, toolchainconfig)
 
 	initObjs = append(initObjs, secret, toolchainStatus)
 

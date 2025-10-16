@@ -11,7 +11,9 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
@@ -105,13 +107,18 @@ func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.Toolcha
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	counter.Reset()
 	t.Cleanup(counter.Reset)
+
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	t.Cleanup(counter.Reset)
-	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
+
+	initializeCounters(t, fakeClient, toolchainStatus)
 }
 
 // InitializeCountersWith initializes the count cache from the counts parameter.
@@ -133,7 +140,11 @@ func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 	}
 
 	toolchainStatus := NewToolchainStatus(options...)
-	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
+
+	initializeCounters(t, fakeClient, toolchainStatus)
 }
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
