@@ -107,7 +107,6 @@ func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.Toolcha
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	counter.Reset()
 	t.Cleanup(counter.Reset)
-
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
