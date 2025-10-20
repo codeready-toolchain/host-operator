@@ -111,6 +111,31 @@ func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.Toolcha
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
+// InitializeCountersWithToolchainConfig initializes the counters with the toolchain configuration given.
+func InitializeCountersWithToolchainConfig(t *testing.T, toolchainConfig *toolchainv1alpha1.ToolchainConfig, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
+	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
+	counter.Reset()
+	t.Cleanup(counter.Reset)
+
+	initObjs = append(initObjs, toolchainConfig)
+	fakeClient := commontest.NewFakeClient(t, initObjs...)
+
+	initializeCounters(t, fakeClient, toolchainStatus)
+}
+
+// InitializeCountersWithMetricsSyncDisabled initializes the counters with the metrics synchronization disabled.
+func InitializeCountersWithMetricsSyncDisabled(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
+	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
+	counter.Reset()
+	t.Cleanup(counter.Reset)
+
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
+	initObjs = append(initObjs, toolchainConfig)
+	fakeClient := commontest.NewFakeClient(t, initObjs...)
+
+	initializeCounters(t, fakeClient, toolchainStatus)
+}
+
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	t.Cleanup(counter.Reset)
