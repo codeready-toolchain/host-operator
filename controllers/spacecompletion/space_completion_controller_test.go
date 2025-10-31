@@ -170,6 +170,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName(""))
+			// Use forceSynchronization=true to prevent ToolchainConfig caching during counter init.
+			// This ensures the mock below will be hit when Reconcile calls GetToolchainConfig.
 			r, req, cl := prepareReconcile(t, space, nil, true)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
@@ -212,7 +214,7 @@ func TestCreateSpace(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig, skipToolchainConfig bool) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig, forceSynchronization bool) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -222,7 +224,7 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 	t.Cleanup(counter.Reset)
 
-	if skipToolchainConfig {
+	if forceSynchronization {
 		InitializeCounters(t, toolchainStatus)
 	} else {
 		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
