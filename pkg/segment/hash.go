@@ -7,7 +7,7 @@ import (
 
 // Hashes the given username to anonymize the data sent to Segment (and subsequently Woopra)
 //
-// Note: implementation of the Hash MUST match with the existing ones of CRW and Web/Dev Console
+// Note: implementation of the Hash MUST match with the existing Web/Dev Console
 // so that metrics can be correlated in Woopra
 // See https://github.com/che-incubator/che-workspace-telemetry-client/pull/68/files
 func Hash(username string) string {

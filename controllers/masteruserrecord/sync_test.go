@@ -905,37 +905,6 @@ func TestRoutes(t *testing.T) {
 			AllUserAccountsHaveCondition(condition)
 	})
 
-	t.Run("che route is missing but condition is ready", func(t *testing.T) {
-		// given
-		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())))
-		mur := masterUserRec.DeepCopy()
-
-		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		sync := Synchronizer{
-			record:        mur,
-			hostClient:    hostClient,
-			memberCluster: newMemberCluster(memberClient),
-			memberUserAcc: userAccount,
-			logger:        l,
-		}
-
-		// when
-		err := sync.synchronizeStatus(context.TODO())
-
-		// then
-		require.NoError(t, err)
-		uatest.AssertThatUserAccount(t, "john", memberClient).
-			Exists().
-			MatchMasterUserRecord(mur).
-			HasConditions(condition)
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-				Name: test.MemberClusterName,
-			}).
-			AllUserAccountsHaveCondition(condition)
-	})
-
 	t.Run("condition is not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
