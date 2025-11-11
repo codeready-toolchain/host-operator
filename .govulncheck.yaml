@@ -1,1 +1,49 @@
-ignored-vulnerabilities: []
+ignored-vulnerabilities:
+  # Panic when validating certificates with DSA public keys in crypto/x509
+  # Found in: crypto/x509@go1.23.12
+  # Fixed in: crypto/x509@go1.24.8
+  - id: GO-2025-4013
+    info: https://pkg.go.dev/vuln/GO-2025-4013
+    silence-until: 2025-12-03
+  # Lack of limit when parsing cookies can cause memory exhaustion in net/http
+  # Found in: net/http@go1.23.12
+  # Fixed in: net/http@go1.24.8
+  - id: GO-2025-4012
+    info: https://pkg.go.dev/vuln/GO-2025-4012
+    silence-until: 2025-12-03
+  # Parsing DER payload can cause memory exhaustion in encoding/asn1
+  # Found in: encoding/asn1@go1.23.12
+  # Fixed in: encoding/asn1@go1.24.8
+  - id: GO-2025-4011
+    info: https://pkg.go.dev/vuln/GO-2025-4011
+    silence-until: 2025-12-03
+  # Insufficient validation of bracketed IPv6 hostnames in net/url
+  # Found in: net/url@go1.23.12
+  # Fixed in: net/url@go1.24.8
+  - id: GO-2025-4010
+    info: https://pkg.go.dev/vuln/GO-2025-4010
+    silence-until: 2025-12-03
+  # Quadratic complexity when parsing some invalid inputs in encoding/pem
+  # Found in: encoding/pem@go1.23.12
+  # Fixed in: encoding/pem@go1.24.8
+  - id: GO-2025-4009
+    info: https://pkg.go.dev/vuln/GO-2025-4009
+    silence-until: 2025-12-03
+  # ALPN negotiation error contains attacker controlled information in crypto/tls
+  # Found in: crypto/tls@go1.23.12
+  # Fixed in: crypto/tls@go1.24.8
+  - id: GO-2025-4008
+    info: https://pkg.go.dev/vuln/GO-2025-4008
+    silence-until: 2025-12-03
+  # Quadratic complexity when checking name constraints in crypto/x509
+  # Found in: crypto/x509@go1.23.12
+  # Fixed in: crypto/x509@go1.24.9
+  - id: GO-2025-4007
+    info: https://pkg.go.dev/vuln/GO-2025-4007
+    silence-until: 2025-12-03
+  # Excessive CPU consumption in ParseAddress in net/mail
+  # Found in: net/mail@go1.23.12
+  # Fixed in: net/mail@go1.24.8
+  - id: GO-2025-4006
+    info: https://pkg.go.dev/vuln/GO-2025-4006
+    silence-until: 2025-12-03
