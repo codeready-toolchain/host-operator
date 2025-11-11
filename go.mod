@@ -153,3 +153,5 @@ require (
 go 1.23.0
 
 toolchain go1.23.12
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20251111121252-51518cd65180
