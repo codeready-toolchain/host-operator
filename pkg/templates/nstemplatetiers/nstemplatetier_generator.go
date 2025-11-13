@@ -3,7 +3,7 @@ package nstemplatetiers
 import (
 	"context"
 	"embed"
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -16,8 +16,10 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template/nstemplatetiers"
 	"gopkg.in/yaml.v2"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const NsTemplateTierRootDir = "templates/nstemplatetiers"
@@ -59,22 +61,52 @@ func removeNoLongerBundledTiers(ctx context.Context, client runtimeclient.Client
 		return err
 	}
 
+	logger := log.FromContext(ctx)
+
 	var allErrors []error
 	for _, tier := range allTiers.Items {
 		if tier.Annotations[toolchainv1alpha1.BundledAnnotationKey] == constants.BundledWithHostOperatorAnnotationValue &&
 			!slices.Contains(bundledTierKeys, runtimeclient.ObjectKeyFromObject(&tier)) {
-			if err := client.Delete(ctx, &tier); err != nil {
+			logger.Info("deleting tier because it is no longer bundled", "tierName", tier.Name)
+
+			deletionCtx := log.IntoContext(ctx, logger.WithValues("tierName", tier.Name))
+
+			// delete the tier and all its templates
+			if err := client.Delete(deletionCtx, &tier); err != nil {
+				allErrors = append(allErrors, err)
+			}
+
+			if err := deleteReferencedTierTemplates(deletionCtx, client, &tier); err != nil {
 				allErrors = append(allErrors, err)
 			}
 		}
 	}
 
-	err := errors.Join(allErrors...)
+	err := stderrors.Join(allErrors...)
 	if err != nil {
 		err = fmt.Errorf("failed to delete some of the no-longer-bundled NSTemplateTiers: %w", err)
 	}
 
 	return err
+}
+
+func deleteReferencedTierTemplates(ctx context.Context, client runtimeclient.Client, tier *toolchainv1alpha1.NSTemplateTier) error {
+	logger := log.FromContext(ctx)
+
+	for _, ref := range GetNSTemplateTierRefs(tier) {
+		template := &toolchainv1alpha1.TierTemplate{}
+		if err := client.Get(ctx, runtimeclient.ObjectKey{Name: ref, Namespace: tier.Namespace}, template); err != nil {
+			if kerrors.IsNotFound(err) {
+				logger.Info("skipping tier template because it no longer exists", "tierTemplate", ref)
+				continue
+			}
+			return err
+		}
+		if err := client.Delete(ctx, template); err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 // LoadFiles takes the file from deploy/nstemplatetiers/<tiername>/<yaml file name> . the folder structure should be 4 steps .
