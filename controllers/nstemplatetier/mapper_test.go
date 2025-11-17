@@ -25,7 +25,7 @@ func TestMapTierTemplateToNSTemplateTier(t *testing.T) {
 
 		// when
 		// for the simplicity of the test, we only try to map one tiertemplate
-		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", nil, base1nsTier.Name)
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", base1nsTier.Name)
 		requests := nstemplatetier.MapTierTemplateToNSTemplateTier(cl)(context.TODO(), clusterResourceTierTemplate)
 
 		// then
@@ -44,7 +44,7 @@ func TestMapTierTemplateToNSTemplateTier(t *testing.T) {
 
 		// when
 		// for the simplicity of the test we only try to map one tiertemplate
-		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", nil, base1nsTier.Name)
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", base1nsTier.Name)
 		requests := nstemplatetier.MapTierTemplateToNSTemplateTier(cl)(context.TODO(), clusterResourceTierTemplate)
 
 		// then
@@ -64,7 +64,7 @@ func TestMapTierTemplateToNSTemplateTier(t *testing.T) {
 
 		// when
 		// for the simplicity of the test, we only try to map one tiertemplate
-		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", nil, base1nsTier.Name)
+		clusterResourceTierTemplate := createTierTemplate(t, "clusterresources", base1nsTier.Name)
 		requests := nstemplatetier.MapTierTemplateToNSTemplateTier(cl)(context.TODO(), clusterResourceTierTemplate)
 
 		// then
