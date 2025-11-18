@@ -77,6 +77,7 @@ objects:
       limits.memory: ${MEMORY_LIMIT}
       requests.cpu: 3000m
       requests.memory: ${MEMORY_REQUEST}
+      requests.nvidia.com/gpu: 0
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
@@ -90,6 +91,7 @@ objects:
       limits.memory: ${MEMORY_BUILD_LIMIT}
       requests.cpu: 3000m
       requests.memory: ${MEMORY_BUILD_REQUEST}
+      requests.nvidia.com/gpu: 0
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
