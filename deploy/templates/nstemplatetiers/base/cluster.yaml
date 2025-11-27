@@ -13,10 +13,12 @@ objects:
         limits.cpu: 40000m
         limits.memory: ${MEMORY_LIMIT}
         limits.ephemeral-storage: 15Gi
+        limits.nvidia.com/gpu: 0
         requests.cpu: 6000m
         requests.memory: ${MEMORY_REQUEST}
         requests.storage: 60Gi
         requests.ephemeral-storage: 15Gi
+        requests.nvidia.com/gpu: 0
         count/persistentvolumeclaims: "5"
     selector:
       annotations: null
