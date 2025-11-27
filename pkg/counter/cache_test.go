@@ -11,9 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
@@ -27,7 +25,7 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus())
+	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -40,7 +38,7 @@ func TestAddMurToCounter(t *testing.T) {
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus(
+	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,external": 1,
 			"1,internal": 1,
@@ -64,7 +62,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus())
+	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -91,7 +89,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 
 func TestAddSpaceToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, NewToolchainStatus(
+	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -114,7 +112,7 @@ func TestAddSpaceToCounter(t *testing.T) {
 
 func TestRemoveSpaceFromCounter(t *testing.T) {
 	// given
-	InitializeCounters(t,
+	InitializeCountersWithMetricsSyncDisabled(t,
 		NewToolchainStatus(
 			WithMember("member-1", WithSpaceCount(2)),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -136,7 +134,7 @@ func TestRemoveSpaceFromCounter(t *testing.T) {
 
 func TestRemoveSpaceFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t,
+	InitializeCountersWithMetricsSyncDisabled(t,
 		NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
@@ -176,7 +174,7 @@ func TestRemoveSpaceFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) 
 func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	// given
 	toolchainStatus := NewToolchainStatus()
-	InitializeCounters(t, toolchainStatus)
+	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
 
 	// when
 	counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
@@ -213,7 +211,7 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	)
 
 	// when
-	InitializeCounters(t, toolchainStatus)
+	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
 
 	// then
 	AssertThatCountersAndMetrics(t).
@@ -314,7 +312,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	initObjs = append(initObjs, spaces...)
 
 	// when
-	InitializeCounters(t, toolchainStatus, initObjs...)
+	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
 
 	// then
 	AssertThatCountersAndMetrics(t).
@@ -367,10 +365,8 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 		}),
 	)
 	// ... but config flag will force synchronization from resources
-	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(true))
 	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
-	initObjs = append(initObjs, toolchainConfig)
 	initObjs = append(initObjs, spaces...)
 
 	// when
@@ -412,7 +408,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 		WithMember("member-1", WithSpaceCount(0)))
 	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
-	InitializeCounters(t, toolchainStatus, initObjs...)
+	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
@@ -445,7 +441,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		WithMember("member-2", WithSpaceCount(0)))
 	initObjs := append([]runtimeclient.Object{}, murs...)
 	initObjs = append(initObjs, spaces...)
-	InitializeCounters(t, toolchainStatus, initObjs...)
+	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	var latch sync.WaitGroup
 	latch.Add(1)
