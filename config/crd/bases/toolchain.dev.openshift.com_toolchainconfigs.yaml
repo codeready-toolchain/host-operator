@@ -407,6 +407,11 @@ spec:
                             type: array
                             x-kubernetes-list-type: atomic
                         type: object
+                      workatoWebHookURL:
+                        description: |-
+                          WorkatoWebHookURL is used by the UI to push events to Marketo for analytics purposes.
+                          The webhook URL is unique per environment.
+                        type: string
                     type: object
                   spaceConfig:
                     description: Keeps parameters necessary for configuring Space
@@ -563,44 +568,6 @@ spec:
                               to deploy the autoscaler buffer
                             type: boolean
                         type: object
-                      che:
-                        description: Keeps parameters concerned with Che/CRW
-                        properties:
-                          keycloakRouteName:
-                            description: Defines the Che/CRW Keycloak route name
-                            type: string
-                          namespace:
-                            description: Defines the Che/CRW operator namespace
-                            type: string
-                          required:
-                            description: Defines a flag that indicates whether the
-                              Che/CRW operator is required to be installed on the
-                              cluster. May be used in monitoring.
-                            type: boolean
-                          routeName:
-                            description: Defines the Che/CRW route name
-                            type: string
-                          secret:
-                            description: Defines all secrets related to Che configuration
-                            properties:
-                              cheAdminPasswordKey:
-                                description: The key for the Che admin password in
-                                  the secret values map
-                                type: string
-                              cheAdminUsernameKey:
-                                description: The key for the Che admin username in
-                                  the secret values map
-                                type: string
-                              ref:
-                                description: Reference is the name of the secret resource
-                                  to look up
-                                type: string
-                            type: object
-                          userDeletionEnabled:
-                            description: Defines a flag to turn the Che user deletion
-                              logic on/off
-                            type: boolean
-                        type: object
                       console:
                         description: Keeps parameters concerned with the console
                         properties:
@@ -701,44 +668,6 @@ spec:
                             deploy:
                               description: Defines the flag that determines whether
                                 to deploy the autoscaler buffer
-                              type: boolean
-                          type: object
-                        che:
-                          description: Keeps parameters concerned with Che/CRW
-                          properties:
-                            keycloakRouteName:
-                              description: Defines the Che/CRW Keycloak route name
-                              type: string
-                            namespace:
-                              description: Defines the Che/CRW operator namespace
-                              type: string
-                            required:
-                              description: Defines a flag that indicates whether the
-                                Che/CRW operator is required to be installed on the
-                                cluster. May be used in monitoring.
-                              type: boolean
-                            routeName:
-                              description: Defines the Che/CRW route name
-                              type: string
-                            secret:
-                              description: Defines all secrets related to Che configuration
-                              properties:
-                                cheAdminPasswordKey:
-                                  description: The key for the Che admin password
-                                    in the secret values map
-                                  type: string
-                                cheAdminUsernameKey:
-                                  description: The key for the Che admin username
-                                    in the secret values map
-                                  type: string
-                                ref:
-                                  description: Reference is the name of the secret
-                                    resource to look up
-                                  type: string
-                              type: object
-                            userDeletionEnabled:
-                              description: Defines a flag to turn the Che user deletion
-                                logic on/off
                               type: boolean
                           type: object
                         console:

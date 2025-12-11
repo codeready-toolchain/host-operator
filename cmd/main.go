@@ -33,6 +33,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
+	"github.com/codeready-toolchain/host-operator/pkg/constants"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
@@ -227,9 +228,10 @@ func main() { // nolint:gocyclo
 
 	// Setup all Controllers
 	if err = (&toolchainclusterresources.Reconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Templates: &deploy.ToolchainClusterTemplateFS,
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		Templates:    &deploy.ToolchainClusterTemplateFS,
+		FieldManager: constants.HostOperatorFieldManager,
 	}).SetupWithManager(mgr, namespace); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainClusterResources")
 		os.Exit(1)

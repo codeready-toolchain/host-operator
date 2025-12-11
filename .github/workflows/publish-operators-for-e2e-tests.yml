@@ -17,8 +17,8 @@ jobs:
     steps:
     # Checkout from PR event
     - name: Checkout code from PR event
-      uses: actions/checkout@v5
-      if: ${{ github.event_name == 'pull_request_target' }}
+      uses: actions/checkout@v6
+      if: ${{ github.event.comment == '' }}
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
@@ -38,8 +38,8 @@ jobs:
     # Checkout the code based on the data retrieved from the previous step
     # Is executed only for comment events
     - name: Checkout code from PR
-      uses: actions/checkout@v5
-      if: ${{ github.event_name == 'issue_comment' }}
+      uses: actions/checkout@v6
+      if: ${{ github.event.pull_request == '' }}
       with:
         repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
         ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
