@@ -13,12 +13,17 @@ jobs:
     name: Build & push operator bundles for e2e tests
 
     runs-on: ubuntu-24.04
-    if: ${{ github.event.comment == '' || contains(github.event.comment.body, '/retest') || contains(github.event.comment.body, '/test all') || contains(github.event.comment.body, '/test e2e') }}
+    if: >-
+      ${{ github.event_name == 'pull_request_target' ||
+          (github.event_name == 'issue_comment' &&
+            (contains(github.event.comment.body, '/retest') ||
+             contains(github.event.comment.body, '/test all') ||
+             contains(github.event.comment.body, '/test e2e'))) }}
     steps:
     # Checkout from PR event
     - name: Checkout code from PR event
       uses: actions/checkout@v6
-      if: ${{ github.event.comment == '' }}
+      if: ${{ github.event_name == 'pull_request_target' }}
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
@@ -39,7 +44,7 @@ jobs:
     # Is executed only for comment events
     - name: Checkout code from PR
       uses: actions/checkout@v6
-      if: ${{ github.event.pull_request == '' }}
+      if: ${{ github.event_name == 'issue_comment' }}
       with:
         repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
         ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
