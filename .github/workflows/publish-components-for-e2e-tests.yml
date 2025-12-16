@@ -1,4 +1,4 @@
-name: publish-operators-for-e2e-tests
+name: publish-components-for-e2e-tests
 on:
   issue_comment:
     types: [created]
@@ -10,36 +10,41 @@ env:
 
 jobs:
   binary:
-    name: Build & push operator bundles for e2e tests
+    name: Build & push operator bundles & dashboard image for e2e tests
 
     runs-on: ubuntu-24.04
-    if: ${{ github.event.comment == '' || contains(github.event.comment.body, '/retest') || contains(github.event.comment.body, '/test all') || contains(github.event.comment.body, '/test e2e') }}
+    if: >-
+      ${{ github.event_name == 'pull_request_target' ||
+          (github.event_name == 'issue_comment' &&
+            (contains(github.event.comment.body, '/retest') ||
+             contains(github.event.comment.body, '/test all') ||
+             contains(github.event.comment.body, '/test e2e'))) }}
     steps:
-    # Checkout from PR event - in that case the comment field is empty
+    # Checkout from PR event
     - name: Checkout code from PR event
       uses: actions/checkout@v6
-      if: ${{ github.event.comment == '' }}
+      if: ${{ github.event_name == 'pull_request_target' }}
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
         fetch-depth: 0
 
     # If the workflow was triggered based on comment, then we need to get the information about the PR
-    # Is executed only for comment events - in that case the pull_request field is empty
+    # Is executed only for comment events
     - name: Send Github API Request to get PR data
       id: request
       uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # workaround for https://github.com/octokit/request-action/issues/315 - use SHA instead of the tag v2.4.0
-      if: ${{ github.event.pull_request == '' }}
+      if: ${{ github.event_name == 'issue_comment' }}
       with:
         route: ${{ github.event.issue.pull_request.url }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Checkout the code based on the data retrieved from the previous step
-    # Is executed only for comment events - in that case the pull_request field is empty
+    # Is executed only for comment events
     - name: Checkout code from PR
       uses: actions/checkout@v6
-      if: ${{ github.event.pull_request == '' }}
+      if: ${{ github.event_name == 'issue_comment' }}
       with:
         repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
         ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
@@ -51,7 +56,7 @@ jobs:
         go-version-file: go.mod
 
     - name: Cache dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles ('**/go.sum') }}
@@ -66,10 +71,10 @@ jobs:
       uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
 
     # Execute composite action using values from PR event
-    # Is executed only for PR events - in that case the comment field is empty
-    - name: Publish current operator bundles for host & member based on PR event
+    # Developer Sandbox Dashboard will be published too in this action
+    - name: Publish current operator bundles & dashboard image based on PR event
       uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
-      if: ${{ github.event.comment == '' }}
+      if: ${{ github.event_name == 'pull_request_target' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
         quay-namespace: codeready-toolchain-test
@@ -79,10 +84,10 @@ jobs:
         gh-head-ref: ${{ github.event.pull_request.head.ref }}
 
     # Execute composite action using values from PR event
-    # Is executed only for comment events - in that case the pull_request field is empty
-    - name: Publish current operator bundles for host & member based on comment event
+    # Developer Sandbox Dashboard will be published too in this action
+    - name: Publish current operator bundles & dashboard image based on comment event
       uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
-      if: ${{ github.event.pull_request == '' }}
+      if: ${{ github.event_name == 'issue_comment' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
         quay-namespace: codeready-toolchain-test
