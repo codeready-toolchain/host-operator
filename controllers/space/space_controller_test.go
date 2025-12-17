@@ -21,6 +21,7 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	"github.com/spf13/cast"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,7 +77,7 @@ func TestCreateSpace(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
+				assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s")) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
@@ -1154,7 +1155,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.True(t, res.Requeue)
 			assert.LessOrEqual(t, res.RequeueAfter, 2*time.Second) // wait 2s for NSTemplateSet update to begin
 			assert.LessOrEqual(t, time.Until(ctrl.NextScheduledUpdate), 2*time.Second)
 			// check that the NSTemplateSet is not being updated
@@ -1187,7 +1187,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.True(t, res.Requeue)
 			assert.LessOrEqual(t, res.RequeueAfter, time.Minute+(2*time.Second)) // wait 2s for NSTemplateSet update to begin
 			assert.LessOrEqual(t, time.Until(ctrl.NextScheduledUpdate), time.Minute+(2*time.Second))
 			// check that the NSTemplateSet is not being updated
@@ -1359,7 +1358,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue)
+		assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s"))
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
 			HasConditions(spacetest.Updating())
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
@@ -1400,7 +1399,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue)
+		assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s"))
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
 			HasConditions(spacetest.Updating()) // changed by controller
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
@@ -1596,7 +1595,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s")) // expect a requeue since the NSTemplateSet was updated
 		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
@@ -1715,7 +1714,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s")) // expect a requeue since the NSTemplateSet was updated
 		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
@@ -1774,7 +1773,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s")) // expect a requeue since the NSTemplateSet was updated
 		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
@@ -1889,7 +1888,7 @@ func TestRetargetSpace(t *testing.T) {
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 			// then
 			require.NoError(t, err)
-			assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
+			assert.Greater(t, res.RequeueAfter, cast.ToDuration("0s")) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				HasFinalizer().
 				HasSpecTargetCluster("member-2").

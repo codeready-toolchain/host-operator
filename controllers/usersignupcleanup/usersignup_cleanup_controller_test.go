@@ -419,7 +419,6 @@ func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
 	durLower := time.Duration(days(1460 - 1 - margin))
 	durUpper := time.Duration(days(1460 + 1 - margin))
 
-	require.True(t, res.Requeue)
 	require.Greater(t, res.RequeueAfter, durLower)
 	require.Less(t, res.RequeueAfter, durUpper)
 }

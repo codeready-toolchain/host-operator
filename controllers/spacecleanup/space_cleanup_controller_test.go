@@ -49,7 +49,6 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue)
 		assert.LessOrEqual(t, res.RequeueAfter, time.Second)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			Exists()
