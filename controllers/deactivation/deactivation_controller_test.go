@@ -426,7 +426,6 @@ func TestReconcile(t *testing.T) {
 
 					// then
 					require.NoError(t, err)
-					assert.Empty(t, res.RequeueAfter)
 					// The RequeueAfter should be ~about 3 days... let's accept if it's within 1 hour of that
 					require.WithinDuration(t, time.Now().Add(time.Duration(72)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
 
