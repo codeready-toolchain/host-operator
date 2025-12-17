@@ -71,7 +71,7 @@ func TestAddFinalizer(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
@@ -106,7 +106,7 @@ func TestAddFinalizer(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
@@ -143,7 +143,7 @@ func TestAddFinalizer(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).

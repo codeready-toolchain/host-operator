@@ -58,7 +58,6 @@ func TestNotificationSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, result.Requeue)
 		assert.Greater(t, cast.ToDuration("10s"), result.RequeueAfter)
 		assert.Greater(t, result.RequeueAfter, cast.ToDuration("1s"))
 		ntest.AssertThatNotification(t, notification.Name, cl).
@@ -81,7 +80,7 @@ func TestNotificationSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 		AssertThatNotificationIsDeleted(t, cl, notification.Name)
 	})
 }
@@ -110,7 +109,7 @@ func TestNotificationSentFailure(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 		assert.Equal(t, err.Error(), fmt.Sprintf("failed to delete notification: unable to delete Notification object '%s': error", notification.Name))
 		ntest.AssertThatNotification(t, notification.Name, cl).
 			HasConditions(sentCond(), deletionCond(fmt.Sprintf("unable to delete Notification object '%s': error", notification.Name)))
@@ -154,7 +153,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.True(t, result.Requeue)
+		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -201,7 +200,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.True(t, result.Requeue)
+		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -262,7 +261,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.True(t, result.Requeue)
+		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -303,7 +302,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.False(t, result.Requeue)
+		assert.Empty(t, result.RequeueAfter)
 		require.Equal(t, "failed to send notification: delivery error", err.Error())
 
 		// Load the reconciled notification
