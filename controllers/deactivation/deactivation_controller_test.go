@@ -238,7 +238,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
@@ -282,7 +282,7 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
 			// Reload the userSignup
