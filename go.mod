@@ -21,10 +21,10 @@ require (
 	go.uber.org/zap v1.27.0
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.33.2
+	k8s.io/api v0.33.4
 	k8s.io/apiextensions-apiserver v0.33.2
-	k8s.io/apimachinery v0.33.2
-	k8s.io/client-go v0.33.2
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -33,13 +33,13 @@ require (
 )
 
 require (
-	k8s.io/kubectl v0.33.2
+	k8s.io/kubectl v0.33.4
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 )
 
 require (
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	k8s.io/code-generator v0.33.2
+	k8s.io/code-generator v0.33.4
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 )
@@ -141,7 +141,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.33.2 // indirect
+	k8s.io/cli-runtime v0.33.4 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250207200755-1244d31929d7 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
@@ -157,6 +157,6 @@ go 1.24.0
 toolchain go1.24.11
 
 replace (
-	github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20251217161230-6834c424aeb8
-	github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20251217163624-ad1edfab055e
+	github.com/codeready-toolchain/api => github.com/rsoaresd/api v0.0.0-20251217181659-99c33cce84d0
+	github.com/codeready-toolchain/toolchain-common => github.com/rsoaresd/toolchain-common v0.0.0-20251217181906-1b70d2afca0e
 )
