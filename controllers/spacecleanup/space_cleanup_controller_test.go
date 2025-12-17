@@ -34,7 +34,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			DoesNotExist()
 	})
@@ -66,7 +66,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			Exists()
 	})
@@ -81,7 +81,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			Exists()
 	})
@@ -101,7 +101,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 	})
 
 	t.Run("with ParentSpace - Space shouldn't be deleted", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
 			Exists()
 	})
@@ -145,7 +145,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
 			Exists()
 	})
@@ -163,7 +163,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
 			Exists()
 	})
@@ -183,7 +183,7 @@ func TestCleanupSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to get the current Space: some error")
-			assert.False(t, res.Requeue)
+			assert.Empty(t, res.RequeueAfter)
 			cl.MockGet = nil
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				Exists()
@@ -202,7 +202,7 @@ func TestCleanupSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to list SpaceBindings: some error")
-			assert.False(t, res.Requeue)
+			assert.Empty(t, res.RequeueAfter)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				Exists()
 		})
@@ -220,7 +220,7 @@ func TestCleanupSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to delete Space: some error")
-			assert.False(t, res.Requeue)
+			assert.Empty(t, res.RequeueAfter)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				Exists()
 		})
