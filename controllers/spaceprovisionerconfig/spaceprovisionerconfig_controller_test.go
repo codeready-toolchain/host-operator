@@ -371,7 +371,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 		// then
 		require.NoError(t, reconcileErr)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		assert.Empty(t, spc.Status.Conditions)
 	})
 	t.Run("doesn't re-enqueue when object being deleted", func(t *testing.T) {
@@ -387,7 +387,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 		// then
 		require.NoError(t, reconcileErr)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		assert.Empty(t, spc.Status.Conditions)
 	})
 	t.Run("doesn't re-enqueue when ToolchainCluster not found", func(t *testing.T) {
@@ -407,7 +407,7 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 		// then
 		require.NoError(t, reconcileErr)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		assert.NotEmpty(t, spc.Status.Conditions)
 	})
 }

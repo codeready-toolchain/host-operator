@@ -74,7 +74,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		// check the social event status
 		socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
 			HasStatusActivations(2).

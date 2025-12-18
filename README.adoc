@@ -10,7 +10,7 @@ This is the CodeReady Toolchain Host Operator repository. It contains the OpenSh
 
 == Build
 
-Requires Go version 1.23.x (1.23.12 or higher) - download for your development environment https://golang.org/dl/[here].
+Requires Go version 1.24.x (1.24.11 or higher) - download for your development environment https://golang.org/dl/[here].
 
 This repository uses https://github.com/golang/go/wiki/Modules[Go modules].
 
