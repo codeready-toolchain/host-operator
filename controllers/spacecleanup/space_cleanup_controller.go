@@ -70,48 +70,47 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	requeue, requeueAfter, err := r.ensureDeletionIfNeeded(ctx, space)
+	requeueAfter, err := r.ensureDeletionIfNeeded(ctx, space)
 
 	return ctrl.Result{
-		Requeue:      requeue,
 		RequeueAfter: requeueAfter,
 	}, err
 }
 
-func (r *Reconciler) ensureDeletionIfNeeded(ctx context.Context, space *toolchainv1alpha1.Space) (bool, time.Duration, error) {
+func (r *Reconciler) ensureDeletionIfNeeded(ctx context.Context, space *toolchainv1alpha1.Space) (time.Duration, error) {
 	logger := log.FromContext(ctx)
 	bindings := &toolchainv1alpha1.SpaceBindingList{}
 	labelMatch := runtimeclient.MatchingLabels{toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name}
 	if err := r.Client.List(ctx, bindings, runtimeclient.InNamespace(space.Namespace), labelMatch); err != nil {
-		return false, 0, errs.Wrap(err, "unable to list SpaceBindings")
+		return 0, errs.Wrap(err, "unable to list SpaceBindings")
 	}
 
 	if len(bindings.Items) > 0 {
 		logger.Info("Space has SpaceBindings - skipping...", "number-of-spacebindings", len(bindings.Items))
-		return false, 0, nil
+		return 0, nil
 	}
 
 	// check if space has a parentSpace
 	// in this case the deletion will be handled by the SR controller
 	if found := r.hasParentSpaceSpec(space); found {
 		// do not delete this space since has a parent-space set
-		return false, 0, nil
+		return 0, nil
 	}
 
 	timeSinceCreation := time.Since(space.GetCreationTimestamp().Time)
 	if timeSinceCreation > deletionTimeThreshold {
 		if err := r.Client.Delete(ctx, space); err != nil {
-			return false, 0, errs.Wrap(err, "unable to delete Space")
+			return 0, errs.Wrap(err, "unable to delete Space")
 		}
 
 		logger.Info("Space has been deleted")
-		return false, 0, nil
+		return 0, nil
 	}
 
 	requeueAfter := deletionTimeThreshold - timeSinceCreation
 	logger.Info("Space is not ready for deletion yet", "requeue-after", requeueAfter, "created", space.CreationTimestamp)
 
-	return true, requeueAfter, nil
+	return requeueAfter, nil
 }
 
 // hasParentSpaceSpec verifies if there .spec.ParentSpace field is set in the current Space.

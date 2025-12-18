@@ -153,7 +153,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
+		assert.Positive(t, result.RequeueAfter)
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -200,7 +200,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
+		assert.Positive(t, result.RequeueAfter)
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -261,7 +261,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Greater(t, result.RequeueAfter, cast.ToDuration("0s"))
+		assert.Positive(t, result.RequeueAfter)
 
 		// Load the reconciled notification
 		key := types.NamespacedName{

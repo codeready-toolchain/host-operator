@@ -1434,7 +1434,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// when
 	res, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{Requeue: false}, res)
+	assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res)
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
 	require.NoError(t, err)

@@ -108,7 +108,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			// Requeue the reconciler to process this resource again after the threshold for unverified user deletion
 			return reconcile.Result{
-				Requeue:      true,
 				RequeueAfter: requeueAfter,
 			}, nil
 		}
@@ -178,7 +177,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{
-			Requeue:      true,
 			RequeueAfter: requeueAfter,
 		}, nil
 	}

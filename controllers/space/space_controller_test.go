@@ -155,7 +155,7 @@ func TestCreateSpace(t *testing.T) {
 
 						// then
 						require.NoError(t, err)
-						assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue and status with new provisioned namespaces was updated
+						assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no requeue and status with new provisioned namespaces was updated
 						spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 							Exists().
 							HasStatusTargetCluster("member-1").
@@ -174,7 +174,7 @@ func TestCreateSpace(t *testing.T) {
 
 							// then
 							require.NoError(t, err)
-							assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+							assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no more requeue.
 							spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 								Exists().
 								HasStatusTargetCluster("member-1").
@@ -485,7 +485,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "mock error")
-			assert.Equal(t, reconcile.Result{Requeue: false}, res)
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
@@ -517,7 +517,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "mock error")
-			assert.Equal(t, reconcile.Result{Requeue: false}, res)
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasNoStatusTargetCluster(). // not set
 				HasNoConditions()           // not set
@@ -597,7 +597,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no need to explicitly requeue while the NSTemplate is terminating
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				Exists().
 				HasFinalizer(). // finalizer is still present while the NSTemplateSet is not fully deleted
@@ -629,7 +629,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no need to explicitly requeue while the NSTemplate is terminating
 			// no changes
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				Exists().
@@ -664,7 +664,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no need to explicitly requeue while the NSTemplate is terminating
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				Exists().
 				HasStatusTargetCluster("member-1").
@@ -756,7 +756,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no requeue needed
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				DoesNotExist()
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
@@ -787,7 +787,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "cannot delete NSTemplateSet: unknown target member cluster: 'member-3'")
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no requeue needed
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				Exists().
 				HasFinalizer(). // finalizer is still there, until the error above is fixed
@@ -930,7 +930,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, reconcile.Result{
-			Requeue:      true,
 			RequeueAfter: 1 * time.Second,
 		}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
@@ -992,7 +991,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{
-					Requeue:      true,
 					RequeueAfter: 1 * time.Second,
 				}, res) // requeue requested
 				s := spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
@@ -1021,7 +1019,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 					// then
 					require.NoError(t, err)
-					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no more requeue.
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
@@ -1071,7 +1069,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, reconcile.Result{
-			Requeue:      true,            // explicitly requeue while the NSTemplateSet update is triggered by its controller
 			RequeueAfter: 1 * time.Second, // requeued by 1s (since the last update happened a long time ago enough)
 		}, res)
 		s = spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
@@ -1109,7 +1106,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+			assert.Equal(t, reconcile.Result{RequeueAfter: 0}, res) // no more requeue.
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
 				HasStatusTargetCluster("member-1").
@@ -1531,7 +1528,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 			// then
 			require.Error(t, err, "The nstemplatier status.revisions is still not updated")
 			assert.Equal(t, reconcile.Result{
-				Requeue:      false,
 				RequeueAfter: 0,
 			}, res)
 		})
