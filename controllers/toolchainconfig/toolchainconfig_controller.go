@@ -151,6 +151,16 @@ func getVars(namespace string, cfg ToolchainConfig) templateVars {
 	vars["IMAGE"] = image
 	vars.addIfNotEmpty("NAMESPACE", namespace)
 	vars.addIfNotEmpty("REPLICAS", fmt.Sprint(cfg.RegistrationService().Replicas()))
+
+	// Allow overriding the registration service's command via an environment
+	// variable.
+	command := os.Getenv(RegistrationServiceCommandEnvKey)
+	if command != "" {
+		vars["COMMAND"] = command
+	} else {
+		vars["COMMAND"] = `["registration-service"]`
+	}
+
 	return vars
 }
 
