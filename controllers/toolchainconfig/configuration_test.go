@@ -332,13 +332,13 @@ func TestMetrics(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.False(t, toolchainCfg.Metrics().ForceSynchronization())
+		assert.True(t, toolchainCfg.Metrics().ForceSynchronization())
 	})
 	t.Run("non-default", func(t *testing.T) {
-		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(true))
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.True(t, toolchainCfg.Metrics().ForceSynchronization())
+		assert.False(t, toolchainCfg.Metrics().ForceSynchronization())
 	})
 }
 
