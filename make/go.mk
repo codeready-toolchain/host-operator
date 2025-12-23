@@ -20,6 +20,19 @@ $(OUT_DIR)/operator:
 		-o $(OUT_DIR)/bin/host-operator \
 		./cmd/main.go
 
+.PHONY: build-debug
+## Build the operator without the optimizations and the inlining, to enable
+## remote debugging via Delve.
+build-debug: generate
+	@echo "building host-operator in ${GO_PACKAGE_PATH}"
+	$(Q)go version
+	$(Q)CGO_ENABLED=0 GOARCH=${goarch} GOOS=linux \
+		go build ${V_FLAG} \
+		-gcflags "all=-N -l" \
+		-ldflags "-X ${GO_PACKAGE_PATH}/version.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/version.BuildTime=${BUILD_TIME}" \
+		-o $(OUT_DIR)/bin/host-operator \
+		./cmd/main.go
+
 .PHONY: vendor
 vendor:
 	$(Q)go mod vendor
