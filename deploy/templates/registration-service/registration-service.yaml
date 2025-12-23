@@ -96,13 +96,12 @@ objects:
               image: ${IMAGE}
               ports:
                 - containerPort: 8080 # registration service
-                - containerPort: 8081 # proxy 
+                - containerPort: 8081 # proxy
                 - containerPort: 8082 # proxy metrics
                   name: metrics
                 - containerPort: 8083 # registration service metrics
                   name: regsvc-metrics
-              command:
-                - registration-service
+              command: ${{COMMAND}}
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 failureThreshold: 3
@@ -141,7 +140,7 @@ objects:
                 requests:
                   cpu: "50m"
                   memory: "100M"
-  
+
   # route for the registration service
   - kind: Route
     apiVersion: v1
@@ -202,7 +201,7 @@ objects:
         run: registration-service
       type: ClusterIP
       sessionAffinity: null
-  
+
   # route for the proxy
   - kind: Route
     apiVersion: v1
@@ -224,7 +223,7 @@ objects:
       tls:
         termination: edge
       wildcardPolicy: None
- 
+
   # service associated with the proxy route
   - kind: Service
     apiVersion: v1
@@ -244,7 +243,7 @@ objects:
         run: registration-service
       type: ClusterIP
       sessionAffinity: null
-  
+
   # internal service for the proxy, used by Prometheus to scrape the metrics
   - kind: Service
     apiVersion: v1
@@ -271,3 +270,5 @@ parameters:
     value: quay.io/openshiftio/codeready-toolchain/registration-service:latest
   - name: REPLICAS
     value: '3'
+  - name: COMMAND
+    value: '["registration-service"]'

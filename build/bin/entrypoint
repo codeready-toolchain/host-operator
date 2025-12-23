@@ -9,4 +9,9 @@ if ! whoami &>/dev/null; then
   fi
 fi
 
-exec ${OPERATOR} $@
+if [ -n "${DEBUG_MODE}" ]
+then
+  exec /usr/local/bin/dlv --listen=:50000 --headless --continue --api-version=2 --accept-multiclient exec "${OPERATOR}" "$@"
+else
+  exec ${OPERATOR} "$@"
+fi
