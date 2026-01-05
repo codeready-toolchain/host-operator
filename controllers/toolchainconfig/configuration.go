@@ -199,7 +199,7 @@ type MetricsConfig struct {
 }
 
 func (d MetricsConfig) ForceSynchronization() bool {
-	return commonconfig.GetBool(d.metrics.ForceSynchronization, false)
+	return commonconfig.GetBool(d.metrics.ForceSynchronization, true)
 }
 
 type GitHubSecret struct {
