@@ -31,7 +31,7 @@ func TestCreateSpace(t *testing.T) {
 		// given
 		space := spacetest.NewSpace(test.HostOperatorNs, "without-fields",
 			spacetest.WithTierName(""))
-		r, req, cl := prepareReconcile(t, space, spc)
+		r, req, cl := prepareReconcile(t, space, spc, false)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -47,7 +47,7 @@ func TestCreateSpace(t *testing.T) {
 		// given
 		space := spacetest.NewSpace(test.HostOperatorNs, "without-targetCluster",
 			spacetest.WithTierName("ourtier"))
-		r, req, cl := prepareReconcile(t, space, spc)
+		r, req, cl := prepareReconcile(t, space, spc, false)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -64,7 +64,7 @@ func TestCreateSpace(t *testing.T) {
 		space := spacetest.NewSpace(test.HostOperatorNs, "without-tierName",
 			spacetest.WithTierName(""),
 			spacetest.WithSpecTargetCluster("member2"))
-		r, req, cl := prepareReconcile(t, space, spc)
+		r, req, cl := prepareReconcile(t, space, spc, false)
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -82,7 +82,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace(test.HostOperatorNs, "with-fields",
 				spacetest.WithTierName("ourtier"),
 				spacetest.WithSpecTargetCluster("member2"))
-			r, req, cl := prepareReconcile(t, space, spc)
+			r, req, cl := prepareReconcile(t, space, spc, false)
 
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -100,7 +100,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithTierName(""),
 				spacetest.WithDeletionTimestamp(),
 				spacetest.WithFinalizer())
-			r, req, cl := prepareReconcile(t, space, spc)
+			r, req, cl := prepareReconcile(t, space, spc, false)
 
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -116,7 +116,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "without-members",
 				spacetest.WithTierName("ourtier"))
-			r, req, cl := prepareReconcile(t, space, nil)
+			r, req, cl := prepareReconcile(t, space, nil, false)
 
 			// when
 			_, err := r.Reconcile(context.TODO(), req)
@@ -132,7 +132,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "not-found",
 				spacetest.WithTierName("ourtier"))
-			r, req, _ := prepareReconcile(t, space, nil)
+			r, req, _ := prepareReconcile(t, space, nil, false)
 			empty := test.NewFakeClient(t)
 			empty.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("shouldn't be called")
@@ -150,7 +150,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "get-fails",
 				spacetest.WithTierName("ourtier"))
-			r, req, cl := prepareReconcile(t, space, nil)
+			r, req, cl := prepareReconcile(t, space, nil, false)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
@@ -170,7 +170,9 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName(""))
-			r, req, cl := prepareReconcile(t, space, nil)
+			// Use forceSynchronization=true to prevent ToolchainConfig caching during counter init.
+			// This ensures the mock below will be hit when Reconcile calls GetToolchainConfig.
+			r, req, cl := prepareReconcile(t, space, nil, true)
 			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
@@ -192,7 +194,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithTierName("ourtier"))
-			r, req, cl := prepareReconcile(t, space, nil)
+			r, req, cl := prepareReconcile(t, space, nil, false)
 			cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
 					return errors.New("some error")
@@ -212,7 +214,7 @@ func TestCreateSpace(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig, forceSynchronization bool) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -221,7 +223,12 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 	t.Cleanup(counter.Reset)
-	InitializeCounters(t, toolchainStatus)
+
+	if forceSynchronization {
+		InitializeCounters(t, toolchainStatus)
+	} else {
+		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+	}
 
 	objs := []runtimeclient.Object{toolchainStatus, space}
 	if member1SpaceProvisionerConfig != nil {
