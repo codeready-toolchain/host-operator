@@ -109,7 +109,7 @@ func TestReconcile(t *testing.T) {
 					res, err = r.Reconcile(context.TODO(), req)
 					// then
 					require.NoError(t, err)
-					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
+					require.Empty(t, res.RequeueAfter) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 						HasConditions(
@@ -158,7 +158,7 @@ func TestReconcile(t *testing.T) {
 					res, err = r.Reconcile(context.TODO(), req)
 					// then
 					require.NoError(t, err)
-					require.Equal(t, reconcile.Result{Requeue: false}, res) // no reconcile
+					require.Empty(t, res.RequeueAfter) // no reconcile
 					// revisions are the same
 					tiertest.AssertThatNSTemplateTier(t, "base1ns", cl).
 						HasConditions(

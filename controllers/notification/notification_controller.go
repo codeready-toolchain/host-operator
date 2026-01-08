@@ -80,7 +80,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(ctx, notification, r.setStatusNotificationDeletionFailed, err, "failed to delete notification")
 		}
 		return reconcile.Result{
-			Requeue:      true,
 			RequeueAfter: requeueAfter,
 		}, nil
 	}
@@ -105,7 +104,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	return reconcile.Result{
-		Requeue:      true,
 		RequeueAfter: config.Notifications().DurationBeforeNotificationDeletion(),
 	}, r.updateStatus(ctx, notification, r.setStatusNotificationSent)
 }

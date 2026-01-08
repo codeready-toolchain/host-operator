@@ -25,6 +25,7 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	metricstest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -224,8 +225,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
@@ -238,8 +238,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 
@@ -283,8 +282,7 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 
 			// Reload the userSignup
@@ -332,7 +330,7 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue)
+			assert.Empty(t, res.RequeueAfter)
 
 			// Reload the userSignup
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -373,7 +371,7 @@ func TestReconcile(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				require.False(t, res.Requeue)
+				assert.Empty(t, res.RequeueAfter)
 
 				// Reload the userSignup
 				require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -428,7 +426,6 @@ func TestReconcile(t *testing.T) {
 
 					// then
 					require.NoError(t, err)
-					require.False(t, res.Requeue)
 					// The RequeueAfter should be ~about 3 days... let's accept if it's within 1 hour of that
 					require.WithinDuration(t, time.Now().Add(time.Duration(72)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
 
@@ -466,7 +463,7 @@ func TestReconcile(t *testing.T) {
 						res, err := r.Reconcile(context.TODO(), req)
 						// then
 						require.NoError(t, err)
-						require.False(t, res.Requeue)
+						assert.Empty(t, res.RequeueAfter)
 
 						// Reload the userSignup
 						require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -495,8 +492,7 @@ func TestReconcile(t *testing.T) {
 							res, err := r.Reconcile(context.TODO(), req)
 							// then
 							require.NoError(t, err)
-							require.False(t, res.Requeue, "requeue should not be set")
-							require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+							assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 						})
 					})
 				})
@@ -515,8 +511,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeue should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeue should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, true)
 			metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 		})
@@ -605,7 +600,7 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			require.False(t, res.Requeue) // no requeue since user should not be auto deactivated
+			assert.Empty(t, res.RequeueAfter) // no requeue since user should not be auto deactivated
 
 			// Reload the userSignup
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -625,7 +620,7 @@ func TestReconcile(t *testing.T) {
 
 				// The scheduled deactivation time should now be set to nil
 				require.Nil(t, userSignupFoobar.Status.ScheduledDeactivationTimestamp)
-				require.False(t, res.Requeue)
+				assert.Empty(t, res.RequeueAfter)
 			})
 		})
 
@@ -724,8 +719,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "usersignup get error")
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 		})
 
 		// cannot update UserSignup
@@ -757,8 +751,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "usersignup update error")
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.Equal(t, time.Duration(0), res.RequeueAfter, "requeueAfter should not be set")
+			assert.Empty(t, res.RequeueAfter, "requeueAfter should not be set")
 			assertThatUserSignupStateIsDeactivated(t, cl, username, false)
 		})
 	})

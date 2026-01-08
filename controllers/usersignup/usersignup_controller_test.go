@@ -976,7 +976,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
-	assert.False(t, res.Requeue)
+	assert.Empty(t, res.RequeueAfter)
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
@@ -1039,7 +1039,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
-	assert.False(t, res.Requeue)
+	assert.Empty(t, res.RequeueAfter)
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
@@ -4567,7 +4567,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
@@ -4589,7 +4589,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTargetCluster("member1")
@@ -4615,7 +4615,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member2")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
@@ -4636,7 +4636,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
@@ -4671,7 +4671,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
-		assert.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
 			DoesNotHaveAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
