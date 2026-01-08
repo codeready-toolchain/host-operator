@@ -35,10 +35,10 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/codeready-toolchain/api v0.0.0-20260108101803-54d23a1b4f3c h1:SwRrYLKaqZgkacUtCFFds5CVL+WxcWgtZvwOGC94Qeg=
-github.com/codeready-toolchain/api v0.0.0-20260108101803-54d23a1b4f3c/go.mod h1:zXOAqYKL70F9CIm357t8NAhaao9vcbl1cbOe7I/hRHo=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20260108104612-94ad63d02d50 h1:8kdg5DA49UdaVysbsA13C9KAFELC7QXoY1kfuvDC71k=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20260108104612-94ad63d02d50/go.mod h1:KmG0LgWVfwZE9r13V8LGQezcH/aS6h/rP+InHIFb7WU=
+github.com/codeready-toolchain/api v0.0.0-20260108115150-4c6695ed18de h1:rc39ZRUk2AyADzH+bt5On7V7qJz6syUrI4qNyCSXY3o=
+github.com/codeready-toolchain/api v0.0.0-20260108115150-4c6695ed18de/go.mod h1:O/HyAcz6fynt3LXr8wTGaIXt+0v6BpkiJvDxNQDCqyA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260108121619-9d154db88508 h1:mLYk2QmCM0VGk5P7AaKe3EEpN4kUxkQOFTdbPol6c+0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260108121619-9d154db88508/go.mod h1:xnME43Bdz4TF11lvPwsZWtGCybs/sS/QyE8HTe6WbiE=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
