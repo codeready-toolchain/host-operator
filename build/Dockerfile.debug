@@ -1,0 +1,53 @@
+# Compile Delve in an intermediate step.
+FROM registry.access.redhat.com/ubi8/ubi:latest AS delve-builder
+
+# The Golang version must be provided as a build arguments, which will ensure
+# that Delve gets built with the same version the service's binary gets built
+# with, to avoid any discrepancies.
+ARG GOLANG_VERSION
+
+# Install Tar to be able to extract Golang.
+RUN yum install --assumeyes \
+    tar \
+    && yum clean all
+
+# Download and extract Golang.
+RUN curl --location --output "${GOLANG_VERSION}.linux-amd64.tar.gz" "https://go.dev/dl/${GOLANG_VERSION}.linux-amd64.tar.gz" \
+    && tar --directory /usr/local --extract --file "${GOLANG_VERSION}.linux-amd64.tar.gz" \
+    && rm --force "${GOLANG_VERSION}.linux-amd64.tar.gz"
+
+# Put Golang in the path so that we can Delve with it.
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Build Delve and leave it in a temporary directory.
+RUN GOBIN=/tmp/bin go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Build the operator as normal.
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+
+LABEL maintainer = "KubeSaw <devsandbox@redhat.com>"
+LABEL author = "KubeSaw <devsandbox@redhat.com>"
+
+# Ensure that the "DEBUG_MODE" is enabled so that the binary executes with
+# Delve.
+ENV DEBUG_MODE=true \
+    OPERATOR=/usr/local/bin/host-operator \
+    USER_UID=1001 \
+    USER_NAME=host-operator \
+    LANG=en_US.utf8
+
+# Install operator binary in the image.
+COPY build/_output/bin/host-operator ${OPERATOR}
+
+COPY build/bin /usr/local/bin
+RUN  /usr/local/bin/user_setup
+
+# Copy Delve to the image so that we can execute the operator with it.
+COPY --from=delve-builder /tmp/bin/dlv /usr/local/bin/dlv
+
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+# Expose the debugger's port.
+EXPOSE 50000
+
+USER ${USER_UID}
