@@ -22,7 +22,7 @@ require (
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.33.4
-	k8s.io/apiextensions-apiserver v0.33.2
+	k8s.io/apiextensions-apiserver v0.33.4
 	k8s.io/apimachinery v0.33.4
 	k8s.io/client-go v0.33.4
 	k8s.io/klog v1.0.0
