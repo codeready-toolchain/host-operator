@@ -56,7 +56,7 @@ type Reconciler struct {
 // and what is in the UserSignup.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+// Result.RequeueAfter > 0 is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling UserSignup")
@@ -108,7 +108,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			// Requeue the reconciler to process this resource again after the threshold for unverified user deletion
 			return reconcile.Result{
-				Requeue:      true,
 				RequeueAfter: requeueAfter,
 			}, nil
 		}
@@ -178,7 +177,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{
-			Requeue:      true,
 			RequeueAfter: requeueAfter,
 		}, nil
 	}

@@ -208,7 +208,7 @@ func TestUserCleanup(t *testing.T) {
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
-		require.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 	})
 
 	t.Run("test that reactivated, unverified UserSignup long time ago is reset", func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestUserCleanup(t *testing.T) {
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
-		require.False(t, res.Requeue)
+		assert.Empty(t, res.RequeueAfter)
 	})
 
 	t.Run("test old deactivated UserSignup cleanup", func(t *testing.T) {
@@ -419,7 +419,6 @@ func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
 	durLower := time.Duration(days(1460 - 1 - margin))
 	durUpper := time.Duration(days(1460 + 1 - margin))
 
-	require.True(t, res.Requeue)
 	require.Greater(t, res.RequeueAfter, durLower)
 	require.Less(t, res.RequeueAfter, durUpper)
 }
