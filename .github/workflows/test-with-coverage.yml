@@ -1,4 +1,4 @@
-name: ci-pr
+name: test-with-coverage
 on:
   pull_request:
     branches: [ master ]
@@ -9,7 +9,7 @@ jobs:
 
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
