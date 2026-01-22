@@ -1,7 +1,7 @@
 name: ci-coverage
 on:
   workflow_run:
-    workflows: [ ci-pr ]
+    workflows: [ test-with-coverage ]
     types: [ completed ]
 
 jobs:
