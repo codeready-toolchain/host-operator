@@ -1,4 +1,4 @@
-name: ci-coverage
+name: upload-coverage
 on:
   workflow_run:
     workflows: [ test-with-coverage ]
