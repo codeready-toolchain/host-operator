@@ -2,6 +2,11 @@ name: test-with-coverage
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - '*.*'  
 
 jobs:
   test:
