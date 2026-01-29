@@ -35,4 +35,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: ./build/_output/coverage/coverage.txt    
+          path: ./build/_output/coverage/coverage.txt
