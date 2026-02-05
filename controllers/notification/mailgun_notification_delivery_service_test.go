@@ -103,7 +103,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			require.ErrorIs(t, err, MailgunDeliveryError{})
+			require.ErrorAs(t, err, &MailgunDeliveryError{})
 			require.Contains(t, err.Error(), "error while delivering notification (ID: , Response: ) - while making http request: Post ")
 			require.Contains(t, err.Error(), "https://127.0.0.1:60000/v3/mg.foo.com/messages")
 			require.Contains(t, err.Error(), ": dial tcp 127.0.0.1:60000: connect: connection refused")
