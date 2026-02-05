@@ -2,6 +2,8 @@ package counter_test
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -13,7 +15,9 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -297,9 +301,12 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.IncrementSpaceCount(logger, "member-1")
 
-	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
-	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
-	spaces := CreateMultipleSpaces("user-", 3, "member-1")
+	initObjs := []runtimeclient.Object{}
+	for index := range 3 {
+		initObjs = append(initObjs, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("user-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
+		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
+		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
+	}
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithSpaceCount(0)),
 		WithMetric("outdated", toolchainv1alpha1.Metric{
@@ -307,9 +314,6 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			"chocolate": 2,
 		}),
 	)
-	initObjs := append([]runtimeclient.Object{}, murs...)
-	initObjs = append(initObjs, usersignups...)
-	initObjs = append(initObjs, spaces...)
 
 	// when
 	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
@@ -344,9 +348,6 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 	//this will be ignored by resetting when initializing counters
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 
-	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
-	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
-	spaces := CreateMultipleSpaces("user-", 3, "member-1")
 	// all expected metrics are set ...
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithSpaceCount(0)),
@@ -365,9 +366,12 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 		}),
 	)
 	// ... but config flag will force synchronization from resources
-	initObjs := append([]runtimeclient.Object{}, murs...)
-	initObjs = append(initObjs, usersignups...)
-	initObjs = append(initObjs, spaces...)
+	initObjs := []runtimeclient.Object{}
+	for index := range 3 {
+		initObjs = append(initObjs, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("user-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
+		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
+		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
+	}
 
 	// when
 	InitializeCounters(t, toolchainStatus, initObjs...)
@@ -402,12 +406,13 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.IncrementSpaceCount(logger, "member-1")
 
-	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	spaces := CreateMultipleSpaces("user-", 10, "member-1")
-	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithSpaceCount(0)))
-	initObjs := append([]runtimeclient.Object{}, murs...)
-	initObjs = append(initObjs, spaces...)
+	toolchainStatus := NewToolchainStatus(WithMember("member-1", WithSpaceCount(0)))
+	initObjs := []runtimeclient.Object{}
+	for index := range 10 {
+		initObjs = append(initObjs, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("user-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
+		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
+		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
+	}
 	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
@@ -434,13 +439,14 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
-	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	spaces := CreateMultipleSpaces("user-", 10, "member-1")
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithSpaceCount(0)),
 		WithMember("member-2", WithSpaceCount(0)))
-	initObjs := append([]runtimeclient.Object{}, murs...)
-	initObjs = append(initObjs, spaces...)
+	initObjs := []runtimeclient.Object{}
+	for index := range 10 {
+		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
+		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
+	}
 	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus, initObjs...)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	var latch sync.WaitGroup
