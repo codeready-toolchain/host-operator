@@ -16,7 +16,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
@@ -417,7 +416,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
-	err = fakeClient.Create(context.TODO(), spacetest.NewSpace(test.HostOperatorNs, "ignored", spacetest.WithSpecTargetCluster("member-1")))
+	err = fakeClient.Create(context.TODO(), space.NewSpace(test.HostOperatorNs, "ignored", space.WithSpecTargetCluster("member-1")))
 	require.NoError(t, err)
 
 	// when

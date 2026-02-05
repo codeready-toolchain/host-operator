@@ -125,7 +125,7 @@ func TestUserCleanup(t *testing.T) {
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
-		require.IsType(t, &apierrors.StatusError{}, err)
+		require.ErrorIs(t, err, &apierrors.StatusError{})
 		statusErr := &apierrors.StatusError{}
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
@@ -355,7 +355,7 @@ func TestUserCleanup(t *testing.T) {
 					// Confirm the UserSignup has been deleted
 					require.Error(t, err)
 					require.True(t, apierrors.IsNotFound(err))
-					require.IsType(t, &apierrors.StatusError{}, err)
+					require.ErrorIs(t, err, &apierrors.StatusError{})
 					statusErr := &apierrors.StatusError{}
 					require.ErrorAs(t, err, &statusErr)
 					require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
