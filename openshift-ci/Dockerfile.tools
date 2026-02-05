@@ -8,8 +8,8 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME="KubeSaw" \
     GIT_COMMITTER_EMAIL=devsandbox@redhat.com \
-    GOLANG_VERSION=go1.24.11 \
-    GOLANG_SHA256=bceca00afaac856bc48b4cc33db7cd9eb383c81811379faed3bdbc80edb0af65
+    GOLANG_VERSION=go1.24.12 \
+    GOLANG_SHA256=bddf8e653c82429aea7aec2520774e79925d4bb929fe20e67ecc00dd5af44c50
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
