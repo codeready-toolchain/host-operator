@@ -8,35 +8,38 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/toolchain-common/pkg/client"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	routev1 "github.com/openshift/api/route/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -1448,12 +1451,18 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		defer counter.Reset()
 		toolchainStatus := NewToolchainStatus()
 		initObjects := append([]runtimeclient.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
-		initObjects = append(initObjects, CreateMultipleUserSignups("cookie-", 8)...)
-		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
-		initObjects = append(initObjects, CreateMultipleSpaces("cookie-", 8, "member-1")...)
-		initObjects = append(initObjects, CreateMultipleUserSignups("pasta-", 2)...)
-		initObjects = append(initObjects, CreateMultipleMurs(t, "pasta-", 2, "member-2")...)
-		initObjects = append(initObjects, CreateMultipleSpaces("pasta-", 2, "member-2")...)
+		// `cookie` usersignups and masteruserrecords
+		for index := range 8 {
+			initObjects = append(initObjects, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("cookie-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
+			initObjects = append(initObjects, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("cookie-%d", index), masteruserrecord.TargetCluster("member-1")))
+			initObjects = append(initObjects, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("cookie-%d", index), space.WithSpecTargetCluster("member-1")))
+		}
+		// `pasta` usersignups and masteruserrecords
+		for index := range 2 {
+			initObjects = append(initObjects, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("pasta-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
+			initObjects = append(initObjects, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("pasta-%d", index), masteruserrecord.TargetCluster("member-2")))
+			initObjects = append(initObjects, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("pasta-%d", index), space.WithSpecTargetCluster("member-2")))
+		}
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"}, initObjects...)
 

@@ -2,9 +2,7 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -14,10 +12,7 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
-	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
@@ -74,33 +69,6 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
 	}
 	return a
-}
-
-func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtimeclient.Object {
-	murs := make([]runtimeclient.Object, number)
-	for index := range murs {
-		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
-	}
-	return murs
-}
-
-func CreateMultipleUserSignups(prefix string, number int) []runtimeclient.Object {
-	usersignups := make([]runtimeclient.Object, number)
-	for index := range usersignups {
-		usersignups[index] = commonsignup.NewUserSignup(
-			commonsignup.WithName(fmt.Sprintf("%s%d", prefix, index)),
-			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
-		)
-	}
-	return usersignups
-}
-
-func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtimeclient.Object {
-	spaces := make([]runtimeclient.Object, number)
-	for index := range spaces {
-		spaces[index] = spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("%s%d", prefix, index), spacetest.WithSpecTargetCluster(targetCluster))
-	}
-	return spaces
 }
 
 func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
