@@ -12,8 +12,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
-	. "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 
@@ -220,14 +221,14 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
-	toolchainStatus := NewToolchainStatus(
-		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember("member1", toolchainstatustest.WithNodeRoleUsage("worker", 68), toolchainstatustest.WithNodeRoleUsage("master", 65)))
 	t.Cleanup(counter.Reset)
 
 	if forceSynchronization {
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 	} else {
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
 	}
 
 	objs := []runtimeclient.Object{toolchainStatus, space}
