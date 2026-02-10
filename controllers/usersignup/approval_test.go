@@ -7,8 +7,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	. "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -23,7 +24,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	// given
 	ctx := context.TODO()
 	signup := commonsignup.NewUserSignup()
-	toolchainStatus := NewToolchainStatus()
+	toolchainStatus := toolchainstatustest.NewToolchainStatus()
 
 	t.Run("with two clusters available, the second one is defined as the last-used one", func(t *testing.T) {
 		// given
@@ -38,7 +39,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -59,7 +60,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				Enabled(true),
 		)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -124,7 +125,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 					Enabled(true).Domains(testFields.DomainConfiguartion),
 			)
 			fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-			InitializeCounters(t, toolchainStatus)
+			metricstest.InitializeCounters(t, toolchainStatus)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -152,7 +153,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -169,7 +170,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.AutomaticApproval().
 				Enabled(true))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -185,7 +186,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t), spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -201,7 +202,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -217,7 +218,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -234,7 +235,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledTenantSPC("member1")
 		spc2 := hspc.NewEnabledTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -251,7 +252,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -268,7 +269,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		InitializeCounters(t, toolchainStatus)
+		metricstest.InitializeCounters(t, toolchainStatus)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
@@ -287,7 +288,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
-			InitializeCounters(t, toolchainStatus)
+			metricstest.InitializeCounters(t, toolchainStatus)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -307,7 +308,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				}
 				return fakeClient.Client.List(ctx, list, opts...)
 			}
-			InitializeCounters(t, toolchainStatus)
+			metricstest.InitializeCounters(t, toolchainStatus)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))

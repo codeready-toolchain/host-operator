@@ -1,4 +1,4 @@
-package test
+package metrics
 
 import (
 	"context"
@@ -9,10 +9,11 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
+	metricscommontest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
@@ -49,7 +50,7 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 
 func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.SpacesPerClusterCounts[clusterName])
-	metricscommon.AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
+	metricscommontest.AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
 	return a
 }
 
@@ -57,7 +58,7 @@ func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1
 	actual := a.counts.UserSignupsPerActivationAndDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for key, count := range expected {
-		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
+		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
 	}
 	return a
 }
@@ -66,7 +67,7 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 	actual := a.counts.MasterUserRecordPerDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual, "invalid counter values")
 	for domain, count := range expected {
-		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
+		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
 	}
 	return a
 }
@@ -109,16 +110,16 @@ func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 	// we need the metrics to be present in the toolchain status so that we force the initialization of the counters from the toolchain status.
 	// without the metrics, the counters would be intialized from MURs and user signups in the cluster (and because we're using a throw-away
 	// fake client with no objects in it, that wouldn't work).
-	options := []ToolchainStatusOption{
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{}),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
+	options := []toolchainstatustest.ToolchainStatusOption{
+		toolchainstatustest.WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{}),
+		toolchainstatustest.WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
 	}
 
 	for _, count := range counts {
-		options = append(options, WithMember(count.clusterName, WithSpaceCount(count.count)))
+		options = append(options, toolchainstatustest.WithMember(count.clusterName, toolchainstatustest.WithSpaceCount(count.count)))
 	}
 
-	toolchainStatus := NewToolchainStatus(options...)
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(options...)
 
 	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
