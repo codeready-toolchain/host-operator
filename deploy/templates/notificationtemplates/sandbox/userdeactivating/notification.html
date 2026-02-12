@@ -8,55 +8,149 @@
         Notice: Your Developer Sandbox account will be deactivated soon.
     </title>
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #e0e0e0;
+            font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #151515;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
         a:hover {
             text-decoration: underline !important;
         }
-        p {
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background-color: #1a1a1a;
+            padding: 0;
+            margin: 0;
+        }
+        .content {
+            padding: 40px 24px;
+            background-color: #ffffff;
+        }
+        .content p {
+            margin: 0 0 20px 0;
             text-align: left;
-            margin: 30px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0066cc;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .button:hover {
+            background-color: #0052a3;
+            text-decoration: none !important;
+        }
+        .footer {
+            background-color: #1a1a1a;
+            padding: 24px;
+            color: #c7c7c7;
+        }
+        .footer-logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+        .footer-links {
+            margin: 16px 0;
+        }
+        .footer-links a {
+            color: #ffffff;
+            margin-right: 20px;
+            font-size: 14px;
+        }
+        .footer-text {
+            font-size: 12px;
+            line-height: 1.6;
+            margin: 12px 0 0 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 24px 16px;
+            }
+            .footer-links a {
+                display: block;
+                margin: 8px 0;
+            }
         }
     </style>
 </head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://explore.redhat.com/rs/427-TBC-474/images/developer-sandbox.png?version=0" alt="Red Hat Developer - Developer Sandbox" style="width: 100%; max-width: 600px; height: auto; display: block;" />
+        </div>
 
-<body
-        style="
-       padding: 10px;
-       padding: 0;
-       background-color: #f9f9f9;
-       font-family: 'Open Sans', sans-serif;
-       font-size: 15px;
-       font-weight: lighter;
-       line-height: 1.2;"
->
-<div
-        style="
-       min-height: 300px;
-       max-width: 750px;
-       margin: 0 auto;
-       padding: 20px;
-       border: 1px solid #d7d7d7;
-       border-radius: 4px;
-       background-color: #fff;
-       box-shadow: 0 2px 4px #d7d7d7;"
->
+        <!-- Content -->
+        <div class="content">
+            <p>
+                The Developer Sandbox account associated with {{.UserEmail}} will expire in 3 days.
+            </p>
 
-    <p>
-        The Developer Sandbox account associated with {{.UserEmail}} will expire in 3 days.
-    </p>
+            <p>
+                We recommend you export your work as all data in your sandbox will be deleted. After deactivation, you can sign up again at any time for new access at <a href="{{.RegistrationURL}}" target="_blank" rel="noopener noreferrer">{{.RegistrationURL}}</a>.
+            </p>
+            <p>
+                <a href="https://developers.redhat.com/learn/openshift/export-your-application-sandbox-red-hat-openshift-service-aws" class="button" target="_blank" rel="noopener noreferrer">Export your work</a>
+            </p>
 
-    <p>
-        We recommend you <a href="https://developers.redhat.com/learn/openshift/export-your-application-sandbox-red-hat-openshift-service-aws">export your work</a> 
-        as all data in your sandbox will be deleted.  After deactivation, you can sign up again at any time for new access at {{.RegistrationURL}}.
-    </p>
+            <p>
+                To share feedback about your experience with the Developer Sandbox, email us at <a href="mailto:{{.ReplyTo}}">{{.ReplyTo}}</a>.
+            </p>
 
-    <p>
-        To share feedback about your experience with the Developer Sandbox, email us at {{.ReplyTo}}.
-    </p>
+            <p>
+                Thanks,<br />
+                The Developer Sandbox team
+            </p>
+        </div>
 
-    <p>
-        Thanks,<br />
-        The Developer Sandbox team
-    </p>
-</div>
+        <!-- Footer -->
+        <div class="footer">
+            <p style="margin: 0 0 16px 0;">
+                <img src="http://220-NSZ-364.mktoweb.com/rs/220-NSZ-364/images/Logo-RedHat-A-Color-White.png?version=0" alt="Red Hat" style="height: 32px; width: auto;" />
+            </p>
+            
+            <div class="footer-links">
+                <a href="https://www.redhat.com/en/about/contact" target="_blank" rel="noopener noreferrer">Contact Us</a>
+                <a href="https://www.redhat.com/en/preferences" target="_blank" rel="noopener noreferrer">Manage email preferences</a>
+                <a href="https://www.redhat.com/en/about/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy statement</a>
+            </div>
+
+            <p class="footer-text">
+                This is a transactional email providing information about your account or business relationship with Red Hat. If you have any questions, please contact <a href="mailto:customerservice@redhat.com" style="color: #73bcf7;">customerservice@redhat.com</a>.
+            </p>
+
+            <p class="footer-text">
+                For more information, you may also visit Red Hat's<a href="https://www.redhat.com/en/about/privacy-policy" style="color: #73bcf7;" target="_blank" rel="noopener noreferrer"> Privacy Statement</a>.
+            </p>
+
+            <p class="footer-text">
+                Red Hat and the Red Hat logo are trademarks or registered trademarks of Red Hat, Inc. or its subsidiaries in the United States and other countries.
+            </p>
+
+            <p class="footer-text">
+                © 2025 Red Hat<br />
+                100 East Davie Street<br />
+                Raleigh, NC 27601<br />
+                USA
+            </p>
+        </div>
+    </div>
 </body>
 </html>
