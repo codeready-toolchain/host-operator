@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup, murName string) {
-	assertMessageQueued(t, cl, murName, us.Spec.IdentityClaims.UserID, us.Spec.IdentityClaims.AccountID, "account activated")
+func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup) {
+	assertMessageQueued(t, cl, us.Spec.IdentityClaims.UserID, us.Spec.IdentityClaims.AccountID, "account activated")
 }
 
-func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, accountID string, event string) {
+func assertMessageQueued(t *testing.T, cl *segment.Client, userID, accountID string, event string) {
 	require.IsType(t, &MockClient{}, cl.Client())
 	require.Len(t, cl.Client().(*MockClient).Queue, 1)
 	expectedTrackEvent := analytics.Track{
