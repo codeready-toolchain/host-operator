@@ -6,14 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	hosttest "github.com/codeready-toolchain/host-operator/test"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	"github.com/codeready-toolchain/toolchain-common/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/assertions"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -36,10 +36,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -61,10 +61,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 			Enabled(false))
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -106,10 +106,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -134,10 +134,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			tc,
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -159,10 +159,10 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(5),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(5),
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -185,11 +185,11 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 90),
-					hosttest.WithNodeRoleUsage("master", 40),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 90),
+					toolchainstatustest.WithNodeRoleUsage("master", 40),
 				),
 			),
 		)
@@ -212,12 +212,12 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 42),
-					hosttest.WithNodeRoleUsage("master", 90),
-					hosttest.WithNodeRoleUsage("magic", 90),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
+					toolchainstatustest.WithNodeRoleUsage("worker", 42),
+					toolchainstatustest.WithNodeRoleUsage("master", 90),
+					toolchainstatustest.WithNodeRoleUsage("magic", 90),
 				),
 			),
 		)
@@ -238,7 +238,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
 
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"), hosttest.NewToolchainStatus())
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"), toolchainstatustest.NewToolchainStatus())
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -257,9 +257,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3),
 				),
 			),
 		)
@@ -281,11 +281,11 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3_000_000),
-					hosttest.WithNodeRoleUsage("worker", 3000),
-					hosttest.WithNodeRoleUsage("master", 800),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithSpaceCount(3_000_000),
+					toolchainstatustest.WithNodeRoleUsage("worker", 3000),
+					toolchainstatustest.WithNodeRoleUsage("master", 800),
 				),
 			),
 		)
@@ -416,16 +416,16 @@ func TestCollectConsumedCapacity(t *testing.T) {
 	// given
 
 	_, _, cl := prepareReconcile(t, nil,
-		hosttest.NewToolchainStatus(
-			hosttest.WithMember(
+		toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(
 				"cluster-1",
-				hosttest.WithSpaceCount(300),
-				hosttest.WithNodeRoleUsage("master", 10),
-				hosttest.WithNodeRoleUsage("worker", 40),
+				toolchainstatustest.WithSpaceCount(300),
+				toolchainstatustest.WithNodeRoleUsage("master", 10),
+				toolchainstatustest.WithNodeRoleUsage("worker", 40),
 			),
-			hosttest.WithMember(
+			toolchainstatustest.WithMember(
 				"cluster-2",
-				hosttest.WithSpaceCount(1),
+				toolchainstatustest.WithSpaceCount(1),
 			),
 		),
 	)
