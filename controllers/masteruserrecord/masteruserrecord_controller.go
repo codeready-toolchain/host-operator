@@ -7,7 +7,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/controllers"
@@ -324,7 +323,7 @@ func (r *Reconciler) manageCleanUp(ctx context.Context, mur *toolchainv1alpha1.M
 	}
 	domain := metrics.GetEmailDomain(mur)
 	logger := log.FromContext(ctx)
-	counter.DecrementMasterUserRecordCount(logger, domain)
+	metrics.DecrementMasterUserRecordCount(logger, domain)
 	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil
 }

@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -98,7 +98,7 @@ type OptimalTargetClusterFilter struct {
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 // In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
 func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
-	counts, err := counter.GetSpaceCountPerClusterSnapshot()
+	counts, err := metrics.GetSpaceCountPerClusterSnapshot()
 	if err != nil {
 		return "", fmt.Errorf("failed to obtain the counts cache: %w", err)
 	}

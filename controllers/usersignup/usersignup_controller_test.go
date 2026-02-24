@@ -12,7 +12,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	. "github.com/codeready-toolchain/host-operator/pkg/space"
@@ -112,7 +111,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
-			defer counter.Reset()
+			defer metrics.Reset()
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.Metrics().ForceSynchronization(false))
@@ -226,7 +225,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
-			defer counter.Reset()
+			defer metrics.Reset()
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
@@ -330,7 +329,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
-	defer counter.Reset()
+	defer metrics.Reset()
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.ApprovedManually(),
@@ -374,7 +373,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 	// given
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
-	defer counter.Reset()
+	defer metrics.Reset()
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.ApprovedManually(),
@@ -611,7 +610,7 @@ func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// given
-	defer counter.Reset()
+	defer metrics.Reset()
 	userSignup := commonsignup.NewUserSignup(
 		commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
 		commonsignup.WithLabel("toolchain.dev.openshift.com/approved", "false"),
@@ -4161,7 +4160,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	config, err := toolchainconfig.GetToolchainConfig(fakeClient)
 	require.NoError(t, err)
 
-	defer counter.Reset()
+	defer metrics.Reset()
 
 	// Confirm we have 5 forbidden prefixes by default
 	require.Len(t, config.Users().ForbiddenUsernamePrefixes(), 5)
@@ -4207,7 +4206,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 	config, err := toolchainconfig.GetToolchainConfig(fakeClient)
 	require.NoError(t, err)
 
-	defer counter.Reset()
+	defer metrics.Reset()
 
 	require.Len(t, config.Users().ForbiddenUsernameSuffixes(), 1)
 	names := []string{"dedicated-", "cluster-", "bob", ""}
