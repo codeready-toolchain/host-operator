@@ -206,9 +206,10 @@ func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	// when
 	metrics.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
 	metrics.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal) // a user signup twice (hence counter for "1" will be decreased)
-	metrics.Synchronize(context.TODO(), test.NewFakeClient(t), toolchainStatus)
+	err := metrics.Synchronize(context.TODO(), test.NewFakeClient(t), toolchainStatus)
 
 	// then
+	require.NoError(t, err)
 	metricstest.AssertThatCountersAndMetrics(t).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 0,
