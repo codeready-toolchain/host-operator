@@ -8,7 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -256,7 +256,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								// even when the counter of the other member is decremented, it should still use the last used one
 								// but we can decrement it only in the second cycle when the member3 has at least 50 Spaces
 								if i == 2 && cycle > 1 {
-									counter.DecrementSpaceCount(log.Log, "member3")
+									metrics.DecrementSpaceCount(log.Log, "member3")
 									member3CurrentCount--
 								}
 
@@ -267,7 +267,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, "member2", clusterName)
 
-								counter.IncrementSpaceCount(log.Log, "member2")
+								metrics.IncrementSpaceCount(log.Log, "member2")
 								member2CurrentCount++
 
 								// and when calling it with the other cluster as preferred
@@ -283,7 +283,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 						// reset the decremented counter back
 						if member2MissingTo50 > 2 && cycle > 1 {
-							counter.IncrementSpaceCount(log.Log, "member3")
+							metrics.IncrementSpaceCount(log.Log, "member3")
 							member3CurrentCount++
 						}
 
@@ -301,7 +301,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, "member3", clusterName)
 
-								counter.IncrementSpaceCount(log.Log, "member3")
+								metrics.IncrementSpaceCount(log.Log, "member3")
 								member3CurrentCount++
 
 								// and when calling it with the other cluster as preferred

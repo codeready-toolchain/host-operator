@@ -11,7 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
@@ -223,7 +223,7 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 
 	toolchainStatus := toolchainstatustest.NewToolchainStatus(
 		toolchainstatustest.WithMember("member1", toolchainstatustest.WithNodeRoleUsage("worker", 68), toolchainstatustest.WithNodeRoleUsage("master", 65)))
-	t.Cleanup(counter.Reset)
+	t.Cleanup(metrics.Reset)
 
 	if forceSynchronization {
 		metricstest.InitializeCounters(t, toolchainStatus)

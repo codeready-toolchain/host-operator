@@ -16,7 +16,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
@@ -1053,7 +1052,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 
 	t.Run("Timestamp set for new status object", func(t *testing.T) {
 		// given a status with unknown (new) ready condition
-		defer counter.Reset()
+		defer metrics.Reset()
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 			mockLastGitHubAPICall,
@@ -1128,7 +1127,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	defer counter.Reset()
+	defer metrics.Reset()
 	requestName := toolchainconfig.ToolchainStatusName
 
 	toolchainStatus := toolchainstatustest.NewToolchainStatus()
@@ -1449,7 +1448,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 	t.Run("Load all current resources", func(t *testing.T) {
 		// given
-		defer counter.Reset()
+		defer metrics.Reset()
 		toolchainStatus := toolchainstatustest.NewToolchainStatus()
 		initObjects := append([]runtimeclient.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 		// `cookie` usersignups and masteruserrecords
@@ -1493,9 +1492,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
-			counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
-			counter.IncrementMasterUserRecordCount(logger, metrics.External)
-			counter.IncrementSpaceCount(logger, "member-1")
+			metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
+			metrics.IncrementMasterUserRecordCount(logger, metrics.External)
+			metrics.IncrementSpaceCount(logger, "member-1")
 			toolchainStatus := toolchainstatustest.NewToolchainStatus()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -1519,7 +1518,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 	t.Run("initialize the cache using the ToolchainStatus resource", func(t *testing.T) {
 		// given
-		defer counter.Reset()
+		defer metrics.Reset()
 
 		toolchainConfig := testconfig.NewToolchainConfigObj(t, testconfig.Metrics().ForceSynchronization(false))
 
@@ -1542,10 +1541,10 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig)
 
 		// when
-		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
-		counter.IncrementSpaceCount(logger, "member-1")
-		counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal)
-		counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal)
+		metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
+		metrics.IncrementSpaceCount(logger, "member-1")
+		metrics.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal)
+		metrics.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal)
 		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
@@ -1559,9 +1558,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-2", ready(), spaceCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
 			HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
+				"1,internal": 4, // was incremented by `metrics.UpdateUsersPerActivationCounters(1)` but decremented `metrics.UpdateUsersPerActivationCounters(2)`
 				"1,external": 1, // unchanged
-				"2,internal": 2, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
+				"2,internal": 2, // was incremented by `metrics.UpdateUsersPerActivationCounters(2)`
 				"2,external": 1, // unchanged
 				"3,internal": 1, // unchanged
 			})
@@ -1571,9 +1570,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				string(metrics.External): 8,
 			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
+				"1,internal": 4, // was incremented by `metrics.UpdateUsersPerActivationCounters(1)` but decremented `metrics.UpdateUsersPerActivationCounters(2)`
 				"1,external": 1, // unchanged
-				"2,internal": 2, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
+				"2,internal": 2, // was incremented by `metrics.UpdateUsersPerActivationCounters(2)`
 				"2,external": 1, // unchanged
 				"3,internal": 1, // unchanged
 			}).

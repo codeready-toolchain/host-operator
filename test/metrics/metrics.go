@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -22,7 +21,7 @@ import (
 
 type CounterAssertion struct {
 	t      *testing.T
-	counts counter.Counts
+	counts metrics.Counts
 }
 
 type CountPerCluster struct {
@@ -31,7 +30,7 @@ type CountPerCluster struct {
 }
 
 func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCountsSnapshot()
+	counts, err := metrics.GetCountsSnapshot()
 	require.NoError(t, err)
 	return &CounterAssertion{
 		t:      t,
@@ -40,7 +39,7 @@ func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
 }
 
 func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCountsSnapshot()
+	counts, err := metrics.GetCountsSnapshot()
 	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
 	return &CounterAssertion{
 		t:      t,
@@ -74,8 +73,8 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 
 func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	counter.Reset()
-	t.Cleanup(counter.Reset)
+	metrics.Reset()
+	t.Cleanup(metrics.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
@@ -93,7 +92,7 @@ func InitializeCountersWithMetricsSyncDisabled(t *testing.T, toolchainStatus *to
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	t.Cleanup(counter.Reset)
+	t.Cleanup(metrics.Reset)
 
 	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
@@ -104,8 +103,8 @@ func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1al
 // InitializeCountersWith initializes the count cache from the counts parameter.
 func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	counter.Reset()
-	t.Cleanup(counter.Reset)
+	metrics.Reset()
+	t.Cleanup(metrics.Reset)
 
 	// we need the metrics to be present in the toolchain status so that we force the initialization of the counters from the toolchain status.
 	// without the metrics, the counters would be intialized from MURs and user signups in the cluster (and because we're using a throw-away
@@ -129,7 +128,7 @@ func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
-	err := counter.Synchronize(context.TODO(), cl, toolchainStatus)
+	err := metrics.Synchronize(context.TODO(), cl, toolchainStatus)
 	require.NoError(t, err)
 }
 
