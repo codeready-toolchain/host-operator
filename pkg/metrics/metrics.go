@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -380,15 +381,18 @@ func Synchronize(ctx context.Context, cl runtimeclient.Client, toolchainStatus *
 
 	// update the toolchainStatus.Status.Metrics and Prometheus metrics
 	// from the cachedCounts
-	toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{} // reset, so any outdated/deprecated entry is automatically removed
+	toolchainStatus.Status.Metrics = make(map[string]toolchainv1alpha1.Metric) // reset, so any outdated/deprecated entry is automatically removed
 	// `userSignupsPerActivationAndDomain` metric
-	toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.UserSignupsPerActivationAndDomainCounts)
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey] = make(toolchainv1alpha1.Metric)
+	maps.Copy(toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey], cachedCounts.UserSignupsPerActivationAndDomainCounts)
+	log.Info("synchronized user_signups_per_activation_and_domain metric", "counts", toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey])
 	for key, count := range cachedCounts.UserSignupsPerActivationAndDomainCounts {
 		labels := splitLabelValues(key) // returns the values of the `activations` and `domain` labels
 		UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(labels...).Set(float64(count))
 	}
 	// `masterUserRecordsPerDomain` metric
-	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = make(toolchainv1alpha1.Metric)
+	maps.Copy(toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey], cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
 		log.Info("synchronized master_user_records gauge", "domain", domain, "count", count)
 		MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
