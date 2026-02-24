@@ -6,8 +6,7 @@ import (
 	"github.com/gofrs/uuid"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	. "github.com/codeready-toolchain/host-operator/test"
-
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -206,7 +205,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
-	toolchainStatus := NewToolchainStatus()
+	toolchainStatus := toolchainstatustest.NewToolchainStatus()
 
 	t.Run("update", func(t *testing.T) {
 		t.Run("when all fields are set", func(t *testing.T) {
@@ -296,7 +295,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
-	toolchainStatus := NewToolchainStatus()
+	toolchainStatus := toolchainstatustest.NewToolchainStatus()
 
 	t.Run("update", func(t *testing.T) {
 		// given

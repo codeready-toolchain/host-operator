@@ -7,7 +7,7 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	. "github.com/codeready-toolchain/host-operator/test"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/require"
@@ -33,7 +33,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		require.NoError(t, err)
 
 		// check that the MemberStatus exists now
-		AssertThatToolchainStatus(t, commontest.HostOperatorNs, name, cl).Exists()
+		toolchainstatustest.AssertThatToolchainStatus(t, commontest.HostOperatorNs, name, cl).Exists()
 	})
 
 	t.Run("should return an error if creation fails ", func(t *testing.T) {

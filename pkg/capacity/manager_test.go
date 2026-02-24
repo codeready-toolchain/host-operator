@@ -9,7 +9,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
-	"github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	hspc "github.com/codeready-toolchain/host-operator/test/spaceprovisionerconfig"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spc "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
@@ -102,7 +102,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			// given
 			spc1 := tc.member1.buildSpaceProvisionerConfig()
 			spc2 := tc.member2.buildSpaceProvisionerConfig()
-			test.InitializeCountersWith(t) // no space counts necessary for this test
+			metricstest.InitializeCountersWith(t) // no space counts necessary for this test
 			fakeClient := commontest.NewFakeClient(t, spc1, spc2)
 			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
@@ -122,7 +122,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
 		fakeClient := commontest.NewFakeClient(t, spaceProvisionerConfig)
-		test.InitializeCountersWith(t)
+		metricstest.InitializeCountersWith(t)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -138,10 +138,10 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(10000))
 		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
 		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000))
-		test.InitializeCountersWith(t,
-			test.ClusterCount("member1", 700),
-			test.ClusterCount("member2", 700),
-			test.ClusterCount("member3", 200))
+		metricstest.InitializeCountersWith(t,
+			metricstest.ClusterCount("member1", 700),
+			metricstest.ClusterCount("member2", 700),
+			metricstest.ClusterCount("member3", 200))
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
@@ -159,10 +159,10 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
 		spc3 := hspc.NewEnabledValidTenantSPC("member3", spc.MaxNumberOfSpaces(1000))
 
-		test.InitializeCountersWith(t,
-			test.ClusterCount("member1", 700),
-			test.ClusterCount("member2", 700),
-			test.ClusterCount("member3", 200))
+		metricstest.InitializeCountersWith(t,
+			metricstest.ClusterCount("member1", 700),
+			metricstest.ClusterCount("member2", 700),
+			metricstest.ClusterCount("member3", 200))
 
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
 
@@ -180,9 +180,9 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		spc1 := hspc.NewEnabledValidTenantSPC("member1", spc.MaxNumberOfSpaces(1000))
 		spc2 := hspc.NewEnabledValidTenantSPC("member2", spc.MaxNumberOfSpaces(1000))
-		test.InitializeCountersWith(t,
-			test.ClusterCount("member1", 700),
-			test.ClusterCount("member2", 500))
+		metricstest.InitializeCountersWith(t,
+			metricstest.ClusterCount("member1", 700),
+			metricstest.ClusterCount("member2", 500))
 		fakeClient := commontest.NewFakeClient(t, spc1, spc2)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
@@ -200,7 +200,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		t.Run("unable to list SpaceProvisionerConfigs", func(t *testing.T) {
 			// given
-			test.InitializeCountersWith(t)
+			metricstest.InitializeCountersWith(t)
 			fakeClient := commontest.NewFakeClient(t)
 			fakeClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceProvisionerConfigList); ok {
@@ -235,10 +235,10 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 					spc3 := hspc.NewEnabledValidTenantSPC("member3",
 						spc.MaxNumberOfSpaces(limit))
 
-					test.InitializeCountersWith(t,
-						test.ClusterCount("member1", 1000),
-						test.ClusterCount("member2", numberOfSpaces),
-						test.ClusterCount("member3", numberOfSpaces))
+					metricstest.InitializeCountersWith(t,
+						metricstest.ClusterCount("member1", 1000),
+						metricstest.ClusterCount("member2", numberOfSpaces),
+						metricstest.ClusterCount("member3", numberOfSpaces))
 
 					fakeClient := commontest.NewFakeClient(t, spc1, spc2, spc3)
 					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
