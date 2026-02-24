@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup) {
+func AssertMessageQueuedForUserSignup(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup) {
 	assertMessageQueued(t, cl, us.Spec.IdentityClaims.UserID, us.Spec.IdentityClaims.AccountID, "account activated")
 }
 
