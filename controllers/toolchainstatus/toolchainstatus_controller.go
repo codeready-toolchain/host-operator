@@ -67,7 +67,7 @@ const (
 	hostRoutesTag          statusComponentTag = "hostRoutes"
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
-	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
+	metricsTag             statusComponentTag = "metrics"
 	durationAfterUnready   time.Duration      = 10 * time.Minute
 )
 
@@ -161,40 +161,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{RequeueAfter: requeueTime}, nil
 }
 
-type statusHandler struct {
-	name         statusComponentTag
-	handleStatus statusHandlerFunc
-}
-
 type statusHandlerFunc func(context.Context, *toolchainv1alpha1.ToolchainStatus) bool
 
 // aggregateAndUpdateStatus runs each of the status handlers. Each status handler reports readiness for a toolchain component. If any
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
 func (r *Reconciler) aggregateAndUpdateStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// collect status handlers that will contribute status of various toolchain components
-	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
-	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
-	proxyURLHandlerFunc := statusHandler{name: hostRoutesTag, handleStatus: r.hostRoutesHandleStatus}
-	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
-	// should be executed as the last one
-	counterHandlerFunc := statusHandler{name: counterTag, handleStatus: r.synchronizeWithCounter}
-
-	statusHandlers := []statusHandler{
-		hostOperatorStatusHandlerFunc,
-		memberStatusHandlerFunc,
-		registrationServiceStatusHandlerFunc,
-		proxyURLHandlerFunc,
-		counterHandlerFunc,
+	logger := log.FromContext(ctx)
+	logger.Info("aggregating component statuses")
+	statusHandlers := map[statusComponentTag]statusHandlerFunc{
+		hostOperatorTag:        r.hostOperatorHandleStatus,
+		memberConnectionsTag:   r.membersHandleStatus,
+		registrationServiceTag: r.registrationServiceHandleStatus,
+		hostRoutesTag:          r.hostRoutesHandleStatus,
+		metricsTag:             r.updateMetrics,
 	}
 
 	// track components that are not ready
 	var unreadyComponents []string
 
 	// retrieve component statuses eg. ToolchainCluster, host deployment
-	for _, statusHandler := range statusHandlers {
-		isReady := statusHandler.handleStatus(ctx, toolchainStatus)
+	for name, handleStatus := range statusHandlers {
+		isReady := handleStatus(ctx, toolchainStatus)
 		if !isReady {
-			unreadyComponents = append(unreadyComponents, string(statusHandler.name))
+			logger.Info("component is not ready", "name", name)
+			unreadyComponents = append(unreadyComponents, string(name))
+			metrics.ToolchainStatusGaugeVec.WithLabelValues(string(name)).Set(0)
+		} else {
+			metrics.ToolchainStatusGaugeVec.WithLabelValues(string(name)).Set(1)
 		}
 	}
 
@@ -266,10 +260,16 @@ func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolcha
 }
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
-func (r *Reconciler) synchronizeWithCounter(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	if err := metrics.Synchronize(ctx, r.Client, toolchainStatus); err != nil {
-		logger := log.FromContext(ctx)
-		logger.Error(err, "unable to synchronize with the counter")
+func (r *Reconciler) updateMetrics(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
+	logger.Info("updating the metrics")
+	namespace, err := commonconfig.GetWatchNamespace()
+	if err != nil {
+		logger.Error(err, "unable to get watch namespace")
+		return false
+	}
+	if err := metrics.Synchronize(ctx, r.Client, namespace); err != nil {
+		logger.Error(err, "unable to update the metrics")
 		return false
 	}
 	return true
@@ -279,6 +279,7 @@ func (r *Reconciler) synchronizeWithCounter(ctx context.Context, toolchainStatus
 // if the deployment is not determined to be ready
 func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	logger := log.FromContext(ctx)
+	logger.Info("checking the deployment of the host-operator")
 	// ensure host operator status is set
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
@@ -355,6 +356,8 @@ func isProdEnvironment(toolchainConfig toolchainconfig.ToolchainConfig) bool {
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
 // if the registration service is not ready
 func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
+	logger.Info("checking the deployment of the registration-service")
 
 	s := regServiceSubstatusHandler{
 		controllerClient:    r.Client,
@@ -384,10 +387,13 @@ func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolch
 
 // hostRoutesHandleStatus retrieves the public routes which should be exposed to the users. Such as Proxy URL.
 // Returns false if any route is not available.
+// TODO: could we replace this check with a Prometheus Probe?
 func (r *Reconciler) hostRoutesHandleStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	logger := log.FromContext(ctx)
+	logger.Info("checking the public routes")
+
 	proxyURL, err := r.proxyURL(ctx)
 	if err != nil {
-		logger := log.FromContext(ctx)
 		logger.Error(err, "Proxy route was not found")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusProxyRouteUnavailableReason, err.Error())
 		toolchainStatus.Status.HostRoutes.Conditions = []toolchainv1alpha1.Condition{*errCondition}
@@ -426,7 +432,7 @@ func (r *Reconciler) membersHandleStatus(ctx context.Context, toolchainStatus *t
 	logger := log.FromContext(ctx)
 
 	// get member clusters
-	logger.Info("updating member status")
+	logger.Info("checking the status of the member clusters")
 	memberClusters := r.GetMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
@@ -440,7 +446,7 @@ func (r *Reconciler) membersHandleStatus(ctx context.Context, toolchainStatus *t
 		err := memberCluster.Client.Get(ctx, types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
 		if err != nil {
 			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
-			logger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
+			logger.Error(err, fmt.Sprintf("cannot find the memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
 			members[memberCluster.Name] = memberStatus
@@ -472,6 +478,7 @@ func (r *Reconciler) membersHandleStatus(ctx context.Context, toolchainStatus *t
 	}
 
 	// add member cluster statuses to toolchainstatus, and assign apiEndpoint in members
+	// if everything above is `ready` (otherwise, skip it)
 	ready = compareAndAssignMemberStatuses(ctx, toolchainStatus, members, memberClusters) && ready
 	return ready
 }
@@ -716,6 +723,7 @@ func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolch
 	logger := log.FromContext(ctx)
 	allOk := true
 	var newMembers []toolchainv1alpha1.Member
+	spaceCounts := metrics.GetSpaceCountPerClusterSnapshot()
 	for _, member := range toolchainStatus.Status.Members {
 		newMemberStatus, ok := members[member.ClusterName]
 		apiEndpoint := getAPIEndpoint(member.ClusterName, memberClusters)
@@ -726,7 +734,7 @@ func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolch
 		if ok {
 			member.MemberStatus = newMemberStatus
 			delete(members, member.ClusterName)
-		} else if member.SpaceCount > 0 {
+		} else if spaceCounts[member.ClusterName] > 0 {
 			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", member.ClusterName)
 			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
@@ -739,6 +747,7 @@ func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolch
 		newMembers = append(newMembers, member)
 	}
 
+	// override the `toolchainStatus.Status.Members` with the `newMembers`
 	toolchainStatus.Status.Members = newMembers
 
 	for clusterName, memberStatus := range members {
@@ -747,7 +756,6 @@ func compareAndAssignMemberStatuses(ctx context.Context, toolchainStatus *toolch
 			APIEndpoint:  apiEndpoint,
 			ClusterName:  clusterName,
 			MemberStatus: memberStatus,
-			SpaceCount:   0,
 		})
 		logger.Info("added member status", "cluster_name", clusterName)
 	}

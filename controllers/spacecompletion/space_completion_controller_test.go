@@ -215,7 +215,7 @@ func TestCreateSpace(t *testing.T) {
 	})
 }
 
-func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig, forceSynchronization bool) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1SpaceProvisionerConfig *toolchainv1alpha1.SpaceProvisionerConfig, _ bool) (*spacecompletion.Reconciler, reconcile.Request, *test.FakeClient) {
 	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -225,17 +225,12 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 		toolchainstatustest.WithMember("member1", toolchainstatustest.WithNodeRoleUsage("worker", 68), toolchainstatustest.WithNodeRoleUsage("master", 65)))
 	t.Cleanup(metrics.Reset)
 
-	if forceSynchronization {
-		metricstest.InitializeCounters(t, toolchainStatus)
-	} else {
-		metricstest.InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-	}
-
 	objs := []runtimeclient.Object{toolchainStatus, space}
 	if member1SpaceProvisionerConfig != nil {
 		objs = append(objs, member1SpaceProvisionerConfig)
 	}
 	fakeClient := test.NewFakeClient(t, objs...)
+	metricstest.ResetCounters(t)
 
 	r := &spacecompletion.Reconciler{
 		Client:         fakeClient,

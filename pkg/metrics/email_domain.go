@@ -29,7 +29,7 @@ func GetEmailDomain(obj RuntimeObject) Domain {
 		emailAddress = obj.Spec.IdentityClaims.Email
 	}
 	if emailAddress == "" {
-		log.Error(nil, "no email address found in object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "name", obj.GetName())
+		logger.Error(nil, "no email address found in object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "name", obj.GetName())
 	} else if internalDomainPattern.MatchString(emailAddress) {
 		return Internal
 	}

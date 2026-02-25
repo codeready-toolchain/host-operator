@@ -15,7 +15,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = logf.Log.WithName("pending_object_cache")
+var logger = logf.Log.WithName("pending_object_cache")
 
 type ListPendingObjects func(ctx context.Context, cl runtimeclient.Client, labelListOption runtimeclient.ListOption) ([]runtimeclient.Object, error)
 
@@ -46,7 +46,7 @@ func (c *cache) loadLatest(ctx context.Context) { //nolint:unparam
 	if err != nil {
 		err = errs.Wrapf(err, "unable to list %s resources with label '%s' having value '%s'",
 			c.objectType.GetObjectKind().GroupVersionKind().Kind, toolchainv1alpha1.StateLabelKey, toolchainv1alpha1.StateLabelValuePending)
-		log.Error(err, "could not get the oldest pending object")
+		logger.Error(err, "could not get the oldest pending object")
 		return
 	}
 
@@ -69,7 +69,7 @@ func (c *cache) getFirstExisting(ctx context.Context, namespace string) runtimec
 			c.sortedObjectNames = c.sortedObjectNames[1:]
 			return c.getFirstExisting(ctx, namespace)
 		}
-		log.Error(err, fmt.Sprintf("could not get the oldest unapproved '%T'", c.objectType))
+		logger.Error(err, fmt.Sprintf("could not get the oldest unapproved '%T'", c.objectType))
 		return nil
 	}
 	if firstExisting.GetLabels()[toolchainv1alpha1.StateLabelKey] != toolchainv1alpha1.StateLabelValuePending {
