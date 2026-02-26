@@ -113,6 +113,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			}
 			fakeClient := commontest.NewFakeClient(t, initObjs...)
 			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
+			metricstest.ResetCounters(t, initObjs...)
 
 			// when
 			clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{
