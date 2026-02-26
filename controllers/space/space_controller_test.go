@@ -643,18 +643,19 @@ func TestDeleteSpace(t *testing.T) {
 		t.Run("when using status target cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
-				spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
-				spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
+				spacetest.WithSpecTargetCluster("member-1"),   // targetCluster was removed from spec ...
+				spacetest.WithStatusTargetCluster("member-1"), // ... but still available in status
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp())
 			metricstest.ResetCounters(t, s)
-			metricstest.AssertThatCountersAndMetrics(t).HaveSpacesForCluster("member-1", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
+			metricstest.AssertThatCountersAndMetrics(t).HaveSpacesForCluster("member-1", 1) // space counter is incremented when `.spec.TargetCluster` is set
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
+			s.Spec.TargetCluster = "" // targetCluster was removed from spec ...
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -670,7 +671,7 @@ func TestDeleteSpace(t *testing.T) {
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
 			metricstest.AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", -1) // space counter is decremented because the NSTemplateSet was deleted
+				HaveSpacesForCluster("member-1", 0) // space counter is decremented because the NSTemplateSet was deleted
 			// stop the test here: it verified that the NSTemplateSet deletion was triggered (the rest is already covered above)
 		})
 

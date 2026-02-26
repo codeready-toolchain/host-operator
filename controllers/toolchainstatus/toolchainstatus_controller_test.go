@@ -1962,7 +1962,6 @@ func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha
 				Conditions: []toolchainv1alpha1.Condition{toolchainstatustest.ToBeReady()},
 			},
 		},
-		SpaceCount: 0,
 	}
 	for _, opt := range options {
 		opt.applyToMember(&m)
