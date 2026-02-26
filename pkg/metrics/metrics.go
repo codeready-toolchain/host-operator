@@ -209,39 +209,32 @@ func RegisterCustomMetrics() []prometheus.Collector {
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord
-func IncrementMasterUserRecordCount(logger logr.Logger, domain Domain) {
-	logger.Info("incrementing MasterUserRecordGaugeVec", "domain", domain)
+func IncrementMasterUserRecordCount(_ logr.Logger, domain Domain) {
 	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Inc()
 }
 
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord
-func DecrementMasterUserRecordCount(logger logr.Logger, domain Domain) {
-	logger.Info("decrementing MasterUserRecordGaugeVec", "domain", domain)
+func DecrementMasterUserRecordCount(_ logr.Logger, domain Domain) {
 	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Dec()
 }
 
 // IncrementSpaceCount increments the number of Space's for the given member cluster
-func IncrementSpaceCount(logger logr.Logger, clusterName string) {
-	logger.Info("incrementing SpaceGaugeVec", "clusterName", clusterName)
+func IncrementSpaceCount(_ logr.Logger, clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Inc()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(1)
-	logger.Info("incremented SpaceGaugeVec", "clusterName", clusterName, "value", actual.(*atomic.Int32).Load())
 }
 
 // DecrementSpaceCount decreases the number of Spaces for the given member cluster
-func DecrementSpaceCount(logger logr.Logger, clusterName string) {
-	logger.Info("decrementing SpaceGaugeVec", "clusterName", clusterName)
+func DecrementSpaceCount(_ logr.Logger, clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Dec()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(-1)
-	logger.Info("decremented SpaceGaugeVec", "clusterName", clusterName, "value", actual.(*atomic.Int32).Load())
 }
 
 // IncrementUsersPerActivationCounters updates the activation counters and metrics
 // When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
-func IncrementUsersPerActivationCounters(logger logr.Logger, activations int, domain Domain) {
-	logger.Info("incrementing UsersPerActivationAndDomainGaugeVec", "activations", activations, "domain", domain)
+func IncrementUsersPerActivationCounters(_ logr.Logger, activations int, domain Domain) {
 	// skip for invalid values
 	if activations <= 0 {
 		return
