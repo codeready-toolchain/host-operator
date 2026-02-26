@@ -116,18 +116,23 @@ func Reset() {
 	for _, c := range allCounters {
 		k8smetrics.Registry.Unregister(c)
 	}
+	allCounters = nil
 	for _, c := range allCounterVecs {
 		k8smetrics.Registry.Unregister(c)
 	}
+	allCounterVecs = nil
 	for _, g := range allGauges {
 		k8smetrics.Registry.Unregister(g)
 	}
+	allGauges = nil
 	for _, v := range allGaugeVecs {
 		k8smetrics.Registry.Unregister(v)
 	}
+	allGaugeVecs = nil
 	for _, v := range allHistograms {
 		k8smetrics.Registry.Unregister(v)
 	}
+	allHistograms = nil
 	initMetrics()
 	cachedSpaceCounts.Clear()
 	initialized = false // allow the counters to be initialized again
