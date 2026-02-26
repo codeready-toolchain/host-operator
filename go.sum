@@ -35,6 +35,10 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
 github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
+github.com/codeready-toolchain/api v0.0.0-20260226033043-912fcbd23dc7 h1:1YCopXDF7WSjhM7sQAFoNeJvoIVPCHDY35jNVqc0Xh4=
+github.com/codeready-toolchain/api v0.0.0-20260226033043-912fcbd23dc7/go.mod h1:PMg6kNHuCGNlu3MOdrCisqGkBpvzB0qS1+E6nrXxPAc=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260226040150-d7d5d0163ff7 h1:NLTKW/An6PfcgqUyjeloAl0cmR0/lJopURsMMY/VZcs=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260226040150-d7d5d0163ff7/go.mod h1:TtwbNKTtHxDEaO2fOhJbYM4S1FykJHOf/4/nCw7hFwo=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -245,10 +249,6 @@ github.com/prometheus/common v0.62.0 h1:xasJaQlnWAeyHdUBeGjXmutelfJHWMRr+Fg4QszZ
 github.com/prometheus/common v0.62.0/go.mod h1:vyBcEuLSvWos9B1+CyL7JZ2up+uFzXhkqml0W5zIY1I=
 github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
 github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoGhij/e3PBqk=
-github.com/rajivnathan/api v0.0.0-20260225164436-80c782ea57de h1:jDu6zVmHfCVKnmKTCmMtvGyACGvE94R09CLHrTVIRA4=
-github.com/rajivnathan/api v0.0.0-20260225164436-80c782ea57de/go.mod h1:PMg6kNHuCGNlu3MOdrCisqGkBpvzB0qS1+E6nrXxPAc=
-github.com/rajivnathan/toolchain-common v0.0.0-20260225170920-5096cffa010b h1:7PjgTyxd+LeOaeJD3pu5IanpoQEKc8olA3e2pyRpVR8=
-github.com/rajivnathan/toolchain-common v0.0.0-20260225170920-5096cffa010b/go.mod h1:fP177rBNtGecNLO7JXFhz6UQVaYMnmofE4HjvTFCtBQ=
 github.com/redhat-cop/operator-utils v1.3.8 h1:xhoMBg2snSzNdcxT53lSBr7PRXxrzP1cDi51NPBLaT4=
 github.com/redhat-cop/operator-utils v1.3.8/go.mod h1:s4R0YY8lVlHkC78GLV20PPuZmywjSbTwZKCHwWUQ3P8=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
