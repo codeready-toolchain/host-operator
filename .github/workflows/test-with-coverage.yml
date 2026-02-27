@@ -32,7 +32,7 @@ jobs:
           make test-with-coverage
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: ./build/_output/coverage/coverage.txt
