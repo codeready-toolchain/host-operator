@@ -589,7 +589,7 @@ func (r *Reconciler) setStateLabel(
 	r.updateUserSignupMetricsByState(userSignup, oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
-	metrics.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
+	metrics.IncrementUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
