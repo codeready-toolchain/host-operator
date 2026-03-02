@@ -180,6 +180,12 @@ func main() { // nolint:gocyclo
 	}
 	crtConfig.Print()
 
+	setupLog.Info("updating the metrics")
+	if err := metrics.Synchronize(ctx, cl, namespace); err != nil {
+		setupLog.Error(err, "unable to update the metrics")
+		os.Exit(1)
+	}
+
 	if crtConfig.RegistrationService().Verification().CaptchaEnabled() {
 		if err := createCaptchaFileFromSecret(crtConfig.RegistrationService()); err != nil {
 			panic(fmt.Sprintf("failed to create captcha file: %s", err.Error()))

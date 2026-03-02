@@ -67,7 +67,6 @@ const (
 	hostRoutesTag          statusComponentTag = "hostRoutes"
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
-	metricsTag             statusComponentTag = "metrics"
 	durationAfterUnready   time.Duration      = 10 * time.Minute
 )
 
@@ -174,7 +173,6 @@ func (r *Reconciler) aggregateAndUpdateStatus(ctx context.Context, toolchainStat
 		memberConnectionsTag:   r.membersHandleStatus,
 		registrationServiceTag: r.registrationServiceHandleStatus,
 		hostRoutesTag:          r.hostRoutesHandleStatus,
-		metricsTag:             r.updateMetrics,
 	}
 
 	// track components that are not ready
@@ -257,22 +255,6 @@ func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolcha
 		}
 	}
 	return nil
-}
-
-// synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
-func (r *Reconciler) updateMetrics(ctx context.Context, _ *toolchainv1alpha1.ToolchainStatus) bool {
-	logger := log.FromContext(ctx)
-	logger.Info("updating the metrics")
-	namespace, err := commonconfig.GetWatchNamespace()
-	if err != nil {
-		logger.Error(err, "unable to get watch namespace")
-		return false
-	}
-	if err := metrics.Synchronize(ctx, r.Client, namespace); err != nil {
-		logger.Error(err, "unable to update the metrics")
-		return false
-	}
-	return true
 }
 
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns false
