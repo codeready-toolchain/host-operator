@@ -260,7 +260,7 @@ func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolcha
 }
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
-func (r *Reconciler) updateMetrics(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) updateMetrics(ctx context.Context, _ *toolchainv1alpha1.ToolchainStatus) bool {
 	logger := log.FromContext(ctx)
 	logger.Info("updating the metrics")
 	namespace, err := commonconfig.GetWatchNamespace()
