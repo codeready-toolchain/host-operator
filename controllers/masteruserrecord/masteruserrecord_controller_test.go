@@ -289,7 +289,6 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
 		murtest.StatusUserAccount(commontest.MemberClusterName))
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
