@@ -12,24 +12,20 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/client"
-	"github.com/go-logr/logr"
-	routev1 "github.com/openshift/api/route/v1"
-
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -269,7 +267,7 @@ func (r *Reconciler) restoredCheck(ctx context.Context, toolchainStatus *toolcha
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
 func (r *Reconciler) synchronizeWithCounter(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	if err := counter.Synchronize(ctx, r.Client, toolchainStatus); err != nil {
+	if err := metrics.Synchronize(ctx, r.Client, toolchainStatus); err != nil {
 		logger := log.FromContext(ctx)
 		logger.Error(err, "unable to synchronize with the counter")
 		return false

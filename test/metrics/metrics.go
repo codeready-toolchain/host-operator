@@ -1,4 +1,4 @@
-package test
+package metrics
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	metricscommon "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
+	metricscommontest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +21,7 @@ import (
 
 type CounterAssertion struct {
 	t      *testing.T
-	counts counter.Counts
+	counts metrics.Counts
 }
 
 type CountPerCluster struct {
@@ -30,7 +30,7 @@ type CountPerCluster struct {
 }
 
 func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCountsSnapshot()
+	counts, err := metrics.GetCountsSnapshot()
 	require.NoError(t, err)
 	return &CounterAssertion{
 		t:      t,
@@ -39,7 +39,7 @@ func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
 }
 
 func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
-	counts, err := counter.GetCountsSnapshot()
+	counts, err := metrics.GetCountsSnapshot()
 	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
 	return &CounterAssertion{
 		t:      t,
@@ -49,7 +49,7 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 
 func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.SpacesPerClusterCounts[clusterName])
-	metricscommon.AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
+	metricscommontest.AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
 	return a
 }
 
@@ -57,7 +57,7 @@ func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1
 	actual := a.counts.UserSignupsPerActivationAndDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for key, count := range expected {
-		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
+		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
 	}
 	return a
 }
@@ -66,15 +66,15 @@ func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1al
 	actual := a.counts.MasterUserRecordPerDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual, "invalid counter values")
 	for domain, count := range expected {
-		metricscommon.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
+		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
 	}
 	return a
 }
 
 func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtimeclient.Object) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	counter.Reset()
-	t.Cleanup(counter.Reset)
+	metrics.Reset()
+	t.Cleanup(metrics.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
@@ -92,7 +92,7 @@ func InitializeCountersWithMetricsSyncDisabled(t *testing.T, toolchainStatus *to
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	t.Cleanup(counter.Reset)
+	t.Cleanup(metrics.Reset)
 
 	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
@@ -103,22 +103,22 @@ func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1al
 // InitializeCountersWith initializes the count cache from the counts parameter.
 func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
-	counter.Reset()
-	t.Cleanup(counter.Reset)
+	metrics.Reset()
+	t.Cleanup(metrics.Reset)
 
 	// we need the metrics to be present in the toolchain status so that we force the initialization of the counters from the toolchain status.
 	// without the metrics, the counters would be intialized from MURs and user signups in the cluster (and because we're using a throw-away
 	// fake client with no objects in it, that wouldn't work).
-	options := []ToolchainStatusOption{
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{}),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
+	options := []toolchainstatustest.ToolchainStatusOption{
+		toolchainstatustest.WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{}),
+		toolchainstatustest.WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{}),
 	}
 
 	for _, count := range counts {
-		options = append(options, WithMember(count.clusterName, WithSpaceCount(count.count)))
+		options = append(options, toolchainstatustest.WithMember(count.clusterName, toolchainstatustest.WithSpaceCount(count.count)))
 	}
 
-	toolchainStatus := NewToolchainStatus(options...)
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(options...)
 
 	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	fakeClient := commontest.NewFakeClient(t, toolchainConfig)
@@ -128,7 +128,7 @@ func InitializeCountersWith(t *testing.T, counts ...CountPerCluster) {
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
-	err := counter.Synchronize(context.TODO(), cl, toolchainStatus)
+	err := metrics.Synchronize(context.TODO(), cl, toolchainStatus)
 	require.NoError(t, err)
 }
 

@@ -43,12 +43,11 @@ func (c *Client) Client() analytics.Client {
 const AccountActivated = "account activated"
 
 func (c *Client) TrackAccountActivation(username, userID, accountID string) {
-	logger.Info("sending event to Segment", "event", AccountActivated, "username_hash", Hash(username), "userid", userID, "accountid", accountID)
+	logger.Info("sending event to Segment", "event", AccountActivated, "username", username, "userid", userID, "accountid", accountID)
 	if err := c.client.Enqueue(analytics.Track{
 		Event:  AccountActivated,
-		UserId: Hash(username),
+		UserId: userID,
 		Properties: analytics.NewProperties().
-			Set("user_id", userID).
 			Set("account_id", accountID).
 			Set("epoch_time", time.Now().UnixMilli()),
 		Context: &analytics.Context{

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/codeready-toolchain/host-operator/test"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
@@ -32,7 +32,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewUserSignupMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
+		requests := mapper.MapToOldestPending(ctx, toolchainstatustest.NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -45,7 +45,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewSpaceMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
+		requests := mapper.MapToOldestPending(ctx, toolchainstatustest.NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -64,7 +64,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
+	requests := mapper.MapToOldestPending(ctx, toolchainstatustest.NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)
@@ -80,7 +80,7 @@ func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestPending(ctx, NewToolchainStatus())
+	requests := mapper.MapToOldestPending(ctx, toolchainstatustest.NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)

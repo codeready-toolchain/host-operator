@@ -313,15 +313,6 @@ func (d TiersConfig) DefaultSpaceTier() string {
 	return commonconfig.GetString(d.tiers.DefaultSpaceTier, "base")
 }
 
-func (d TiersConfig) DurationBeforeChangeTierRequestDeletion() time.Duration {
-	v := commonconfig.GetString(d.tiers.DurationBeforeChangeTierRequestDeletion, "24h")
-	duration, err := time.ParseDuration(v)
-	if err != nil {
-		duration = 24 * time.Hour
-	}
-	return duration
-}
-
 func (d TiersConfig) FeatureToggles() []FeatureToggle {
 	toggles := make([]FeatureToggle, 0, len(d.tiers.FeatureToggles))
 	for _, t := range d.tiers.FeatureToggles {

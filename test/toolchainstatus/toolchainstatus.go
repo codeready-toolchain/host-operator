@@ -1,4 +1,4 @@
-package test
+package toolchainstatus
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"

@@ -10,8 +10,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/mapper"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
@@ -318,7 +318,7 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(ctx, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			counter.IncrementSpaceCount(logger, space.Spec.TargetCluster)
+			metrics.IncrementSpaceCount(logger, space.Spec.TargetCluster)
 
 			return nsTmplSet, requeueDelay, r.setStatusProvisioning(ctx, space)
 		}
@@ -585,7 +585,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(ctx context.Context, space *
 		}
 		return false, nil // was already deleted in the mean time
 	}
-	counter.DecrementSpaceCount(logger, space.Status.TargetCluster)
+	metrics.DecrementSpaceCount(logger, space.Status.TargetCluster)
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
 }

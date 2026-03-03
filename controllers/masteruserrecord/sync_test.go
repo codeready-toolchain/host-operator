@@ -9,8 +9,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-var readyToolchainStatus = NewToolchainStatus(
-	WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())))
+var readyToolchainStatus = toolchainstatustest.NewToolchainStatus(
+	toolchainstatustest.WithMember(test.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())))
 
 func TestIsSynchronized(t *testing.T) {
 
@@ -766,8 +766,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			t.Run("condition is not ready", func(t *testing.T) {
 				// given
 				for _, toolchainStatus := range []*toolchainv1alpha1.ToolchainStatus{
-					NewToolchainStatus(WithMember(test.MemberClusterName, WithRoutes("", ToBeNotReady()))),
-					NewToolchainStatus(WithMember(test.MemberClusterName)),
+					toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithMember(test.MemberClusterName, toolchainstatustest.WithRoutes("", toolchainstatustest.ToBeNotReady()))),
+					toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithMember(test.MemberClusterName)),
 				} {
 					memberClient := test.NewFakeClient(t, userAccount)
 					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
@@ -876,8 +876,8 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("routes are set", func(t *testing.T) {
 		// given
-		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())))
+		toolchainStatus := toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(test.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())))
 		mur := masterUserRec.DeepCopy()
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
@@ -907,8 +907,8 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("condition is not ready", func(t *testing.T) {
 		// given
-		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeNotReady())))
+		toolchainStatus := toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(test.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeNotReady())))
 		mur := masterUserRec.DeepCopy()
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)

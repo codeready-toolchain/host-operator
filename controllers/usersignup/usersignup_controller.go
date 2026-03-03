@@ -11,7 +11,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
@@ -590,7 +589,7 @@ func (r *Reconciler) setStateLabel(
 	r.updateUserSignupMetricsByState(userSignup, oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
-	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
+	metrics.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
@@ -707,7 +706,7 @@ func (r *Reconciler) provisionMasterUserRecord(
 	}
 	// increment the counter of MasterUserRecords
 	domain := metrics.GetEmailDomain(mur)
-	counter.IncrementMasterUserRecordCount(logger, domain)
+	metrics.IncrementMasterUserRecordCount(logger, domain)
 
 	// track the MUR creation as an account activation event in Segment
 	if r.SegmentClient != nil {
