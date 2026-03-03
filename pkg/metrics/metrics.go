@@ -9,7 +9,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/version"
 
-	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -209,24 +208,24 @@ func RegisterCustomMetrics() []prometheus.Collector {
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord
-func IncrementMasterUserRecordCount(_ logr.Logger, domain Domain) {
+func IncrementMasterUserRecordCount(domain Domain) {
 	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Inc()
 }
 
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord
-func DecrementMasterUserRecordCount(_ logr.Logger, domain Domain) {
+func DecrementMasterUserRecordCount(domain Domain) {
 	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Dec()
 }
 
 // IncrementSpaceCount increments the number of Space's for the given member cluster
-func IncrementSpaceCount(_ logr.Logger, clusterName string) {
+func IncrementSpaceCount(clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Inc()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(1)
 }
 
 // DecrementSpaceCount decreases the number of Spaces for the given member cluster
-func DecrementSpaceCount(_ logr.Logger, clusterName string) {
+func DecrementSpaceCount(clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Dec()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(-1)
@@ -234,7 +233,7 @@ func DecrementSpaceCount(_ logr.Logger, clusterName string) {
 
 // IncrementUsersPerActivationCounters updates the activation counters and metrics
 // When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
-func IncrementUsersPerActivationCounters(_ logr.Logger, activations int, domain Domain) {
+func IncrementUsersPerActivationCounters(activations int, domain Domain) {
 	// skip for invalid values
 	if activations <= 0 {
 		return
@@ -307,11 +306,11 @@ func Synchronize(ctx context.Context, cl runtimeclient.Client, namespace string)
 	MasterUserRecordGaugeVec.Reset()
 	for _, mur := range murs.Items {
 		domain := GetEmailDomain(&mur) // nolint:gosec
-		IncrementMasterUserRecordCount(logger, domain)
+		IncrementMasterUserRecordCount(domain)
 	}
 	SpaceGaugeVec.Reset()
 	for _, space := range spaces.Items {
-		IncrementSpaceCount(logger, space.Spec.TargetCluster)
+		IncrementSpaceCount(space.Spec.TargetCluster)
 	}
 	initialized = true
 	logger.Info("metrics initialized from UserSignups, MasterUserRecords and Spaces", "userSignups", len(usersignups.Items), "murs", len(murs.Items), "spaces", len(spaces.Items))

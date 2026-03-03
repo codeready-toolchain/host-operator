@@ -318,7 +318,7 @@ func (r *Reconciler) manageNSTemplateSet(ctx context.Context, space *toolchainv1
 				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(ctx, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			metrics.IncrementSpaceCount(logger, space.Spec.TargetCluster)
+			metrics.IncrementSpaceCount(space.Spec.TargetCluster)
 
 			return nsTmplSet, requeueDelay, r.setStatusProvisioning(ctx, space)
 		}
@@ -585,7 +585,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(ctx context.Context, space *
 		}
 		return false, nil // was already deleted in the mean time
 	}
-	metrics.DecrementSpaceCount(logger, space.Status.TargetCluster)
+	metrics.DecrementSpaceCount(space.Status.TargetCluster)
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
 }

@@ -23,8 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-var logger = logf.Log.WithName("metrics_test")
-
 func TestResetMetrics(t *testing.T) {
 	// given
 	metrics.Reset()
@@ -49,9 +47,9 @@ func TestIncrementMasterUserRecordCount(t *testing.T) {
 	defer metrics.Reset()
 
 	// when
-	metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
-	metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
-	metrics.IncrementMasterUserRecordCount(logger, metrics.External)
+	metrics.IncrementMasterUserRecordCount(metrics.Internal)
+	metrics.IncrementMasterUserRecordCount(metrics.Internal)
+	metrics.IncrementMasterUserRecordCount(metrics.External)
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
@@ -65,10 +63,10 @@ func TestDecrementMasterUserRecordCount(t *testing.T) {
 	defer metrics.Reset()
 
 	// when
-	metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
-	metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
-	metrics.DecrementMasterUserRecordCount(logger, metrics.Internal)
-	metrics.IncrementMasterUserRecordCount(logger, metrics.External)
+	metrics.IncrementMasterUserRecordCount(metrics.Internal)
+	metrics.IncrementMasterUserRecordCount(metrics.Internal)
+	metrics.DecrementMasterUserRecordCount(metrics.Internal)
+	metrics.IncrementMasterUserRecordCount(metrics.External)
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
@@ -86,9 +84,9 @@ func TestIncrementSpaceCount(t *testing.T) {
 	defer metrics.Reset()
 
 	// when
-	metrics.IncrementSpaceCount(logger, "member-1")
-	metrics.IncrementSpaceCount(logger, "member-2")
-	metrics.IncrementSpaceCount(logger, "member-2")
+	metrics.IncrementSpaceCount("member-1")
+	metrics.IncrementSpaceCount("member-2")
+	metrics.IncrementSpaceCount("member-2")
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
@@ -102,11 +100,11 @@ func TestDecrementSpaceCount(t *testing.T) {
 	defer metrics.Reset()
 
 	// when
-	metrics.IncrementSpaceCount(logger, "member-1")
-	metrics.DecrementSpaceCount(logger, "member-1")
-	metrics.IncrementSpaceCount(logger, "member-2")
-	metrics.IncrementSpaceCount(logger, "member-2")
-	metrics.DecrementSpaceCount(logger, "member-2")
+	metrics.IncrementSpaceCount("member-1")
+	metrics.DecrementSpaceCount("member-1")
+	metrics.IncrementSpaceCount("member-2")
+	metrics.IncrementSpaceCount("member-2")
+	metrics.DecrementSpaceCount("member-2")
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
@@ -200,44 +198,44 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			metrics.IncrementMasterUserRecordCount(logger, metrics.Internal)
+			metrics.IncrementMasterUserRecordCount(metrics.Internal)
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					metrics.DecrementMasterUserRecordCount(logger, metrics.Internal)
+					metrics.DecrementMasterUserRecordCount(metrics.Internal)
 				}()
 			}
 		}(i)
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			metrics.IncrementSpaceCount(logger, "member-2")
+			metrics.IncrementSpaceCount("member-2")
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					metrics.DecrementSpaceCount(logger, "member-2")
+					metrics.DecrementSpaceCount("member-2")
 				}()
 			}
 		}(i)
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			metrics.IncrementSpaceCount(logger, "member-1")
+			metrics.IncrementSpaceCount("member-1")
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					metrics.DecrementSpaceCount(logger, "member-1")
+					metrics.DecrementSpaceCount("member-1")
 				}()
 			}
 		}(i)
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			metrics.IncrementUsersPerActivationCounters(logger, 1, metrics.Internal) // increment metric for internal users with 1 activation
+			metrics.IncrementUsersPerActivationCounters(1, metrics.Internal) // increment metric for internal users with 1 activation
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					metrics.IncrementUsersPerActivationCounters(logger, 2, metrics.Internal) // increment metric for internal users with 2 activations and decrement metric for internal users with 1 activation
+					metrics.IncrementUsersPerActivationCounters(2, metrics.Internal) // increment metric for internal users with 2 activations and decrement metric for internal users with 1 activation
 				}()
 			}
 		}(i)

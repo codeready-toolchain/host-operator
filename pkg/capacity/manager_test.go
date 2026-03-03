@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type memberConfig struct {
@@ -283,7 +282,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								// even when the counter of the other member is decremented, it should still use the last used one
 								// but we can decrement it only in the second cycle when the member3 has at least 50 Spaces
 								if i == 2 && cycle > 1 {
-									metrics.DecrementSpaceCount(log.Log, "member3-cluster")
+									metrics.DecrementSpaceCount("member3-cluster")
 									member3CurrentCount--
 								}
 
@@ -294,7 +293,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, commontest.Member2ClusterName, clusterName)
 
-								metrics.IncrementSpaceCount(log.Log, commontest.Member2ClusterName)
+								metrics.IncrementSpaceCount(commontest.Member2ClusterName)
 								member2CurrentCount++
 
 								// and when calling it with the other cluster as preferred
@@ -310,7 +309,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 						// reset the decremented counter back
 						if member2MissingTo50 > 2 && cycle > 1 {
-							metrics.IncrementSpaceCount(log.Log, "member3-cluster")
+							metrics.IncrementSpaceCount("member3-cluster")
 							member3CurrentCount++
 						}
 
@@ -328,7 +327,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								require.NoError(t, err)
 								assert.Equal(t, "member3-cluster", clusterName)
 
-								metrics.IncrementSpaceCount(log.Log, "member3-cluster")
+								metrics.IncrementSpaceCount("member3-cluster")
 								member3CurrentCount++
 
 								// and when calling it with the other cluster as preferred
