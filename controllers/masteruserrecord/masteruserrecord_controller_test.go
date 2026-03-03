@@ -175,7 +175,6 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"))
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
