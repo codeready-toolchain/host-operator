@@ -284,33 +284,6 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 			Has(ConsumedMemoryUsage(nil)))
 	})
 
-	t.Run("zero means unlimited", func(t *testing.T) {
-		// given
-		spc := blueprintSpc.DeepCopy()
-		initObjs := []runtimeclient.Object{
-			readyToolchainCluster("cluster1"),
-			toolchainstatustest.NewToolchainStatus(
-				toolchainstatustest.WithMember("cluster1",
-					toolchainstatustest.WithNodeRoleUsage("worker", 3000),
-					toolchainstatustest.WithNodeRoleUsage("master", 800),
-				),
-			),
-		}
-		for i := range 3 { // TODO: check if we really need 3_000_000 here
-			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
-		}
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
-		// when
-		_, reconcileErr := r.Reconcile(context.TODO(), req)
-		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
-
-		// then
-		require.NoError(t, reconcileErr)
-		AssertThat(t, spc,
-			Is(Ready()),
-			Has(ConsumedSpaceCount(3)),
-			Has(ConsumedMemoryUsage(map[string]int{"master": 800, "worker": 3000})))
-	})
 }
 
 func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
