@@ -120,7 +120,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			otherMur := murtest.NewMasterUserRecord(t, "john-456", murtest.WithOwnerLabel(otherSignup.Name))
 			externalSignup := commonsignup.NewUserSignup(commonsignup.WithName("jack-456"), commonsignup.WithActivations("1"), commonsignup.WithEmail("jack@example.com"))
 			externalMur := murtest.NewMasterUserRecord(t, "jack-456", murtest.WithOwnerLabel(externalSignup.Name), murtest.Email("jack@example.com"))
-			metricstest.ResetCounters(t, userSignup, otherSignup, otherMur, externalSignup, externalMur)
+			fakeClient := commontest.NewFakeClient(t, userSignup, otherSignup, otherMur, externalSignup, externalMur)
+			metricstest.ResetCounters(t, fakeClient)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -4090,8 +4091,8 @@ func prepareReconcile(t *testing.T, name string, toolchainConfig *toolchainv1alp
 		toolchainConfig = commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
 	}
 	initObjs = append(initObjs, toolchainConfig, secret, toolchainStatus)
-	metricstest.ResetCounters(t, initObjs...)
 	fakeClient := commontest.NewFakeClient(t, initObjs...)
+	metricstest.ResetCounters(t, fakeClient)
 	r := &Reconciler{
 		StatusUpdater: &StatusUpdater{
 			Client: fakeClient,

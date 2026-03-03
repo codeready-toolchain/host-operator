@@ -112,7 +112,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			}
 			fakeClient := commontest.NewFakeClient(t, initObjs...)
 			cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
-			metricstest.ResetCounters(t, initObjs...)
+			metricstest.ResetCounters(t, fakeClient)
 
 			// when
 			clusterName, err := cm.GetOptimalTargetCluster(context.TODO(), capacity.OptimalTargetClusterFilter{
@@ -156,8 +156,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		for i := range 200 {
 			initObjs = append(initObjs, spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("jeff-space-%d", i), spacetest.WithSpecTargetCluster("member3-cluster")))
 		}
-		metricstest.ResetCounters(t, initObjs...)
 		fakeClient := commontest.NewFakeClient(t, initObjs...)
+		metricstest.ResetCounters(t, fakeClient)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -184,8 +184,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		for i := range 200 {
 			initObjs = append(initObjs, spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("jeff-space-%d", i), spacetest.WithSpecTargetCluster("member3-cluster")))
 		}
-		metricstest.ResetCounters(t, initObjs...)
 		fakeClient := commontest.NewFakeClient(t, initObjs...)
+		metricstest.ResetCounters(t, fakeClient)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -208,8 +208,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		for i := range 500 {
 			initObjs = append(initObjs, spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("jack-space-%d", i), spacetest.WithSpecTargetCluster(commontest.Member2ClusterName)))
 		}
-		metricstest.ResetCounters(t, initObjs...)
 		fakeClient := commontest.NewFakeClient(t, initObjs...)
+		metricstest.ResetCounters(t, fakeClient)
 		cm := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 		// when
@@ -265,8 +265,8 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						initObjs = append(initObjs, spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("jack-space-%d", i), spacetest.WithSpecTargetCluster(commontest.Member2ClusterName)))
 						initObjs = append(initObjs, spacetest.NewSpace(commontest.HostOperatorNs, fmt.Sprintf("jeff-space-%d", i), spacetest.WithSpecTargetCluster("member3-cluster")))
 					}
-					metricstest.ResetCounters(t, initObjs...)
 					fakeClient := commontest.NewFakeClient(t, initObjs...)
+					metricstest.ResetCounters(t, fakeClient)
 					clusterBalancer := capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient)
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50

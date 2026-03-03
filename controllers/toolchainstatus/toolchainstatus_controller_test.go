@@ -100,7 +100,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 			"registration-service": lastGitHubAPICall,
 		}},
 	}
-	metricstest.ResetCounters(t, initObjs...)
+	metricstest.ResetCounters(t, fakeClient)
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 

@@ -185,7 +185,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
 	}
 	fakeClient := test.NewFakeClient(t, initObjs...)
-	metricstest.ResetCounters(t, initObjs...)
+	metricstest.ResetCounters(t, fakeClient)
 	latch := new(sync.WaitGroup)
 	latch.Add(1)
 	waitForFinished := new(sync.WaitGroup)

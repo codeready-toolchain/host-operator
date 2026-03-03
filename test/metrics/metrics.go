@@ -49,11 +49,10 @@ func (a *MetricAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1alp
 	return a
 }
 
-func ResetCounters(t *testing.T, initObjs ...runtimeclient.Object) {
+func ResetCounters(t *testing.T, cl runtimeclient.Client) {
 	os.Setenv("WATCH_NAMESPACE", commontest.HostOperatorNs)
 	metrics.Reset()
 	t.Cleanup(metrics.Reset)
-	cl := commontest.NewFakeClient(t, initObjs...)
 	err := metrics.Synchronize(context.TODO(), cl, commontest.HostOperatorNs)
 	require.NoError(t, err)
 }

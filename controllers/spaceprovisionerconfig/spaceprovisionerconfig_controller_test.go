@@ -517,7 +517,7 @@ func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfi
 		namespace = spc.Namespace
 	}
 	fakeClient := test.NewFakeClient(t, objs...)
-	metricstest.ResetCounters(t, objs...)
+	metricstest.ResetCounters(t, fakeClient)
 	r := &Reconciler{
 		Client: fakeClient,
 	}

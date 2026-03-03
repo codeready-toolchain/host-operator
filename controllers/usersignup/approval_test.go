@@ -39,7 +39,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -60,7 +60,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				Enabled(true),
 		)
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -125,7 +125,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 					Enabled(true).Domains(testFields.DomainConfiguartion),
 			)
 			fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1)
-			metricstest.ResetCounters(t)
+			metricstest.ResetCounters(t, fakeClient)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -153,7 +153,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig, spc1, spc2)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -170,7 +170,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.AutomaticApproval().
 				Enabled(true))
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -186,7 +186,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t), spc1, spc2)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -202,7 +202,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
 		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		metricstest.ResetCounters(t)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -217,9 +217,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		metricstest.ResetCounters(t)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, signup)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -234,9 +234,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		spc1 := hspc.NewEnabledTenantSPC("member1")
 		spc2 := hspc.NewEnabledTenantSPC("member2")
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		metricstest.ResetCounters(t)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, signup)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -251,9 +251,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		spc1 := hspc.NewEnabledTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		metricstest.ResetCounters(t)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, signup)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -268,9 +268,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		spc1 := hspc.NewEnabledValidTenantSPC("member1")
 		spc2 := hspc.NewEnabledValidTenantSPC("member2")
-		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2)
-		metricstest.ResetCounters(t)
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, spc1, spc2, signup)
+		metricstest.ResetCounters(t, fakeClient)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -288,7 +288,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
-			metricstest.ResetCounters(t)
+			metricstest.ResetCounters(t, fakeClient)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))
@@ -308,7 +308,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				}
 				return fakeClient.Client.List(ctx, list, opts...)
 			}
-			metricstest.ResetCounters(t)
+			metricstest.ResetCounters(t, fakeClient)
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(ctx, fakeClient, signup, capacity.NewClusterManager(commontest.HostOperatorNs, fakeClient))

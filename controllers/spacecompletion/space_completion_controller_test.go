@@ -230,7 +230,7 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, member1Space
 		objs = append(objs, member1SpaceProvisionerConfig)
 	}
 	fakeClient := test.NewFakeClient(t, objs...)
-	metricstest.ResetCounters(t)
+	metricstest.ResetCounters(t, fakeClient)
 
 	r := &spacecompletion.Reconciler{
 		Client:         fakeClient,
