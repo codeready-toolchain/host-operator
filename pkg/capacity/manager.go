@@ -98,11 +98,7 @@ type OptimalTargetClusterFilter struct {
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 // In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
 func (b *ClusterManager) GetOptimalTargetCluster(ctx context.Context, optimalClusterFilter OptimalTargetClusterFilter) (string, error) {
-	counts, err := metrics.GetSpaceCountPerClusterSnapshot()
-	if err != nil {
-		return "", fmt.Errorf("failed to obtain the counts cache: %w", err)
-	}
-
+	counts := metrics.GetSpaceCountPerClusterSnapshot()
 	// NOTE: the isReady(), checkHasNotReachedSpaceCountThreshold() combination of predicates is not perfect and we only use it
 	// to prevent OVER-commitment of spaces to clusters. We do not guarantee that UNDER-commitment doesn't happen.
 	//

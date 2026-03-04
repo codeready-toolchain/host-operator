@@ -6,6 +6,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	toolchainpredicate "github.com/codeready-toolchain/host-operator/pkg/predicate"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -153,13 +154,12 @@ func collectConsumedCapacity(ctx context.Context, cl runtimeclient.Client, clust
 	if err := cl.Get(ctx, types.NamespacedName{Namespace: toolchainStatusNs, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return nil, fmt.Errorf("unable to read ToolchainStatus resource: %w", err)
 	}
-
+	spaceCounts := metrics.GetSpaceCountPerClusterSnapshot()
 	for _, m := range status.Status.Members {
 		if m.ClusterName == clusterName {
 			cc := toolchainv1alpha1.ConsumedCapacity{}
 			cc.MemoryUsagePercentPerNodeRole = m.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole
-			cc.SpaceCount = m.SpaceCount
-
+			cc.SpaceCount = spaceCounts[clusterName]
 			return &cc, nil
 		}
 	}

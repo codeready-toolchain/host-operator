@@ -323,7 +323,7 @@ func (r *Reconciler) manageCleanUp(ctx context.Context, mur *toolchainv1alpha1.M
 	}
 	domain := metrics.GetEmailDomain(mur)
 	logger := log.FromContext(ctx)
-	metrics.DecrementMasterUserRecordCount(logger, domain)
+	metrics.DecrementMasterUserRecordCount(domain)
 	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil
 }

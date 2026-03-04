@@ -7,6 +7,9 @@ coverage.txt
 bin/
 tmp/
 
+# Delve debugger
+**/__debug_bin*
+
 # generated files
 deploy/**/metadata.yaml
 *_assets.go
@@ -353,4 +356,3 @@ bundle.Dockerfile
 
 /bin
 database
-

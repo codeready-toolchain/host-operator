@@ -25,7 +25,7 @@ import (
 
 const UserTierRootDir = "templates/usertiers"
 
-var log = logf.Log.WithName("usertiers")
+var logger = logf.Log.WithName("usertiers")
 
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
@@ -214,7 +214,7 @@ func (t *tierGenerator) createUserTiers(ctx context.Context) error {
 		if err := applyCl.ApplyObject(ctx, tier); err != nil {
 			return fmt.Errorf("unable to patch the '%s' UserTier: %w", tierName, err)
 		}
-		tierLog := log.WithValues("name", tierName)
+		tierLog := logger.WithValues("name", tierName)
 		tierLog = tierLog.WithValues("DeactivationTimeoutDays", tier.Spec.DeactivationTimeoutDays)
 		tierLog.Info("UserTier was patched")
 	}

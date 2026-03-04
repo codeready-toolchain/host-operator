@@ -2,7 +2,6 @@ package toolchainstatus
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -65,43 +64,6 @@ func (a *ToolchainStatusAssertion) HasHostOperatorStatus(expected toolchainv1alp
 	require.NoError(a.t, err)
 	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
 	test.AssertHostOperatorStatusMatch(a.t, *a.toolchainStatus.Status.HostOperator, expected)
-	return a
-}
-
-func (a *ToolchainStatusAssertion) HasUsersPerActivationsAndDomain(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey])
-	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey])
-	return a
-}
-
-func (a *ToolchainStatusAssertion) HasMasterUserRecordsPerDomain(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey])
-	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey])
-	return a
-}
-
-func (a *ToolchainStatusAssertion) HasNoMetric(key string) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.Empty(a.t, a.toolchainStatus.Status.Metrics[key])
-	return a
-}
-
-func (a *ToolchainStatusAssertion) HasSpaceCount(memberClusterName string, expectedCount int) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
-	for _, member := range a.toolchainStatus.Status.Members {
-		if member.ClusterName == memberClusterName {
-			assert.Equal(a.t, expectedCount, member.SpaceCount)
-			return a
-		}
-	}
-	require.Fail(a.t, fmt.Sprintf("cluster with the name %s wasn't found", memberClusterName))
 	return a
 }
 
