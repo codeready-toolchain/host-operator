@@ -327,21 +327,6 @@ func TestEnvironment(t *testing.T) {
 	})
 }
 
-func TestMetrics(t *testing.T) {
-	t.Run("default", func(t *testing.T) {
-		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
-		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
-
-		assert.True(t, toolchainCfg.Metrics().ForceSynchronization())
-	})
-	t.Run("non-default", func(t *testing.T) {
-		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Metrics().ForceSynchronization(false))
-		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
-
-		assert.False(t, toolchainCfg.Metrics().ForceSynchronization())
-	})
-}
-
 func TestNotifications(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)

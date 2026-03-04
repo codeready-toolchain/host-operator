@@ -542,9 +542,6 @@ spec:
                               type: string
                           type: object
                       type: object
-                    spaceCount:
-                      description: Number of Spaces created within the member cluster
-                      type: integer
                   required:
                   - clusterName
                   - memberStatus
@@ -553,15 +550,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - clusterName
                 x-kubernetes-list-type: map
-              metrics:
-                additionalProperties:
-                  additionalProperties:
-                    type: integer
-                  type: object
-                description: Metrics is a map that stores metrics to be exposed on
-                  Prometheus.
-                type: object
-                x-kubernetes-map-type: atomic
               registrationService:
                 description: RegistrationService is the status of the registration
                   service

@@ -72,10 +72,10 @@ func TestAddFinalizer(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -99,10 +99,10 @@ func TestAddFinalizer(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -128,10 +128,10 @@ func TestAddFinalizer(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -159,10 +159,10 @@ func TestAddFinalizer(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -203,10 +203,10 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 1, // unchanged
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 1, // unchanged
 		})
 }
@@ -252,10 +252,10 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 1, // unchanged
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 1, // unchanged
 		})
 
@@ -289,6 +289,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
 		murtest.StatusUserAccount(commontest.MemberClusterName))
+	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
@@ -311,10 +312,10 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 1, // unchanged
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 1, // unchanged
 		})
 
@@ -367,10 +368,10 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasStatusUserAccounts(commontest.MemberClusterName).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -409,10 +410,10 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasStatusUserAccounts(commontest.MemberClusterName).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 
@@ -479,10 +480,10 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasStatusUserAccounts().
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -513,10 +514,10 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasStatusUserAccounts().
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -545,10 +546,10 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasStatusUserAccounts().
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -588,10 +589,10 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -630,10 +631,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -657,10 +658,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -685,10 +686,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -716,10 +717,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason, "unable to create user account john"))
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -759,10 +760,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -801,10 +802,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(updatingCond).
 			HasStatusUserAccounts()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -837,10 +838,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason, "unable to delete user account john")).
 			HasFinalizer()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -891,10 +892,10 @@ func TestModifyUserAccount(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 1, // unchanged
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 1, // unchanged
 		})
 }
@@ -957,10 +958,10 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			HasStatusUserAccountsWithCondition(commontest.MemberClusterName, userAccount.Status.Conditions[0]).
 			HasStatusUserAccountsWithCondition(commontest.Member2ClusterName, userAccount2.Status.Conditions[0])
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -1020,10 +1021,10 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 1, // unchanged
 			})
 	})
@@ -1062,11 +1063,11 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			DoesNotExist()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 0, // decremented
 				string(metrics.External): 1, // unchanged
 			})
@@ -1107,11 +1108,11 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			DoesNotExist()
 		metricstest.AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			HaveUsersPerActivationsAndDomain(map[string]int{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
 			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(map[string]int{
 				string(metrics.Internal): 0, // decremented
 				string(metrics.External): 1, // unchanged
 			})
@@ -1223,7 +1224,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		DoesNotExist()
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 0, // decremented
 			string(metrics.External): 1, // unchanged
 		})
@@ -1261,7 +1262,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, userAcc.Spec.Disabled)
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}) // unchanged
+		HaveMasterUserRecordsPerDomain(map[string]int{string(metrics.Internal): 1}) // unchanged
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {

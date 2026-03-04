@@ -53,8 +53,8 @@ func TestIncrementMasterUserRecordCount(t *testing.T) {
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 2}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.External): 1})
+		HaveMasterUserRecordsPerDomain(map[string]int{string(metrics.Internal): 2}).
+		HaveMasterUserRecordsPerDomain(map[string]int{string(metrics.External): 1})
 }
 
 func TestDecrementMasterUserRecordCount(t *testing.T) {
@@ -70,7 +70,7 @@ func TestDecrementMasterUserRecordCount(t *testing.T) {
 
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
 		})
@@ -136,12 +136,12 @@ func TestInitializeCountersFromExistingResources(t *testing.T) {
 	// then
 	metricstest.AssertThatCountersAndMetrics(t).
 		HaveSpacesForCluster("member-1", 3).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 1,
 			"2,internal": 1,
 			"3,internal": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
 		})
 }
@@ -171,7 +171,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 10, // same value
 		}).
 		HaveSpacesForCluster("member-1", 10)
@@ -259,12 +259,12 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
 		}).
 		HaveSpacesForCluster("member-1", 12).
 		HaveSpacesForCluster("member-2", 2).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 2,
 			"2,internal": 1000,
 		})
