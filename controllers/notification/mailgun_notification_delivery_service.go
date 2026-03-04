@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -87,6 +88,8 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 		} else {
 			context[ContextReplyTo] = s.SenderEmail
 		}
+
+		context["CurrentYear"] = strconv.Itoa(time.Now().Year())
 
 		subject, err = s.base.GenerateContent(context, template.Subject)
 		if err != nil {
