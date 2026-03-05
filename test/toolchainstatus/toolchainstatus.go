@@ -88,12 +88,6 @@ func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainSt
 
 type MemberToolchainStatusOption func(*toolchainv1alpha1.Member)
 
-func WithSpaceCount(count int) MemberToolchainStatusOption {
-	return func(status *toolchainv1alpha1.Member) {
-		status.SpaceCount = count
-	}
-}
-
 func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		if status.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole == nil {
@@ -110,27 +104,6 @@ func WithRoutes(consoleURL string, condition toolchainv1alpha1.Condition) Member
 		}
 		status.MemberStatus.Routes.ConsoleURL = consoleURL
 		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
-	}
-}
-
-func WithMetric(key string, metric toolchainv1alpha1.Metric) ToolchainStatusOption {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		if status.Status.Metrics == nil {
-			status.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
-		}
-		status.Status.Metrics[key] = metric
-	}
-}
-
-func WithEmptyMetrics() ToolchainStatusOption {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		if status.Status.Metrics == nil {
-			status.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
-		}
-		status.Status.Metrics = map[string]toolchainv1alpha1.Metric{
-			toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey:        {},
-			toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey: {},
-		}
 	}
 }
 
