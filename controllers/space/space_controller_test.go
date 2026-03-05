@@ -11,8 +11,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -21,8 +21,8 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
-	"github.com/spf13/cast"
 
+	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -66,9 +66,9 @@ func TestCreateSpace(t *testing.T) {
 				// given
 				s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spaceOptions...)
 				hostClient := test.NewFakeClient(t, s, base1nsTier)
+				metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 				member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 				member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-				InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
@@ -97,9 +97,9 @@ func TestCreateSpace(t *testing.T) {
 						DoesNotHaveAnnotation(toolchainv1alpha1.FeatureToggleNameAnnotationKey)
 				}
 				nsTmplSet = nsTmplSetAssertion.Get()
-				AssertThatCountersAndMetrics(t).
-					HaveSpacesForCluster("member-1", 1).
-					HaveSpacesForCluster("member-2", 0) // check that increment for member-1 was called
+				metricstest.AssertThatCountersAndMetrics(t).
+					HaveSpacesForCluster("member-1", 1). // space counter incremented
+					HaveSpacesForCluster("member-2", 0)  // check that increment for member-1 was called
 
 				t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 					// given another round of requeue without while NSTemplateSet is *not ready*
@@ -127,9 +127,9 @@ func TestCreateSpace(t *testing.T) {
 						HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
 						HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 						Get()
-					AssertThatCountersAndMetrics(t).
-						HaveSpacesForCluster("member-1", 1).
-						HaveSpacesForCluster("member-2", 0) // nothing has changed since previous increment
+					metricstest.AssertThatCountersAndMetrics(t).
+						HaveSpacesForCluster("member-1", 1). // nothing has changed since previous increment
+						HaveSpacesForCluster("member-2", 0)
 
 					t.Run("when NSTemplateSet is ready update the provisioned namespace list", func(t *testing.T) {
 						// given another round of requeue without with NSTemplateSet now *ready*
@@ -162,9 +162,9 @@ func TestCreateSpace(t *testing.T) {
 							HasConditions(spacetest.Ready()). // space is still provisioning
 							HasStateLabel("cluster-assigned").
 							HasFinalizer()
-						AssertThatCountersAndMetrics(t).
-							HaveSpacesForCluster("member-1", 1).
-							HaveSpacesForCluster("member-2", 0) // space counter unchanged
+						metricstest.AssertThatCountersAndMetrics(t).
+							HaveSpacesForCluster("member-1", 1). // space counter unchanged
+							HaveSpacesForCluster("member-2", 0)
 
 						t.Run("done when provisioned namespace list is up to date", func(t *testing.T) {
 							// given another round of requeue with updated list of provisioned namespaces in status
@@ -181,9 +181,9 @@ func TestCreateSpace(t *testing.T) {
 								HasConditions(spacetest.Ready()). // space is now ready
 								HasStateLabel("cluster-assigned").
 								HasFinalizer()
-							AssertThatCountersAndMetrics(t).
-								HaveSpacesForCluster("member-1", 1).
-								HaveSpacesForCluster("member-2", 0) // space counter unchanged
+							metricstest.AssertThatCountersAndMetrics(t).
+								HaveSpacesForCluster("member-1", 1). // space counter unchanged
+								HaveSpacesForCluster("member-2", 0)  // space counter unchanged
 						})
 					})
 				})
@@ -191,12 +191,11 @@ func TestCreateSpace(t *testing.T) {
 				t.Run("unspecified target member cluster", func(t *testing.T) {
 					// given
 					s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
-					hostClient := test.NewFakeClient(t, s)
+					hostClient := test.NewFakeClient(t, base1nsTier, s)
+					metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 					ctrl := newReconciler(hostClient, member1, member2)
-					InitializeCountersWithMetricsSyncDisabled(t,
-						NewToolchainStatus())
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -208,7 +207,7 @@ func TestCreateSpace(t *testing.T) {
 						HasNoStatusTargetCluster().
 						HasStateLabel("pending").
 						HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
-					AssertThatCountersAndMetrics(t).
+					metricstest.AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 0).
 						HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
 				})
@@ -216,11 +215,11 @@ func TestCreateSpace(t *testing.T) {
 				t.Run("unspecified tierName", func(t *testing.T) {
 					// given
 					s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithTierName(""))
-					hostClient := test.NewFakeClient(t, s)
+					hostClient := test.NewFakeClient(t, base1nsTier, s)
+					metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 					member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 					member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 					ctrl := newReconciler(hostClient, member1, member2)
-					InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -232,7 +231,7 @@ func TestCreateSpace(t *testing.T) {
 						HasNoStatusTargetCluster().
 						HasStateLabel("pending").
 						HasConditions(spacetest.ProvisioningPending("unspecified tier name")) // the Space will remain in `ProvisioningPending` until a tierName is set.
-					AssertThatCountersAndMetrics(t).
+					metricstest.AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 0).
 						HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
 				})
@@ -248,8 +247,8 @@ func TestCreateSpace(t *testing.T) {
 					memberClient := test.NewFakeClient(t, nsTmplSet)
 					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
+					metricstest.ResetCounters(t, hostClient) // let's ignore the subspace for now
 					ctrl := newReconciler(hostClient, member)
-					InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -271,13 +270,12 @@ func TestCreateSpace(t *testing.T) {
 						spacetest.WithTierName(base1nsTier.Name),
 						spacetest.WithSpecTargetCluster("member-1"),
 						spacetest.WithStatusTargetCluster("member-1"))
-
 					nsTmplSet := nstemplatetsettest.NewNSTemplateSet("myspace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(base1nsTier))
 					memberClient := test.NewFakeClient(t, nsTmplSet)
 					member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 					hostClient := test.NewFakeClient(t, subSpace, base1nsTier)
+					metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 					ctrl := newReconciler(hostClient, member)
-					InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -300,10 +298,10 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("space not found", func(t *testing.T) {
 			// given
 			hostClient := test.NewFakeClient(t)
+			metricstest.ResetCounters(t, hostClient)
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(nil))
@@ -311,7 +309,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err) // not an error, space simply doesn't exist :shrug:
 			assert.Empty(t, res.RequeueAfter)
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no space is created
 		})
@@ -319,17 +317,17 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("error while getting space", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
 			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -337,32 +335,33 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to get the current Space: mock error")
 			assert.Empty(t, res.RequeueAfter)
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
-				HaveSpacesForCluster("member-2", 0) // no space is created since `spec.TargetCluster` field is not set
+				HaveSpacesForCluster("member-2", 0)
 		})
 
 		t.Run("error while adding finalizer", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity")
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
 			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Update(ctx, obj, opts...)
 			}
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
+
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.Empty(t, res.RequeueAfter)
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no space is created since `spec.TargetCluster` field is not set
 		})
@@ -370,11 +369,11 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("unknown target member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity", spacetest.WithSpecTargetCluster("unknown"))
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
+			metricstest.ResetCounters(t, hostClient)
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -386,7 +385,7 @@ func TestCreateSpace(t *testing.T) {
 				HasStatusTargetCluster(""). // has empty target cluster since it wasn't provisioned
 				HasStateLabel("cluster-assigned").
 				HasConditions(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'"))
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters are set since target cluster is invalid
 		})
@@ -396,7 +395,8 @@ func TestCreateSpace(t *testing.T) {
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
@@ -406,7 +406,6 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -417,9 +416,9 @@ func TestCreateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasSpecTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error"))
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0).
-				HaveSpacesForCluster("member-2", 0) // no counters increment when there is an error on NSTemplateTier
+			metricstest.AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 0). // space counter unchanged
+				HaveSpacesForCluster("member-2", 0)  // space counter unchanged
 		})
 
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
@@ -427,7 +426,8 @@ func TestCreateSpace(t *testing.T) {
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
-			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
@@ -438,7 +438,6 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -449,7 +448,7 @@ func TestCreateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters increment when there is an error on NSTemplateSet
 		})
@@ -460,6 +459,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
@@ -470,7 +470,6 @@ func TestCreateSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -481,7 +480,7 @@ func TestCreateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters increment when there is an error on NSTemplateSet
 		})
@@ -498,10 +497,10 @@ func TestCreateSpace(t *testing.T) {
 				}
 				return hostClient.Client.Status().Update(ctx, obj, opts...)
 			}
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -512,7 +511,7 @@ func TestCreateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasNoStatusTargetCluster(). // not set
 				HasNoConditions()           // not set
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters are incremented
 		})
@@ -577,8 +576,8 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("Space controller deletes NSTemplateSet", func(t *testing.T) {
 			// given
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			memberClient := test.NewFakeClient(t, nsTmplSet)
 			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member)
@@ -596,13 +595,14 @@ func TestDeleteSpace(t *testing.T) {
 				HasConditions(spacetest.Terminating())
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member.Client).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0) // counter is decremented
 		})
 
 		t.Run("when NSTemplateSet is being deleted and in terminating state", func(t *testing.T) {
 			// given
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
+			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now()), func(templateSet *toolchainv1alpha1.NSTemplateSet) {
 				templateSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Terminating(),
@@ -610,7 +610,6 @@ func TestDeleteSpace(t *testing.T) {
 				// we need to set the finalizer, otherwise, the FakeClient would delete the object immediately
 				templateSet.Finalizers = []string{"kubernetes"}
 			})
-			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			memberClient := test.NewFakeClient(t, nsTmplSet)
 			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member)
@@ -631,24 +630,25 @@ func TestDeleteSpace(t *testing.T) {
 				Exists().
 				HasDeletionTimestamp().
 				HasConditions(nstemplatetsettest.Terminating())
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // counter for space is not decremented because the NSTemplateSet is already being deleted
 		})
 
 		t.Run("when using status target cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
-				spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
-				spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
+				spacetest.WithSpecTargetCluster("member-1"),   // targetCluster was removed from spec ...
+				spacetest.WithStatusTargetCluster("member-1"), // ... but still available in status
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
+			s.Spec.TargetCluster = "" // targetCluster was removed from spec ...
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -663,8 +663,8 @@ func TestDeleteSpace(t *testing.T) {
 				HasFinalizer() // finalizer is still present while the NSTemplateSet is not fully deleted
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
+			metricstest.AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 0) // space counter is decremented because the NSTemplateSet was deleted
 			// stop the test here: it verified that the NSTemplateSet deletion was triggered (the rest is already covered above)
 		})
 
@@ -674,8 +674,8 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			ctrl := newReconciler(hostClient)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -690,8 +690,7 @@ func TestDeleteSpace(t *testing.T) {
 			// finalizer was removed
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
+			metricstest.AssertThatCountersAndMetrics(t).HaveSpacesForCluster("member-1", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
 		})
 
 		t.Run("when nstemplateset is gone, then it should remove the finalizer and the client automatically delete the Space", func(t *testing.T) {
@@ -702,11 +701,11 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithDeletionTimestamp(),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			member1Client := test.NewFakeClient(t)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -721,8 +720,8 @@ func TestDeleteSpace(t *testing.T) {
 			// finalizer was removed
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1) // space counter is not decremented
+			metricstest.AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 0) // space counter is not decremented
 		})
 	})
 
@@ -736,10 +735,10 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithCondition(spacetest.ProvisioningFailed("missing target member cluster")),
 			)
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -751,7 +750,7 @@ func TestDeleteSpace(t *testing.T) {
 				DoesNotExist()
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
 		})
@@ -766,10 +765,10 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithCondition(spacetest.ProvisioningFailed("unknown target member cluster 'member-3'")),
 			)
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -784,7 +783,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasStatusTargetCluster("member-3")
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0).
 				HaveSpacesForCluster("member-3", 0) // unknown target cluster doesn't increment counter
@@ -800,7 +799,8 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithStatusTargetCluster("member-1"),
 				spacetest.WithFinalizer(),
 			)
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier)) // let's ignore the space for now
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
@@ -811,7 +811,6 @@ func TestDeleteSpace(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -825,7 +824,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.TerminatingFailed("mock error"))
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // not increment when there is an error with getting NSTemplateSet
 		})
@@ -838,22 +837,13 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithStatusTargetCluster("member-1"),
 				spacetest.WithFinalizer(),
 			)
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, base1nsTier, s)
+			metricstest.ResetCounters(t, hostClient)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithFinalizer(), nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(1)),
-				))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -867,7 +857,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.TerminatingFailed("NSTemplateSet deletion has not completed in over 1 minute"))
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // space counter is not decremented when there NSTemplateSet deletion is stuck
 		})
@@ -895,22 +885,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithFinalizer(),
 			spacetest.WithCondition(spacetest.Ready()))
 		hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
+		metricstest.ResetCounters(t, hostClient)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -934,7 +915,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasClusterResourcesTemplateRef("other-clusterresources-123456a-ttr").
 			HasNamespaceTemplateRefs("other-code-123456a-ttr", "other-dev-123456a-ttr", "other-stage-123456a-ttr").
 			Get()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1).
 			HaveSpacesForCluster("member-2", 0) // space counter is unchanged
 
@@ -960,7 +941,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(hash.TemplateTierHashLabelKey(otherTier.Name)).
 				HasMatchingTierLabelForTier(base1nsTier)
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // space counter is unchanged
 
@@ -989,7 +970,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					HasMatchingTierLabelForTier(base1nsTier).                        // old label not removed yet, since NSTemplateSet not ready for more than 1s
 					HasFinalizer().
 					Get()
-				AssertThatCountersAndMetrics(t).
+				metricstest.AssertThatCountersAndMetrics(t).
 					HaveSpacesForCluster("member-1", 1).
 					HaveSpacesForCluster("member-2", 0) // space counter is unchanged
 
@@ -1015,7 +996,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 						DoesNotHaveLabel(hash.TemplateTierHashLabelKey(base1nsTier.Name)). // old label removed
 						HasMatchingTierLabelForTier(otherTier).                            // new label matching updated tier
 						HasFinalizer()
-					AssertThatCountersAndMetrics(t).
+					metricstest.AssertThatCountersAndMetrics(t).
 						HaveSpacesForCluster("member-1", 1).
 						HaveSpacesForCluster("member-2", 0) // space counter is unchanged
 				})
@@ -1034,22 +1015,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithFinalizer(),
 			spacetest.WithCondition(spacetest.Ready()))
 		hostClient := test.NewFakeClient(t, s, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderbase1nsTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old base1ns tier
 		member1Client := test.NewFakeClient(t, nsTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1074,7 +1046,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasSpaceRoles().
 			Get()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 
 		t.Run("NSTemplateSet is provisioned", func(t *testing.T) {
@@ -1101,7 +1073,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasConditions(spacetest.Ready()).
 				HasMatchingTierLabelForTier(base1nsTier). // label updated
 				HasFinalizer()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
 	})
@@ -1117,19 +1089,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet(s.Name,
 			nstemplatetsettest.WithReferencesFor(olderbase1nsTier), // NSTemplateSet has references to old base1ns tier
 			nstemplatetsettest.WithReadyCondition())
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		t.Run("postponed by two seconds from now", func(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			member1Client := test.NewFakeClient(t, nsTmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
@@ -1155,12 +1118,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasNamespaceTemplateRefs("base1ns-code-123456old-ttr", "base1ns-dev-123456old-ttr", "base1ns-stage-123456old-ttr").
 				HasSpaceRoles().
 				Get()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
 
 		t.Run("postponed by two seconds from the NextScheduledUpdate", func(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
+			metricstest.ResetCounters(t, hostClient)
 			member1Client := test.NewFakeClient(t, nsTmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
@@ -1187,7 +1151,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasNamespaceTemplateRefs("base1ns-code-123456old-ttr", "base1ns-dev-123456old-ttr", "base1ns-stage-123456old-ttr").
 				HasSpaceRoles().
 				Get()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
 	})
@@ -1280,21 +1244,12 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 		hostClient := test.NewFakeClient(t, s, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1309,7 +1264,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Ready()).
 			HasMatchingTierLabelForTier(base1nsTier) // label is immediately set since the NSTemplateSet was already up-to-date
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1324,19 +1279,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nstemplatetsettest.WithReferencesFor(olderbase1nsTier), // NSTemplateSet has references to old base1ns tier
 			nstemplatetsettest.WithReadyCondition())                // NSTemplateSet is ready
 		hostClient := test.NewFakeClient(t, notReadySpace, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
@@ -1350,7 +1296,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
 			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasConditions(nstemplatetsettest.Provisioned()) // status will be set to `Updating` by NSTemplateSet controller
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1365,19 +1311,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nstemplatetsettest.WithReferencesFor(olderbase1nsTier),                                      // NSTemplateSet has references to old base1ns tier
 			nstemplatetsettest.WithNotReadyCondition(toolchainv1alpha1.NSTemplateSetUpdatingReason, "")) // NSTemplateSet is not ready
 		hostClient := test.NewFakeClient(t, notReadySpace, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
@@ -1391,7 +1328,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
 			HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr").
 			HasConditions(nstemplatetsettest.Updating()) // was already `Updating`
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1405,6 +1342,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
+			metricstest.ResetCounters(t, hostClient)
 			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok && obj.GetLabels()[hash.TemplateTierHashLabelKey(base1nsTier.Name)] != "" {
 					return fmt.Errorf("mock error")
@@ -1416,16 +1354,6 @@ func TestUpdateSpaceTier(t *testing.T) {
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(1)),
-				))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1438,7 +1366,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error")).
 				HasFinalizer()
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
 
@@ -1452,22 +1380,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithFinalizer(),
 				spacetest.WithCondition(spacetest.Ready()))
 			hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
+			metricstest.ResetCounters(t, hostClient)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1Client.MockUpdate = mockUpdateNSTemplateSetFail(member1Client.Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(1)),
-				))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1487,7 +1406,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasTierName(base1nsTier.Name).
 				HasClusterResourcesTemplateRef("base1ns-clusterresources-123456new-ttr").
 				HasNamespaceTemplateRefs("base1ns-code-123456new-ttr", "base1ns-dev-123456new-ttr", "base1ns-stage-123456new-ttr")
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 		})
 
@@ -1502,13 +1421,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithFinalizer(),
 				spacetest.WithCondition(spacetest.Ready()))
 			hostClient := test.NewFakeClient(t, s, base1nsTier, otherTier)
+			metricstest.ResetCounters(t, hostClient)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(base1nsTier), nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
-			InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus())
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1553,26 +1472,14 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// ...and their corresponding space bindings
 		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
 		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
-
 		// and a SpaceBinding for John as an Admin on the Space
 		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
-
 		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1590,7 +1497,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name),             // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1615,27 +1522,15 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// ...and their corresponding space bindings
 		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
 		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
-
 		// and a SpaceBinding for John as an Admin on the Space
 		sb3 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin") // duplicate of sb1
 		sb3.Name = "something-else"                                                            // make sure that the sb3's name does not collide with existing sb1's name
-
 		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1652,7 +1547,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name), // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned())
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1675,23 +1570,12 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// ...and their corresponding space bindings
 		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
 		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
-
 		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1709,7 +1593,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name), // unchanged
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 
@@ -1729,28 +1613,17 @@ func TestUpdateSpaceRoles(t *testing.T) {
 				nstemplatetsettest.WithSpaceRole("viewer", johnMUR.Name),
 			),
 			nstemplatetsettest.WithReadyCondition())
-
 		// corresponding space bindings for adminMUR and viewerMUR
 		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
 		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
 		// but SpaceBinding for John as an _admin_ on the Space
 		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
 		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, sb3, base1nsTier)
+		metricstest.ResetCounters(t, hostClient)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1768,7 +1641,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 				nstemplatetsettest.SpaceRole("base1ns-viewer-123456new-ttr", viewerMUR.Name),             // entry removed for user 'john'
 			).
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 1) // space counter is unchanged
 	})
 }
@@ -1784,18 +1657,16 @@ func TestRetargetSpace(t *testing.T) {
 		// given
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithFinalizer(),
-			spacetest.WithoutSpecTargetCluster(), // assume that field was reset by a client (admin, appstudio console, etc.)
+			spacetest.WithSpecTargetCluster("member-1"), // assume that field was reset by a client (admin, appstudio console, etc.)
 			spacetest.WithStatusTargetCluster("member-1"))
+		metricstest.ResetCounters(t, test.NewFakeClient(t, s, base1nsTier))
+		s.Spec.TargetCluster = "" // assume that field was reset by a client (admin, appstudio console, etc.)
 		hostClient := test.NewFakeClient(t, s, base1nsTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(WithEmptyMetrics(),
-				WithMember("member-1", WithSpaceCount(1)),
-				WithMember("member-2", WithSpaceCount(0))))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1808,8 +1679,8 @@ func TestRetargetSpace(t *testing.T) {
 			HasNoSpecTargetCluster().
 			HasConditions(spacetest.Retargeting()).
 			HasStatusTargetCluster("member-1") // not reset yet
-		AssertThatCountersAndMetrics(t).
-			HaveSpacesForCluster("member-1", 0). // space counter is decremented
+		metricstest.AssertThatCountersAndMetrics(t).
+			HaveSpacesForCluster("member-1", 0). // space counter is decremented because the NSTemplateSet was deleted
 			HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 
 		t.Run("status target cluster reset when NSTemplateSet is deleted", func(t *testing.T) {
@@ -1828,8 +1699,8 @@ func TestRetargetSpace(t *testing.T) {
 				HasNoStatusTargetCluster() // reset
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0). // space counter is unchanged
+			metricstest.AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 0). // space counter was previously decremented
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 	})
@@ -1838,8 +1709,10 @@ func TestRetargetSpace(t *testing.T) {
 		// given
 		s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 			spacetest.WithFinalizer(),
-			spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"))
+		metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier, s))
+		s.Spec.TargetCluster = "member-2" // assume that field was changed by a client (admin, appstudio console, etc.)
 		hostClient := test.NewFakeClient(t, s, base1nsTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
@@ -1847,10 +1720,6 @@ func TestRetargetSpace(t *testing.T) {
 		member2Client := test.NewFakeClient(t)
 		member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
-		InitializeCountersWithMetricsSyncDisabled(t,
-			NewToolchainStatus(WithEmptyMetrics(),
-				WithMember("member-1", WithSpaceCount(1)),
-				WithMember("member-2", WithSpaceCount(0))))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1863,7 +1732,7 @@ func TestRetargetSpace(t *testing.T) {
 			HasSpecTargetCluster("member-2").
 			HasConditions(spacetest.Retargeting()).
 			HasStatusTargetCluster("member-1") // not reset yet
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveSpacesForCluster("member-1", 0). // space counter is decremented
 			HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 
@@ -1883,7 +1752,7 @@ func TestRetargetSpace(t *testing.T) {
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member2.Client).
 				Exists().
 				HasTierName(base1nsTier.Name)
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 1) // increment space counter on member-2
 		})
@@ -1894,8 +1763,10 @@ func TestRetargetSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
-				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"))
+			metricstest.ResetCounters(t, test.NewFakeClient(t, s, base1nsTier))
+			s.Spec.TargetCluster = "member-2" // assume that field was changed by a client (admin, appstudio console, etc.)
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
@@ -1904,16 +1775,6 @@ func TestRetargetSpace(t *testing.T) {
 			member2Client := test.NewFakeClient(t)
 			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(1)),
-				))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1926,7 +1787,7 @@ func TestRetargetSpace(t *testing.T) {
 				HasSpecTargetCluster("member-2").
 				HasConditions(spacetest.RetargetingFailed("mock error")).
 				HasStatusTargetCluster("member-1") // NOT updated
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // space counter is unchanged when there is an error while deleting NSTemplateSet
 		})
@@ -1935,8 +1796,10 @@ func TestRetargetSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace(test.HostOperatorNs, "oddity",
 				spacetest.WithFinalizer(),
-				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+				spacetest.WithSpecTargetCluster("member-1"), // assume that field was changed by a client (admin, appstudio console, etc.)
 				spacetest.WithStatusTargetCluster("member-1"))
+			metricstest.ResetCounters(t, test.NewFakeClient(t, base1nsTier, s))
+			s.Spec.TargetCluster = "member-2" // assume that field was changed by a client (admin, appstudio console, etc.)
 			hostClient := test.NewFakeClient(t, s, base1nsTier)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 			hostClient.MockStatusUpdate = mockUpdateSpaceStatusFail(hostClient.Client)
@@ -1945,8 +1808,6 @@ func TestRetargetSpace(t *testing.T) {
 			member2Client := test.NewFakeClient(t)
 			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCountersWithMetricsSyncDisabled(t,
-				NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1959,7 +1820,7 @@ func TestRetargetSpace(t *testing.T) {
 				HasSpecTargetCluster("member-2").
 				HasNoConditions().
 				HasStatusTargetCluster("member-1") // NOT updated
-			AssertThatCountersAndMetrics(t).
+			metricstest.AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0). // counter is decremented according to the value in status
 				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
@@ -1975,6 +1836,7 @@ func TestSubSpace(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	base1nsTier := tiertest.Base1nsTier(t, tiertest.CurrentBase1nsTemplates, tiertest.WithStatusRevisions())
+
 	// test SpaceBindings of a parentSpace are created/updated/deleted ,
 	// and how this should affect the subSpace and its NSTemplateSet
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
@@ -1984,7 +1846,6 @@ func TestSubSpace(t *testing.T) {
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 			sb2 := spacebindingtest.NewSpaceBinding("parentSpaceViewer", parentSpace.Name, "viewer", "signupViewer")
-
 			// ...now create a subSpace
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(base1nsTier.Name),
@@ -1995,7 +1856,6 @@ func TestSubSpace(t *testing.T) {
 			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
 				nstemplatetsettest.WithReadyCondition(), // create empty NSTemplate set for subSpace
 			)
-
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, base1nsTier, subSpace)
 			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -2020,7 +1880,6 @@ func TestSubSpace(t *testing.T) {
 			parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
-
 			// ...now create a subSpace
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(base1nsTier.Name),
@@ -2037,7 +1896,6 @@ func TestSubSpace(t *testing.T) {
 			)
 			// ...and the corresponding space bindings for the subSpace
 			sb2 := spacebindingtest.NewSpaceBinding("subSpaceViewer", subSpace.Name, "viewer", "signupViewer")
-
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, base1nsTier, subSpace)
 			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -2063,7 +1921,6 @@ func TestSubSpace(t *testing.T) {
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
 			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "viewer", "signupJane")
-
 			// ...now create a subSpace
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(base1nsTier.Name),
@@ -2080,7 +1937,6 @@ func TestSubSpace(t *testing.T) {
 			)
 			// ...and the corresponding space bindings for the subSpace
 			sb3 := spacebindingtest.NewSpaceBinding("jane", subSpace.Name, "admin", "janeSignup")
-
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, sb3, base1nsTier, subSpace)
 			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -2107,7 +1963,6 @@ func TestSubSpace(t *testing.T) {
 			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "edit", "signupJane")
 			sb3 := spacebindingtest.NewSpaceBinding("bob", parentSpace.Name, "view", "signupBob")
 			sb4 := spacebindingtest.NewSpaceBinding("lara", parentSpace.Name, "view", "signupLara")
-
 			// ...now create a subSpace
 			subSpace := spacetest.NewSpace(test.HostOperatorNs, "subSpace",
 				spacetest.WithTierName(base1nsTier.Name),
@@ -2120,7 +1975,6 @@ func TestSubSpace(t *testing.T) {
 			)
 			sb5 := spacebindingtest.NewSpaceBinding("jane", subSpace.Name, "admin", "signupJane")
 			sb6 := spacebindingtest.NewSpaceBinding("lara", subSpace.Name, "edit", "signupLara")
-
 			// ... and now create a subSubSpace
 			subSubSpace := spacetest.NewSpace(test.HostOperatorNs, "subSubSpace",
 				spacetest.WithTierName(base1nsTier.Name),
@@ -2133,7 +1987,6 @@ func TestSubSpace(t *testing.T) {
 			)
 			sb7 := spacebindingtest.NewSpaceBinding("bob", subSubSpace.Name, "edit", "signupBob")
 			sb8 := spacebindingtest.NewSpaceBinding("lara", subSubSpace.Name, "admin", "signupLara")
-
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, sb3, sb4, sb5, sb6, sb7, sb8, base1nsTier, subSpace, subSubSpace)
 			member1Client := test.NewFakeClient(t, subNStmplSet, subSubNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)

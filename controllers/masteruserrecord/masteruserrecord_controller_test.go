@@ -12,8 +12,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -21,6 +23,7 @@ import (
 	commontier "github.com/codeready-toolchain/toolchain-common/pkg/test/tier"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +45,7 @@ func TestAddFinalizer(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
-	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel("john-123"))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
@@ -52,17 +55,9 @@ func TestAddFinalizer(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// given
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-		))
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -76,7 +71,7 @@ func TestAddFinalizer(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -87,17 +82,9 @@ func TestAddFinalizer(t *testing.T) {
 
 	t.Run("provisioning condition set when there is no SpaceBinding/Space present yet", func(t *testing.T) {
 		// given
+		hostClient := commontest.NewFakeClient(t, mur, signup)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
-		hostClient := commontest.NewFakeClient(t, mur)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-		))
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -111,7 +98,7 @@ func TestAddFinalizer(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -126,15 +113,7 @@ func TestAddFinalizer(t *testing.T) {
 		murSkipSpace.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] = "true"
 		memberClient := commontest.NewFakeClient(t)
 		hostClient := commontest.NewFakeClient(t, murSkipSpace, signup, userTier)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-		))
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -148,7 +127,7 @@ func TestAddFinalizer(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -159,19 +138,12 @@ func TestAddFinalizer(t *testing.T) {
 
 	t.Run("fails because it cannot add finalizer", func(t *testing.T) {
 		// given
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
 		hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -186,7 +158,7 @@ func TestAddFinalizer(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -200,25 +172,16 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"))
-
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
-
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+	hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+	metricstest.ResetCounters(t, hostClient)
 	memberClient := commontest.NewFakeClient(t)
-	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-		WithMember(commontest.MemberClusterName),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		})))
 
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -239,7 +202,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -252,36 +215,24 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
-
-	signup := commonsignup.NewUserSignup(commonsignup.WithName("ricky-123"))
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("ricky-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "ricky",
 		murtest.WithOwnerLabel("ricky-123"),
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-
 	spaceBinding := spacebindingtest.NewSpaceBinding("ricky", "ricky-space", "admin", "ricky-123")
 	space := spacetest.NewSpace(mur.Namespace, "ricky-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "ricky-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
-
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName,
-			WithRoutes("https://console.foo.com", toolchainv1alpha1.Condition{
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName,
+			toolchainstatustest.WithRoutes("https://console.foo.com", toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.ConditionReady,
 				Status: corev1.ConditionTrue,
 			})),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		}),
 	)
-
+	hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space, toolchainStatus)
+	metricstest.ResetCounters(t, hostClient)
 	memberClient := commontest.NewFakeClient(t)
-	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space, signup, toolchainStatus)
-
-	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
 	// when
@@ -297,11 +248,10 @@ func TestUserAccountSynchronizeSuccessfulWhenPropagatedClaimsModified(t *testing
 			Disabled:         false,
 			PropagatedClaims: mur.Spec.PropagatedClaims,
 		})
-
 	murtest.AssertThatMasterUserRecord(t, "ricky", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -335,6 +285,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
 		murtest.StatusUserAccount(commontest.MemberClusterName))
@@ -342,19 +293,9 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
-
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+	hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+	metricstest.ResetCounters(t, hostClient)
 	memberClient := commontest.NewFakeClient(t)
-	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-		WithMember(commontest.MemberClusterName),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		})))
-
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
 	// when
@@ -369,7 +310,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -383,10 +324,8 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
-
-	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	userTier := commontier.NewUserTier(commontier.WithName("deactivate30"))
-
 	provisionedTime := metav1.Now()
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -396,29 +335,20 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
-
 	sharedSpaceBinding := spacebindingtest.NewSpaceBinding("john", "jane-space", "admin", "")
 	sharedSpace := spacetest.NewSpace(mur.Namespace, "jane-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "jane-123"),
 		spacetest.WithSpecTargetCluster(commontest.Member2ClusterName))
-
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		}),
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+		toolchainstatustest.WithMember(commontest.Member2ClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
 	)
 
 	t.Run("creation of UserAccounts for different spaces is disabled", func(t *testing.T) {
 		memberClient := commontest.NewFakeClient(t, newUserAccount(namespacedName(commontest.MemberOperatorNs, mur.Name), mur))
 		memberClient2 := commontest.NewFakeClient(t)
 		hostClient := commontest.NewFakeClient(t, mur, signup, spaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
+		metricstest.ResetCounters(t, hostClient)
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
 		// when reconciling
@@ -436,7 +366,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasConditions().
 			HasStatusUserAccounts(commontest.MemberClusterName).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -457,10 +387,8 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spaceInM2 := spacetest.NewSpace(murToMove.Namespace, "john-space",
 			spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 			spacetest.WithSpecTargetCluster(commontest.Member2ClusterName))
-
 		hostClient := commontest.NewFakeClient(t, murToMove, signup, spaceBinding, spaceInM2, sharedSpaceBinding, sharedSpace, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
+		metricstest.ResetCounters(t, hostClient)
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
 		// when
@@ -480,7 +408,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasStatusUserAccounts(commontest.MemberClusterName).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -533,7 +461,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacetest.WithFinalizer()(terminatingSpace)
 
 		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, spaceBinding, terminatingSpace, sharedSpaceBinding, sharedSpace, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
@@ -550,7 +478,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -567,7 +495,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 		spacebindingtest.WithFinalizer()(terminatingSpaceBinding)
 
 		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, terminatingSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
@@ -584,7 +512,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -599,7 +527,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 
 		otherSpaceBinding := spacebindingtest.NewSpaceBinding("other-john", "john-space", "admin", "john-123")
 		hostClient := commontest.NewFakeClient(t, mur, signup, userTier, otherSpaceBinding, space, sharedSpaceBinding, sharedSpace, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
@@ -616,7 +544,7 @@ func TestWithMultipleMembersAndSpaces(t *testing.T) {
 			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts().
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -630,26 +558,22 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts(commontest.Member2ClusterName), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
-		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		}))
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+		toolchainstatustest.WithMember(commontest.Member2ClusterName, toolchainstatustest.WithRoutes("https://console.member2-cluster/", toolchainstatustest.ToBeReady())),
+		toolchainstatustest.WithMember("member3-cluster", toolchainstatustest.WithRoutes("https://console.member3-cluster/", toolchainstatustest.ToBeReady())),
+	)
 	memberClient1 := commontest.NewFakeClient(t, userAccount1)
 	memberClient3 := commontest.NewFakeClient(t, userAccount3)
-	hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
+	hostClient := commontest.NewFakeClient(t, signup, mur, toolchainStatus)
 
 	t.Run("when userAccount is accidentally being deleted then don't change the counter", func(t *testing.T) {
 		// given
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 		userAccount2 := uatest.NewUserAccountFromMur(mur,
 			uatest.DeletedUa(),
 			uatest.WithFinalizer())
@@ -663,7 +587,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -677,6 +601,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 		murtest.WithOwnerLabel("john-123"))
@@ -687,18 +612,9 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}),
-		))
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
-
 		cntrl := newController(hostClient, s, ClusterClient("other", memberClient))
 
 		// when
@@ -713,7 +629,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -724,15 +640,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 
 		cntrl := newController(hostClient, s, ClusterClient("other", memberClient))
@@ -747,7 +656,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -758,15 +667,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
@@ -782,7 +684,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -793,15 +695,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("creation of the UserAccount failed", func(t *testing.T) {
 		// given
-		hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t)
 		memberClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 			return fmt.Errorf("unable to create user account %s", mur.Name)
@@ -820,7 +715,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason, "unable to create user account john"))
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -831,14 +726,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := commontest.NewFakeClient(t, userAcc)
 		memberClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
@@ -853,7 +740,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.TierName(otherTier.Name),
 			murtest.UserID("abc123")) // UserID is different and needs to be synced
-		hostClient := commontest.NewFakeClient(t, modifiedMur, spaceBinding, space)
+		hostClient := commontest.NewFakeClient(t, signup, modifiedMur, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -870,7 +758,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasSpec(userAcc.Spec) // UserAccount should be unchanged
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -881,14 +769,9 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
-		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}))
+		toolchainStatus := toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+		)
 		updatingCond := toBeNotReady("updating", "")
 		provisionedMur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel("john-123"),
@@ -896,14 +779,12 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			murtest.StatusCondition(updatingCond))
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
-		hostClient := commontest.NewFakeClient(t, provisionedMur, toolchainStatus, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
+		hostClient := commontest.NewFakeClient(t, signup, provisionedMur, toolchainStatus, spaceBinding, space)
+		metricstest.ResetCounters(t, hostClient)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.SubResourceUpdateOption) error {
 			hostClient.MockStatusUpdate = nil // mock only once
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
-
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
 		// when
@@ -919,7 +800,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(updatingCond).
 			HasStatusUserAccounts()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -930,20 +811,12 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
-		InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-			WithMember(commontest.MemberClusterName),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel("john-123"),
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.ToBeDeleted())
-		hostClient := commontest.NewFakeClient(t, mur)
-
+		hostClient := commontest.NewFakeClient(t, signup, mur)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 		memberClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
@@ -963,7 +836,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason, "unable to delete user account john")).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -978,6 +851,7 @@ func TestModifyUserAccount(t *testing.T) {
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -987,29 +861,20 @@ func TestModifyUserAccount(t *testing.T) {
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
 		spacetest.WithSpecTargetCluster(commontest.MemberClusterName))
-
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+		toolchainstatustest.WithMember(commontest.Member2ClusterName, toolchainstatustest.WithRoutes("https://console.member2-cluster/", toolchainstatustest.ToBeReady())),
+		toolchainstatustest.WithMember("member3-cluster", toolchainstatustest.WithRoutes("https://console.member3-cluster/", toolchainstatustest.ToBeReady())),
+	)
 	userAccount := uatest.NewUserAccountFromMur(mur)
-
+	// change the user ID to a different value, so that the UserAccount will need to be updated
 	err := murtest.Modify(mur, murtest.UserID("abc123"))
 	require.NoError(t, err)
-
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
-		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		}))
-
+	hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space, toolchainStatus)
+	metricstest.ResetCounters(t, hostClient)
 	memberClient := commontest.NewFakeClient(t, userAccount)
 	memberClient2 := commontest.NewFakeClient(t)
 	memberClient3 := commontest.NewFakeClient(t)
-	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space, toolchainStatus)
-
-	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
 
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2),
 		ClusterClient("member3-cluster", memberClient3))
@@ -1025,7 +890,7 @@ func TestModifyUserAccount(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -1047,34 +912,26 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// given
 		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from commontest.Member2ClusterName but will miss from commontest.MemberClusterName
 		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing commontest.MemberClusterName cluster without updating anything else
+		signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.WithOwnerLabel("john-123"),
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
 			murtest.StatusUserAccount(commontest.Member2ClusterName, toBeProvisioned()))
-
 		userAccount := uatest.NewUserAccountFromMur(mur,
 			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 		userAccount2 := uatest.NewUserAccountFromMur(mur,
 			uatest.DeletedUa(),
 			uatest.WithFinalizer(),
 			uatest.StatusCondition(toBeNotReady("Terminating", "")), uatest.ResourceVersion("123abc"))
-
 		memberClient := commontest.NewFakeClient(t, userAccount)
 		memberClient2 := commontest.NewFakeClient(t, userAccount2)
-
-		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}))
-		hostClient := commontest.NewFakeClient(t, mur, toolchainStatus, spaceBinding, space)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
+		toolchainStatus := toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+			toolchainstatustest.WithMember(commontest.Member2ClusterName, toolchainstatustest.WithRoutes("https://console.member2-cluster/", toolchainstatustest.ToBeReady())),
+		)
+		hostClient := commontest.NewFakeClient(t, signup, mur, spaceBinding, space, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
 		// when
@@ -1099,7 +956,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			HasStatusUserAccounts(commontest.MemberClusterName, commontest.Member2ClusterName).
 			HasStatusUserAccountsWithCondition(commontest.MemberClusterName, userAccount.Status.Conditions[0]).
 			HasStatusUserAccountsWithCondition(commontest.Member2ClusterName, userAccount2.Status.Conditions[0])
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -1110,39 +967,29 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 	t.Run("outdated mur status error cleaned and align readiness", func(t *testing.T) {
 		// given
-		// A basic userSignup to set as the mur owner
-		userSignup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"))
-		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+		// A basic signup to set as the mur owner
+		signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
+		signup.Status = toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john",
 		}
-
 		// MUR with ready condition set to false with an error
 		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
 		mur := murtest.NewMasterUserRecord(t, "john",
-			murtest.WithOwnerLabel(userSignup.Name),
+			murtest.WithOwnerLabel(signup.Name),
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, "something went wrong")),
 			murtest.AdditionalAccounts(commontest.MemberClusterName, commontest.Member2ClusterName),
 			murtest.StatusUserAccount(commontest.MemberClusterName, toBeProvisioned()),
 			murtest.StatusUserAccount(commontest.Member2ClusterName, toBeProvisioned()))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
-
-		toolchainStatus := NewToolchainStatus(
-			WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-			WithMember(commontest.Member2ClusterName, WithRoutes("https://console.member2-cluster/", ToBeReady())),
-			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			}))
-		hostClient := commontest.NewFakeClient(t, userSignup, userTier, mur, spaceBinding, space, toolchainStatus)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
+		toolchainStatus := toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+			toolchainstatustest.WithMember(commontest.Member2ClusterName, toolchainstatustest.WithRoutes("https://console.member2-cluster/", toolchainstatustest.ToBeReady())),
+			toolchainstatustest.WithMember("member3-cluster", toolchainstatustest.WithRoutes("https://console.member3-cluster/", toolchainstatustest.ToBeReady())))
+		hostClient := commontest.NewFakeClient(t, signup, userTier, mur, spaceBinding, space, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t, userAccount)
 		memberClient2 := commontest.NewFakeClient(t)
-
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient),
 			ClusterClient(commontest.Member2ClusterName, memberClient2))
 
@@ -1172,7 +1019,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.Len(t, notification.OwnerReferences, 1)
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -1183,47 +1030,38 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 }
 
 func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-			"1,external": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-			string(metrics.External): 1,
-		}))
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+	)
 
 	t.Run("success", func(t *testing.T) {
 		// given
 		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
-		mur := murtest.NewMasterUserRecord(t, "john",
-			murtest.ToBeDeleted())
+		signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
+		mur := murtest.NewMasterUserRecord(t, "john-123", murtest.ToBeDeleted())
+		externalSignup := commonsignup.NewUserSignup(commonsignup.WithName("john-456"), commonsignup.WithActivations("1"), commonsignup.WithEmail("john@example.com"))
+		externalMur := murtest.NewMasterUserRecord(t, "john-456", murtest.WithOwnerLabel(externalSignup.Name), murtest.Email("john@example.com"))
 		userAcc := uatest.NewUserAccountFromMur(mur)
-
+		hostClient := commontest.NewFakeClient(t, signup, mur, externalSignup, externalMur)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t, userAcc)
-		hostClient := commontest.NewFakeClient(t, mur)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
 		// when
 		result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 		require.NoError(t, err1)
 		assert.Equal(t, 10*time.Second, result1.RequeueAfter)
-
 		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Empty(t, result2)
 		require.NoError(t, err2)
-
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			DoesNotExist()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
@@ -1238,14 +1076,14 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		// given
 		log.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
-		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
-			murtest.ToBeDeleted())
+		signup := commonsignup.NewUserSignup(commonsignup.WithName("john-wait-for-ua"), commonsignup.WithActivations("1"))
+		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua", murtest.ToBeDeleted())
 		userAcc := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa(), uatest.WithFinalizer())
-
-		hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
+		externalSignup := commonsignup.NewUserSignup(commonsignup.WithName("john-456"), commonsignup.WithActivations("1"), commonsignup.WithEmail("john@example.com"))
+		externalMur := murtest.NewMasterUserRecord(t, "john-456", murtest.WithOwnerLabel(externalSignup.Name), murtest.Email("john@example.com"))
+		hostClient := commontest.NewFakeClient(t, signup, mur, toolchainStatus, externalSignup, externalMur)
+		metricstest.ResetCounters(t, hostClient)
 		memberClient := commontest.NewFakeClient(t, userAcc)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
-
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
 		// when
@@ -1259,7 +1097,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		userAcc.SetFinalizers(nil)
 		err = memberClient.Update(context.TODO(), userAcc)
 		require.NoError(t, err)
-
 		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
@@ -1269,7 +1106,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			DoesNotExist()
-		AssertThatCountersAndMetrics(t).
+		metricstest.AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
@@ -1299,7 +1136,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		hostClient := commontest.NewFakeClient(t, mur, toolchainStatus)
 		memberClient := commontest.NewFakeClient(t, userAcc)
-		InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+		metricstest.ResetCounters(t, hostClient)
 
 		cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -1352,27 +1189,18 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	// given
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 		murtest.ToBeDeleted(), murtest.AdditionalAccounts(commontest.Member2ClusterName))
-	userAcc := uatest.NewUserAccountFromMur(mur)
+	externalSignup := commonsignup.NewUserSignup(commonsignup.WithName("john-456"), commonsignup.WithActivations("1"), commonsignup.WithEmail("john@example.com"))
+	externalMur := murtest.NewMasterUserRecord(t, "john-456", murtest.WithOwnerLabel(externalSignup.Name), murtest.Email("john@example.com"))
 
+	userAcc := uatest.NewUserAccountFromMur(mur)
+	hostClient := commontest.NewFakeClient(t, signup, mur, externalSignup, externalMur)
+	metricstest.ResetCounters(t, hostClient)
 	memberClient := commontest.NewFakeClient(t, userAcc)
 	memberClient2 := commontest.NewFakeClient(t, userAcc)
-	hostClient := commontest.NewFakeClient(t, mur)
-	InitializeCountersWithMetricsSyncDisabled(t, NewToolchainStatus(
-		WithMember(commontest.MemberClusterName),
-		WithMember(commontest.Member2ClusterName),
-		WithMember("member3-cluster"),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-			"1,external": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-			string(metrics.External): 1,
-		})))
-
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient), ClusterClient(commontest.Member2ClusterName, memberClient2))
 
 	// when
@@ -1383,20 +1211,18 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // second reconcile will wait for second useraccount to be deleted
 	require.NoError(t, err2)
 	assert.Equal(t, 10*time.Second, result2.RequeueAfter)
-
 	result3, err3 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 	// then
 	require.Empty(t, result3)
 	require.NoError(t, err3)
-
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		DoesNotExist()
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		DoesNotExist()
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		DoesNotExist()
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0, // decremented
 			string(metrics.External): 1, // unchanged
@@ -1418,16 +1244,11 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := commontest.NewFakeClient(t, userAccount)
-	toolchainStatus := NewToolchainStatus(
-		WithMember(commontest.MemberClusterName, WithRoutes("https://console.member-cluster/", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 1,
-		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 1,
-		}))
+	toolchainStatus := toolchainstatustest.NewToolchainStatus(
+		toolchainstatustest.WithMember(commontest.MemberClusterName, toolchainstatustest.WithRoutes("https://console.member-cluster/", toolchainstatustest.ToBeReady())),
+	)
 	hostClient := commontest.NewFakeClient(t, mur, spaceBinding, space, toolchainStatus)
-	InitializeCountersWithMetricsSyncDisabled(t, toolchainStatus)
+	metricstest.ResetCounters(t, hostClient)
 
 	cntrl := newController(hostClient, s, ClusterClient(commontest.MemberClusterName, memberClient))
 
@@ -1439,7 +1260,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
 	require.NoError(t, err)
 	assert.True(t, userAcc.Spec.Disabled)
-	AssertThatCountersAndMetrics(t).
+	metricstest.AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}) // unchanged
 }
 

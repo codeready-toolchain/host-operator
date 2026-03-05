@@ -439,10 +439,6 @@ spec:
                         description: DefaultUserTier specifies the default tier to
                           assign for new users
                         type: string
-                      durationBeforeChangeTierRequestDeletion:
-                        description: DurationBeforeChangeTierRequestDeletion specifies
-                          the duration before a ChangeTierRequest resource is deleted
-                        type: string
                       featureToggles:
                         description: FeatureToggles specifies the list of feature
                           toggles/flags

@@ -1,13 +1,21 @@
 package metrics
 
 import (
+	"context"
+	"strconv"
+	"sync"
+	"sync/atomic"
+
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/version"
+
 	"github.com/prometheus/client_golang/prometheus"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-var log = logf.Log.WithName("toolchain_metrics")
+var logger = logf.Log.WithName("toolchain_metrics")
 
 // counters
 var (
@@ -49,6 +57,8 @@ var (
 	MasterUserRecordGaugeVec *prometheus.GaugeVec
 	// HostOperatorVersionGaugeVec reflects the current version of the host-operator (via the `version` label)
 	HostOperatorVersionGaugeVec *prometheus.GaugeVec
+	// ToolchainStatusGaugeVec reflects the current status of the toolchainstatus, labelled with the status
+	ToolchainStatusGaugeVec *prometheus.GaugeVec
 )
 
 // histograms
@@ -68,14 +78,14 @@ var (
 	allHistograms  = []prometheus.Histogram{}
 )
 
+var cachedSpaceCounts = new(sync.Map)
+
 func init() {
 	initMetrics()
 }
 
-const metricsPrefix = "sandbox_"
-
 func initMetrics() {
-	log.Info("initializing custom metrics")
+	logger.Info("initializing custom metrics")
 	// Counters
 	UserSignupUniqueTotal = newCounter("user_signups_total", "Total number of unique UserSignups")
 	UserSignupApprovedTotal = newCounter("user_signups_approved_total", "Total number of approved UserSignups")
@@ -91,15 +101,41 @@ func initMetrics() {
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	HostOperatorVersionGaugeVec = newGaugeVec("host_operator_version", "Current version of the host operator", "commit")
+	ToolchainStatusGaugeVec = newGaugeVec("toolchain_status", "Current status of the toolchain components", "component")
 	// Histograms
 	UserSignupProvisionTimeHistogram = newHistogram("user_signup_provision_time", "UserSignup provision time in seconds")
-	log.Info("custom metrics initialized")
+	logger.Info("custom metrics initialized")
 }
 
-// Reset resets all metrics. For testing purpose only!
+const metricsPrefix = "sandbox_"
+
+// Reset resets all  For testing purpose only!
 func Reset() {
-	log.Info("resetting custom metrics")
+	logger.Info("resetting custom metrics and counts")
+	for _, c := range allCounters {
+		k8smetrics.Registry.Unregister(c)
+	}
+	allCounters = nil
+	for _, c := range allCounterVecs {
+		k8smetrics.Registry.Unregister(c)
+	}
+	allCounterVecs = nil
+	for _, g := range allGauges {
+		k8smetrics.Registry.Unregister(g)
+	}
+	allGauges = nil
+	for _, v := range allGaugeVecs {
+		k8smetrics.Registry.Unregister(v)
+	}
+	allGaugeVecs = nil
+	for _, v := range allHistograms {
+		k8smetrics.Registry.Unregister(v)
+	}
+	allHistograms = nil
 	initMetrics()
+	cachedSpaceCounts.Clear()
+	initialized = false // allow the counters to be initialized again
+	logger.Info("metrics reset")
 }
 
 func newCounter(name, help string) prometheus.Counter {
@@ -118,15 +154,6 @@ func newCounterVec(name, help string, labels ...string) *prometheus.CounterVec {
 	}, labels)
 	allCounterVecs = append(allCounterVecs, c)
 	return c
-}
-
-func newGauge(name, help string) prometheus.Gauge {
-	g := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: metricsPrefix + name,
-		Help: help,
-	})
-	allGauges = append(allGauges, g)
-	return g
 }
 
 func newGaugeVec(name, help string, labels ...string) *prometheus.GaugeVec {
@@ -149,26 +176,143 @@ func newHistogram(name, help string) prometheus.Histogram {
 }
 
 // RegisterCustomMetrics registers the custom metrics
-func RegisterCustomMetrics() {
+func RegisterCustomMetrics() []prometheus.Collector {
+	collectors := []prometheus.Collector{}
 	// register metrics
 	for _, c := range allCounters {
 		k8smetrics.Registry.MustRegister(c)
+		collectors = append(collectors, c)
 	}
 	for _, c := range allCounterVecs {
 		k8smetrics.Registry.MustRegister(c)
+		collectors = append(collectors, c)
 	}
 	for _, g := range allGauges {
 		k8smetrics.Registry.MustRegister(g)
+		collectors = append(collectors, g)
 	}
 	for _, v := range allGaugeVecs {
 		k8smetrics.Registry.MustRegister(v)
+		collectors = append(collectors, v)
 	}
 	for _, v := range allHistograms {
 		k8smetrics.Registry.MustRegister(v)
+		collectors = append(collectors, v)
 	}
 
 	// expose the HostOperatorVersionGaugeVec metric (static ie, 1 value per build/deployment)
 	HostOperatorVersionGaugeVec.WithLabelValues(version.Commit[0:7]).Set(1)
 
-	log.Info("custom metrics registered")
+	logger.Info("custom metrics registered")
+	return collectors
+}
+
+// IncrementMasterUserRecordCount increments the number of MasterUserRecord
+func IncrementMasterUserRecordCount(domain Domain) {
+	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Inc()
+}
+
+// DecrementMasterUserRecordCount decreases the number of MasterUserRecord
+func DecrementMasterUserRecordCount(domain Domain) {
+	MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Dec()
+}
+
+// IncrementSpaceCount increments the number of Space's for the given member cluster
+func IncrementSpaceCount(clusterName string) {
+	SpaceGaugeVec.WithLabelValues(clusterName).Inc()
+	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
+	actual.(*atomic.Int32).Add(1)
+}
+
+// DecrementSpaceCount decreases the number of Spaces for the given member cluster
+func DecrementSpaceCount(clusterName string) {
+	SpaceGaugeVec.WithLabelValues(clusterName).Dec()
+	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
+	actual.(*atomic.Int32).Add(-1)
+}
+
+// IncrementUsersPerActivationCounters updates the activation counters and metrics
+// When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
+func IncrementUsersPerActivationCounters(activations int, domain Domain) {
+	// skip for invalid values
+	if activations <= 0 {
+		return
+	}
+	// increase the gauge with the given number of activations and the email address domain
+	UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strconv.Itoa(activations), string(domain)).Inc()
+	// and decrease the gauge with the previous number of activations and the email address domain (if applicable)
+	if activations > 1 {
+		UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strconv.Itoa(activations-1), string(domain)).Dec()
+	}
+}
+
+// GetSpaceCountPerClusterSnapshot is a specialization of the GetCountsSnapshot function that retrieves just the map
+// of the space counts per cluster.
+func GetSpaceCountPerClusterSnapshot() map[string]int {
+	spaceCounts := make(map[string]int)
+	cachedSpaceCounts.Range(func(clusterName, count any) bool {
+		spaceCounts[clusterName.(string)] = int(count.(*atomic.Int32).Load())
+		return true
+	})
+	return spaceCounts
+}
+
+var initialized = false
+
+// Synchronize synchronizes the content of the ToolchainStatus with the cached counter
+//
+// If the counter hasn't been initialized yet, then it adds the actual cached count
+// to the one taken from ToolchainStatus and marks the cached as initialized
+//
+// If the ToolchainStatus doesn't contain any MUR counts, then it lists all existing
+// MURs, counts them and stores in both cache and ToolchainStatus object
+//
+// If the cached counter is initialized and ToolchainStatus contains already some numbers
+// then it updates the ToolchainStatus numbers with the one taken from the cached counter
+func Synchronize(ctx context.Context, cl runtimeclient.Client, namespace string) error {
+	// skip if cached counters are already initialized
+	if initialized {
+		logger.Info("skipping counters initialization because they are already initialized")
+		return nil
+	}
+
+	logger.Info("initializing counters from resources")
+	usersignups := &toolchainv1alpha1.UserSignupList{}
+	if err := cl.List(ctx, usersignups, runtimeclient.InNamespace(namespace)); err != nil {
+		return err
+	}
+	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	if err := cl.List(ctx, murs, runtimeclient.InNamespace(namespace)); err != nil {
+		return err
+	}
+	spaces := &toolchainv1alpha1.SpaceList{}
+	if err := cl.List(ctx, spaces, runtimeclient.InNamespace(namespace)); err != nil {
+		return err
+	}
+	UserSignupsPerActivationAndDomainGaugeVec.Reset()
+	for _, usersignup := range usersignups.Items {
+		activations, activationsExists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
+		if activationsExists {
+			_, err := strconv.Atoi(activations) // let's make sure the value is actually an integer
+			if err != nil {
+				logger.Error(err, "invalid number of activations", "name", usersignup.Name, "value", activations)
+				continue
+			}
+			domain := GetEmailDomain(&usersignup) // nolint:gosec
+			UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(activations, string(domain)).Inc()
+
+		}
+	}
+	MasterUserRecordGaugeVec.Reset()
+	for _, mur := range murs.Items {
+		domain := GetEmailDomain(&mur) // nolint:gosec
+		IncrementMasterUserRecordCount(domain)
+	}
+	SpaceGaugeVec.Reset()
+	for _, space := range spaces.Items {
+		IncrementSpaceCount(space.Spec.TargetCluster)
+	}
+	initialized = true
+	logger.Info("metrics initialized from UserSignups, MasterUserRecords and Spaces", "userSignups", len(usersignups.Items), "murs", len(murs.Items), "spaces", len(spaces.Items))
+	return nil
 }

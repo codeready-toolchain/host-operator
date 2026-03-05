@@ -3,17 +3,19 @@ package spaceprovisionerconfig
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	hosttest "github.com/codeready-toolchain/host-operator/test"
+	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
+	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	"github.com/codeready-toolchain/toolchain-common/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/assertions"
+	spacetest "github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test/spaceprovisionerconfig"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -33,16 +36,18 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 	t.Run("is ready when enabled, cluster present and enabled and enough capacity available", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
+		initObjs := []runtimeclient.Object{
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
-		)
+		}
+		for i := range 3 {
+			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
+		}
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -61,10 +66,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 			Enabled(false))
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -106,10 +110,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -134,10 +137,9 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 
 		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
 			tc,
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
 		)
@@ -156,16 +158,18 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 	t.Run("is not ready when space count is depleted", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
+		initObjs := []runtimeclient.Object{
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(5),
-					hosttest.WithNodeRoleUsage("worker", 50),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 50),
 				),
 			),
-		)
+		}
+		for i := range 5 {
+			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
+		}
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -182,17 +186,19 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 	t.Run("is not ready when memory is depleted in one", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
+		initObjs := []runtimeclient.Object{
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 90),
-					hosttest.WithNodeRoleUsage("master", 40),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 90),
+					toolchainstatustest.WithNodeRoleUsage("master", 40),
 				),
 			),
-		)
+		}
+		for i := range 3 {
+			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
+		}
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -209,18 +215,20 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 	t.Run("is not ready when memory is depleted in more", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
+		initObjs := []runtimeclient.Object{
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-					hosttest.WithNodeRoleUsage("worker", 42),
-					hosttest.WithNodeRoleUsage("master", 90),
-					hosttest.WithNodeRoleUsage("magic", 90),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1",
+					toolchainstatustest.WithNodeRoleUsage("worker", 42),
+					toolchainstatustest.WithNodeRoleUsage("master", 90),
+					toolchainstatustest.WithNodeRoleUsage("magic", 90),
 				),
 			),
-		)
+		}
+		for i := range 3 {
+			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
+		}
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -238,7 +246,7 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
 
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"), hosttest.NewToolchainStatus())
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), readyToolchainCluster("cluster1"), toolchainstatustest.NewToolchainStatus())
 
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
@@ -254,15 +262,16 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 	t.Run("has ready unknown if memory capacity not known", func(t *testing.T) {
 		// given
 		spc := ModifySpaceProvisionerConfig(blueprintSpc.DeepCopy(), MaxNumberOfSpaces(5), MaxMemoryUtilizationPercent(80))
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
+		initObjs := []runtimeclient.Object{
 			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3),
-				),
+			toolchainstatustest.NewToolchainStatus(
+				toolchainstatustest.WithMember("cluster1"),
 			),
-		)
+		}
+		for i := range 3 {
+			initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster1")))
+		}
+		r, req, cl := prepareReconcile(t, spc.DeepCopy(), initObjs...)
 		// when
 		_, reconcileErr := r.Reconcile(context.TODO(), req)
 		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
@@ -275,31 +284,6 @@ func TestSpaceProvisionerConfigReadinessTracking(t *testing.T) {
 			Has(ConsumedMemoryUsage(nil)))
 	})
 
-	t.Run("zero means unlimited", func(t *testing.T) {
-		// given
-		spc := blueprintSpc.DeepCopy()
-
-		r, req, cl := prepareReconcile(t, spc.DeepCopy(),
-			readyToolchainCluster("cluster1"),
-			hosttest.NewToolchainStatus(
-				hosttest.WithMember("cluster1",
-					hosttest.WithSpaceCount(3_000_000),
-					hosttest.WithNodeRoleUsage("worker", 3000),
-					hosttest.WithNodeRoleUsage("master", 800),
-				),
-			),
-		)
-		// when
-		_, reconcileErr := r.Reconcile(context.TODO(), req)
-		require.NoError(t, cl.Get(context.TODO(), runtimeclient.ObjectKeyFromObject(spc), spc))
-
-		// then
-		require.NoError(t, reconcileErr)
-		AssertThat(t, spc,
-			Is(Ready()),
-			Has(ConsumedSpaceCount(3_000_000)),
-			Has(ConsumedMemoryUsage(map[string]int{"master": 800, "worker": 3000})))
-	})
 }
 
 func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
@@ -414,21 +398,20 @@ func TestSpaceProvisionerConfigReEnqueing(t *testing.T) {
 
 func TestCollectConsumedCapacity(t *testing.T) {
 	// given
-
-	_, _, cl := prepareReconcile(t, nil,
-		hosttest.NewToolchainStatus(
-			hosttest.WithMember(
-				"cluster-1",
-				hosttest.WithSpaceCount(300),
-				hosttest.WithNodeRoleUsage("master", 10),
-				hosttest.WithNodeRoleUsage("worker", 40),
+	initObjs := []runtimeclient.Object{
+		toolchainstatustest.NewToolchainStatus(
+			toolchainstatustest.WithMember("cluster-1",
+				toolchainstatustest.WithNodeRoleUsage("master", 10),
+				toolchainstatustest.WithNodeRoleUsage("worker", 40),
 			),
-			hosttest.WithMember(
-				"cluster-2",
-				hosttest.WithSpaceCount(1),
-			),
+			toolchainstatustest.WithMember("cluster-2"),
 		),
-	)
+	}
+	for i := range 300 {
+		initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("space-%d", i), spacetest.WithSpecTargetCluster("cluster-1")))
+	}
+	initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, "space-300", spacetest.WithSpecTargetCluster("cluster-2")))
+	_, _, cl := prepareReconcile(t, nil, initObjs...)
 
 	t.Run("returns the capacity when present", func(t *testing.T) {
 		// when
@@ -507,7 +490,7 @@ func prepareReconcile(t *testing.T, spc *toolchainv1alpha1.SpaceProvisionerConfi
 		namespace = spc.Namespace
 	}
 	fakeClient := test.NewFakeClient(t, objs...)
-
+	metricstest.ResetCounters(t, fakeClient)
 	r := &Reconciler{
 		Client: fakeClient,
 	}
