@@ -4,68 +4,85 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>
-        Notice: Your Developer Sandbox account is ready.
-    </title>
-    <style>
-        a:hover {
-            text-decoration: underline !important;
-        }
-        p {
-            text-align: left;
-            margin: 30px 0;
-        }
-    </style>
+    <title>Notice: Your Developer Sandbox account is ready.</title>
 </head>
+<body style="margin: 0; padding: 0; background-color: #e0e0e0; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="background-color: #06030B; padding: 0; margin: 0;">
+            <img src="https://explore.redhat.com/rs/427-TBC-474/images/sandbox-email-header-RH.png" alt="Red Hat Developer - Developer Sandbox" style="width: 100%; max-width: 600px; height: auto; display: block;" />
+        </div>
 
-<body
-        style="
-       padding: 10px;
-       padding: 0;
-       background-color: #f9f9f9;
-       font-family: 'Open Sans', sans-serif;
-       font-size: 15px;
-       font-weight: lighter;
-       line-height: 1.2;"
->
-<div
-        style="
-       min-height: 300px;
-       max-width: 750px;
-       margin: 0 auto;
-       padding: 20px;
-       border: 1px solid #d7d7d7;
-       border-radius: 4px;
-       background-color: #fff;
-       box-shadow: 0 2px 4px #d7d7d7;"
->
+        <!-- Content -->
+        <div style="padding: 40px 24px; background-color: #ffffff;">
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                You are receiving this email because the Developer Sandbox account associated with {{.UserEmail}} 
+                is now ready to use. Your account will be active for {{.DeactivationTimeoutDays}} days at no cost to you.
+            </p>
 
-    <p>
-        You are receiving this email because the Developer Sandbox account associated with {{.UserEmail}} 
-        is now ready to use. Your account will be active for {{.DeactivationTimeoutDays}} days at no cost to you.
-    </p>
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                At the end of the active period, your access will be terminated and all your data on the Developer Sandbox will be deleted.
+                We will send you an email 3 days before deactivation with instructions to export your work, so you will not lose your progress.
+            </p>
 
-    <p>
-        At the end of the active period, your access will be terminated and all your data on the Developer Sandbox will be deleted.
-        We will send you an email 3 days before deactivation with instructions to export your work, so you will not lose your progress.
-    </p>
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                Please log in to <a href="{{.RegistrationURL}}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none;">{{.RegistrationURL}}</a> to begin using your account.
+            </p>
 
-    <p>
-        Please log in to {{.RegistrationURL}} to begin using your account.
-    </p>
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                Unsure of where to start? Check out our Developer Sandbox activities for some ideas!
+            </p>
+            <p style="margin: 0 0 20px 0; text-align: left;">
+                <a href="https://developers.redhat.com/developer-sandbox/activities" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 20px; background-color: #0066cc; color: #ffffff; text-decoration: none; border-radius: 20px; font-weight: 600; font-size: 14px; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif;">Developer Sandbox activities</a>
+            </p>
 
-    <p>
-        Unsure of where to start? Check out our <a href="https://developers.redhat.com/developer-sandbox/activities">Developer Sandbox activities</a> for some ideas!
-    </p>
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                To share feedback or ask questions, reach out to us at <a href="mailto:{{.ReplyTo}}" style="color: #0066cc; text-decoration: none;">{{.ReplyTo}}</a>.
+            </p>
 
-    <p>
-        To share feedback or ask questions, reach out to us at {{.ReplyTo}}.
-    </p>
+            <p style="margin: 0 0 20px 0; text-align: left; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #151515;">
+                Thanks,<br />
+                The Developer Sandbox team
+            </p>
+        </div>
 
-    <p>
-        Thanks,<br />
-        The Developer Sandbox team
-    </p>
-</div>
+        <!-- Footer -->
+        <div style="background-color: #06030B; padding: 24px; color: #c7c7c7; font-family: 'RedHatDisplay', 'Red Hat Display', 'Open Sans', Arial, sans-serif;">
+            <p style="margin: 0 0 16px 0;">
+                <img src="https://220-NSZ-364.mktoweb.com/rs/220-NSZ-364/images/Logo-RedHat-A-Color-White.png?version=0" alt="Red Hat" style="height: 32px; width: auto;" />
+            </p>
+            
+            <div style="margin: 16px 0;">
+                <a href="https://www.redhat.com/en/about/contact" target="_blank" rel="noopener noreferrer" style="color: #ffffff; margin-right: 20px; font-size: 14px; text-decoration: none;">Contact Us</a>
+                <a href="https://www.redhat.com/en/preferences" target="_blank" rel="noopener noreferrer" style="color: #ffffff; margin-right: 20px; font-size: 14px; text-decoration: none;">Manage email preferences</a>
+                <a href="https://www.redhat.com/en/about/privacy-policy" target="_blank" rel="noopener noreferrer" style="color: #ffffff; font-size: 14px; text-decoration: none;">Privacy statement</a>
+            </div>
+
+            <p style="font-size: 12px; line-height: 1.6; margin: 12px 0 0 0; color: #c7c7c7;">
+                This is a transactional email providing information about your account or business relationship with Red Hat. If you have any questions, please contact <a href="mailto:customerservice@redhat.com" style="color: #73bcf7; text-decoration: none;">customerservice@redhat.com</a>.
+            </p>
+
+            <p style="font-size: 12px; line-height: 1.6; margin: 12px 0 0 0; color: #c7c7c7;">
+                For more information, you may also visit <a href="https://www.redhat.com/en/about/privacy-policy" style="color: #73bcf7; text-decoration: none;" target="_blank" rel="noopener noreferrer">Red Hat's Privacy Statement</a>.
+            </p>
+
+            <p style="font-size: 12px; line-height: 1.6; margin: 12px 0 0 0; color: #c7c7c7;">
+                Red Hat and the Red Hat logo are trademarks or registered trademarks of Red Hat, Inc. or its subsidiaries in the United States and other countries.
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 12px; line-height: 1.6; margin: 12px 0 0 0; color: #c7c7c7;">
+                <tr>
+                    <td style="text-align: left; vertical-align: top; font-size: 12px; color: #c7c7c7;">
+                        100 East Davie Street<br />
+                        Raleigh, NC 27601<br />
+                        +1-919-301-3003
+                    </td>
+                    <td style="text-align: right; vertical-align: top; font-size: 12px; color: #c7c7c7;">
+                        © {{.CurrentYear}} Red Hat
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
 </body>
 </html>
