@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Download coverage artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
