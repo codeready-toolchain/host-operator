@@ -286,10 +286,10 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	log.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	signup := commonsignup.NewUserSignup(commonsignup.WithName("john-123"), commonsignup.WithActivations("1"))
-	mur := murtest.NewMasterUserRecord(t, "john",
+mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.WithOwnerLabel("john-123"),
-		murtest.StatusUserAccount(commontest.MemberClusterName))
-	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+		murtest.StatusUserAccount(commontest.MemberClusterName),
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	spaceBinding := spacebindingtest.NewSpaceBinding("john", "john-space", "admin", "john-123")
 	space := spacetest.NewSpace(mur.Namespace, "john-space",
 		spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, "john-123"),
