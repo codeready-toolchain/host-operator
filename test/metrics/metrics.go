@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	metricscommontest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
@@ -35,14 +34,14 @@ func (a *MetricAssertion) HaveSpacesForCluster(clusterName string, number int) *
 	return a
 }
 
-func (a *MetricAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1alpha1.Metric) *MetricAssertion {
+func (a *MetricAssertion) HaveUsersPerActivationsAndDomain(expected map[string]int) *MetricAssertion {
 	for key, count := range expected {
 		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...), "invalid gauge value for key '%v'", key)
 	}
 	return a
 }
 
-func (a *MetricAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1alpha1.Metric) *MetricAssertion {
+func (a *MetricAssertion) HaveMasterUserRecordsPerDomain(expected map[string]int) *MetricAssertion {
 	for domain, count := range expected {
 		metricscommontest.AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
 	}

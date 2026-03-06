@@ -106,10 +106,6 @@ func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 	return DeactivationConfig{c.cfg.Host.Deactivation}
 }
 
-func (c *ToolchainConfig) Metrics() MetricsConfig {
-	return MetricsConfig{c.cfg.Host.Metrics}
-}
-
 func (c *ToolchainConfig) Notifications() NotificationsConfig {
 	return NotificationsConfig{
 		c:       c.cfg.Host.Notifications,
@@ -192,14 +188,6 @@ func (d DeactivationConfig) UserSignupDeactivatedRetentionDays() int {
 
 func (d DeactivationConfig) UserSignupUnverifiedRetentionDays() int {
 	return commonconfig.GetInt(d.dctv.UserSignupUnverifiedRetentionDays, 7)
-}
-
-type MetricsConfig struct {
-	metrics toolchainv1alpha1.MetricsConfig
-}
-
-func (d MetricsConfig) ForceSynchronization() bool {
-	return commonconfig.GetBool(d.metrics.ForceSynchronization, true)
 }
 
 type GitHubSecret struct {
