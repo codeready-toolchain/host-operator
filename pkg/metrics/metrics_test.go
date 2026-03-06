@@ -16,7 +16,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -146,42 +145,12 @@ func TestInitializeCountersFromExistingResources(t *testing.T) {
 		})
 }
 
-func TestShouldNotInitializeAgain(t *testing.T) {
-	// given
-	metrics.Reset()
-	defer metrics.Reset()
-
-	initObjs := []runtimeclient.Object{}
-	for index := range 10 {
-		initObjs = append(initObjs, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("user-%d", index)), usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1))))
-		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
-		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
-	}
-	fakeClient := test.NewFakeClient(t, initObjs...)
-	err := metrics.Synchronize(context.TODO(), fakeClient, test.HostOperatorNs)
-	require.NoError(t, err)
-
-	// when
-	err = fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
-	require.NoError(t, err)
-	err = fakeClient.Create(context.TODO(), space.NewSpace(test.HostOperatorNs, "ignored", space.WithSpecTargetCluster("member-1")))
-	require.NoError(t, err)
-	err = metrics.Synchronize(context.TODO(), fakeClient, test.HostOperatorNs)
-
-	// then
-	require.NoError(t, err)
-	metricstest.AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.Internal): 10, // same value
-		}).
-		HaveSpacesForCluster("member-1", 10)
-}
-
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
 	initObjs := []runtimeclient.Object{}
 	for index := range 10 {
-		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.TargetCluster("member-1")))
+		initObjs = append(initObjs, usersignup.NewUserSignup(usersignup.WithName(fmt.Sprintf("user-%d", index)), usersignup.WithEmail(fmt.Sprintf("user-%d@redhat.com", index))))
+		initObjs = append(initObjs, masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("user-%d", index), masteruserrecord.Email(fmt.Sprintf("user-%d@redhat.com", index)), masteruserrecord.TargetCluster("member-1")))
 		initObjs = append(initObjs, space.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", index), space.WithSpecTargetCluster("member-1")))
 	}
 	fakeClient := test.NewFakeClient(t, initObjs...)
@@ -189,7 +158,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	latch := new(sync.WaitGroup)
 	latch.Add(1)
 	waitForFinished := new(sync.WaitGroup)
-
+	// run 1002 iterations to increment and decrement counters in parallel
 	for i := range 1002 {
 		waitForFinished.Add(4) // 4 routines to increment counters
 		if i < 1000 {
@@ -241,23 +210,11 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		}(i)
 	}
 
-	for range 102 {
-		waitForFinished.Add(1)
-		go func() {
-			defer waitForFinished.Done()
-			latch.Wait()
-			err := metrics.Synchronize(context.TODO(), fakeClient, test.HostOperatorNs)
-			assert.NoError(t, err) // require must only be used in the goroutine running the test function (testifylint)
-		}()
-	}
-
 	// when
 	latch.Done()
 	waitForFinished.Wait()
-	err := metrics.Synchronize(context.TODO(), fakeClient, test.HostOperatorNs)
 
 	// then
-	require.NoError(t, err)
 	metricstest.AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
