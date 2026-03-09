@@ -1,0 +1,12 @@
+inheritance: true
+knowledge_base:
+  linked_repositories:
+    - repository: 'codeready-toolchain/toolchain-common'
+      instructions: >
+        toolchain-common contains shared controllers, utilities, and libraries used by host-operator.
+        
+        When reviewing host-operator changes:
+        - Check if host-operator is using deprecated or outdated patterns from toolchain-common when newer/better utilities exist.
+        - Verify behavioral assumptions — if host-operator expects specific return values or side effects from toolchain-common functions, check if that behavior is actually implemented.
+        - If host-operator duplicates logic that already exists in toolchain-common (pkg/cluster, pkg/condition, pkg/configuration, pkg/status), suggest using the shared implementation instead.
+        - Flag if host-operator is making assumptions about toolchain-common's internal state or behavior that isn't documented or guaranteed.
