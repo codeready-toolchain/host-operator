@@ -134,7 +134,6 @@ func Reset() {
 	allHistograms = nil
 	initMetrics()
 	cachedSpaceCounts.Clear()
-	initialized = false // allow the counters to be initialized again
 	logger.Info("metrics reset")
 }
 
@@ -257,8 +256,6 @@ func GetSpaceCountPerClusterSnapshot() map[string]int {
 	return spaceCounts
 }
 
-var initialized = false
-
 // Synchronize synchronizes the content of the ToolchainStatus with the cached counter
 //
 // If the counter hasn't been initialized yet, then it adds the actual cached count
@@ -270,12 +267,6 @@ var initialized = false
 // If the cached counter is initialized and ToolchainStatus contains already some numbers
 // then it updates the ToolchainStatus numbers with the one taken from the cached counter
 func Synchronize(ctx context.Context, cl runtimeclient.Client, namespace string) error {
-	// skip if cached counters are already initialized
-	if initialized {
-		logger.Info("skipping counters initialization because they are already initialized")
-		return nil
-	}
-
 	logger.Info("initializing counters from resources")
 	usersignups := &toolchainv1alpha1.UserSignupList{}
 	if err := cl.List(ctx, usersignups, runtimeclient.InNamespace(namespace)); err != nil {
@@ -312,7 +303,6 @@ func Synchronize(ctx context.Context, cl runtimeclient.Client, namespace string)
 	for _, space := range spaces.Items {
 		IncrementSpaceCount(space.Spec.TargetCluster)
 	}
-	initialized = true
 	logger.Info("metrics initialized from UserSignups, MasterUserRecords and Spaces", "userSignups", len(usersignups.Items), "murs", len(murs.Items), "spaces", len(spaces.Items))
 	return nil
 }

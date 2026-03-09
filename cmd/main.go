@@ -424,6 +424,13 @@ func main() { // nolint:gocyclo
 			os.Exit(1)
 		}
 
+		setupLog.Info("Updating the metrics")
+		if err := metrics.Synchronize(ctx, mgr.GetClient(), namespace); err != nil {
+			setupLog.Error(err, "unable to update the metrics")
+			os.Exit(1)
+		}
+		setupLog.Info("Updated the metrics")
+
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
 		if err := toolchainstatus.CreateOrUpdateResources(ctx, mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
