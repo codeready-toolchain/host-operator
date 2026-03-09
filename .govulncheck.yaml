@@ -1,1 +1,19 @@
-ignored-vulnerabilities: []
+ignored-vulnerabilities:
+  # Incorrect parsing of IPv6 host literals in net/url
+  # Found in: net/url@go1.24.13
+  # Fixed in: net/url@go1.25.8
+  - id: GO-2026-4601
+    info: https://pkg.go.dev/vuln/GO-2026-4601
+    silence-until: 2026-04-08
+  # FileInfo can escape from a Root in os
+  # Found in: os@go1.24.13
+  # Fixed in: os@go1.25.8
+  - id: GO-2026-4602
+    info: https://pkg.go.dev/vuln/GO-2026-4602
+    silence-until: 2026-04-08
+  # URLs in meta content attribute actions are not escaped in html/template
+  # Found in: html/template@go1.24.13
+  # Fixed in: html/template@go1.25.8
+  - id: GO-2026-4603
+    info: https://pkg.go.dev/vuln/GO-2026-4603
+    silence-until: 2026-04-08
