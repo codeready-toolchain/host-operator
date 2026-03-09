@@ -180,12 +180,6 @@ func main() { // nolint:gocyclo
 	}
 	crtConfig.Print()
 
-	setupLog.Info("updating the metrics")
-	if err := metrics.Synchronize(ctx, cl, namespace); err != nil {
-		setupLog.Error(err, "unable to update the metrics")
-		os.Exit(1)
-	}
-
 	if crtConfig.RegistrationService().Verification().CaptchaEnabled() {
 		if err := createCaptchaFileFromSecret(crtConfig.RegistrationService()); err != nil {
 			panic(fmt.Sprintf("failed to create captcha file: %s", err.Error()))
@@ -429,6 +423,13 @@ func main() { // nolint:gocyclo
 			setupLog.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
+
+		setupLog.Info("Updating the metrics")
+		if err := metrics.Synchronize(ctx, mgr.GetClient(), namespace); err != nil {
+			setupLog.Error(err, "unable to update the metrics")
+			os.Exit(1)
+		}
+		setupLog.Info("Updated the metrics")
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
