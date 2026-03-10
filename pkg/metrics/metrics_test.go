@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
@@ -16,6 +17,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
+	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,6 +43,32 @@ func TestResetMetrics(t *testing.T) {
 	metricscommontest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 }
 
+func TestGitCommitGauge(t *testing.T) {
+	t.Run("HostOperatorCommitGaugeVec", func(t *testing.T) {
+		// given
+		metrics.Reset()
+		defer metrics.Reset()
+		now := time.Now()
+
+		// when
+		metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890").SetToCurrentTime()
+
+		// then
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890")), float64(time.Minute))
+	})
+	t.Run("HostOperatorShortCommitGaugeVec", func(t *testing.T) {
+		// given
+		metrics.Reset()
+		defer metrics.Reset()
+		now := time.Now()
+
+		// when
+		metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890").SetToCurrentTime()
+
+		// then
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890")), float64(time.Minute))
+	})
+}
 func TestIncrementMasterUserRecordCount(t *testing.T) {
 	// given
 	metrics.Reset()
