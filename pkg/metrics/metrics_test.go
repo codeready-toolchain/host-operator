@@ -54,7 +54,7 @@ func TestGitCommitGauge(t *testing.T) {
 		metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890").SetToCurrentTime()
 
 		// then
-		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890")), float64(time.Minute))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890")), float64(time.Minute.Seconds()))
 	})
 	t.Run("HostOperatorShortCommitGaugeVec", func(t *testing.T) {
 		// given
@@ -66,7 +66,7 @@ func TestGitCommitGauge(t *testing.T) {
 		metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890").SetToCurrentTime()
 
 		// then
-		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890")), float64(time.Minute))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890")), float64(time.Minute.Seconds()))
 	})
 }
 func TestIncrementMasterUserRecordCount(t *testing.T) {
