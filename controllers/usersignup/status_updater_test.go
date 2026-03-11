@@ -82,7 +82,7 @@ func TestUpdateHomeSpaceStatus(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Equal(t, " \"\" is invalid: metadata.name: Required value: name is required", err.Error())
+		assert.Equal(t, "UserSignup.toolchain.dev.openshift.com \"\" is invalid: metadata.name: Required value: name is required", err.Error())
 	})
 
 }
