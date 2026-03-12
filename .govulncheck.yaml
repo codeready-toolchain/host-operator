@@ -1,16 +1,4 @@
 ignored-vulnerabilities:
-  # Incorrect enforcement of email constraints in crypto/x509
-  # Found in: crypto/x509@go1.26.0
-  # Fixed in: crypto/x509@go1.26.1
-  - id: GO-2026-4599
-    info: https://pkg.go.dev/vuln/GO-2026-4599
-    silence-until: 2026-04-09
-  # Panic in name constraint checking for malformed certificates in crypto/x509
-  # Found in: crypto/x509@go1.26.0
-  # Fixed in: crypto/x509@go1.26.1
-  - id: GO-2026-4600
-    info: https://pkg.go.dev/vuln/GO-2026-4600
-    silence-until: 2026-04-09
   # Incorrect parsing of IPv6 host literals in net/url
   # Found in: net/url@go1.24.13
   # Fixed in: net/url@go1.25.8
