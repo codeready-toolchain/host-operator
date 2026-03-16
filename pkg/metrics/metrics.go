@@ -55,8 +55,12 @@ var (
 	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
 	MasterUserRecordGaugeVec *prometheus.GaugeVec
-	// HostOperatorVersionGaugeVec reflects the current version of the host-operator (via the `version` label)
-	HostOperatorVersionGaugeVec *prometheus.GaugeVec
+	// HostOperatorVersionGaugeVec reflects the current short commit used to identify the version of the host-operator (via the `commit` label)
+	HostOperatorVersionGaugeVec *prometheus.GaugeVec // DEPRECATED: use HostOperatorShortCommitGaugeVec instead
+	// HostOperatorShortCommitGaugeVec reflects the current short git commit of the host-operator (via the `commit` label)
+	HostOperatorShortCommitGaugeVec *prometheus.GaugeVec
+	// HostOperatorCommitGaugeVec reflects the current full git commit of the host-operator (via the `commit` label)
+	HostOperatorCommitGaugeVec *prometheus.GaugeVec
 	// ToolchainStatusGaugeVec reflects the current status of the toolchainstatus, labelled with the status
 	ToolchainStatusGaugeVec *prometheus.GaugeVec
 )
@@ -100,7 +104,9 @@ func initMetrics() {
 	SpaceGaugeVec = newGaugeVec("spaces_current", "Current number of Spaces (per member cluster)", "cluster_name")
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
-	HostOperatorVersionGaugeVec = newGaugeVec("host_operator_version", "Current version of the host operator", "commit")
+	HostOperatorVersionGaugeVec = newGaugeVec("host_operator_version", "Short commit used to identify the version of the host operator", "commit")
+	HostOperatorCommitGaugeVec = newGaugeVec("host_operator_commit", "Full commit used to identify the version of the host operator", "commit")
+	HostOperatorShortCommitGaugeVec = newGaugeVec("host_operator_short_commit", "Short commit used to identify the version of the host operator", "commit")
 	ToolchainStatusGaugeVec = newGaugeVec("toolchain_status", "Current status of the toolchain components", "component")
 	// Histograms
 	UserSignupProvisionTimeHistogram = newHistogram("user_signup_provision_time", "UserSignup provision time in seconds")
@@ -199,8 +205,9 @@ func RegisterCustomMetrics() []prometheus.Collector {
 		collectors = append(collectors, v)
 	}
 
-	// expose the HostOperatorVersionGaugeVec metric (static ie, 1 value per build/deployment)
-	HostOperatorVersionGaugeVec.WithLabelValues(version.Commit[0:7]).Set(1)
+	HostOperatorVersionGaugeVec.WithLabelValues(version.Commit[0:7]).Set(1)                 // the HostOperatorVersionGaugeVec is set to `1`, Grafana will display the 'commit' label as the version for the instant record
+	HostOperatorCommitGaugeVec.WithLabelValues(version.Commit).SetToCurrentTime()           // automatically set the value to the current time, so that the highest value is the current commit
+	HostOperatorShortCommitGaugeVec.WithLabelValues(version.Commit[0:7]).SetToCurrentTime() // automatically set the value to the current time, so that the highest value is the current commit
 
 	logger.Info("custom metrics registered")
 	return collectors
