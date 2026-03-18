@@ -27,7 +27,7 @@ require (
 	k8s.io/client-go v0.34.1
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.130.1
-	sigs.k8s.io/controller-runtime v0.22.0
+	sigs.k8s.io/controller-runtime v0.22.1
 	sigs.k8s.io/controller-tools v0.19.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.7.1
 )
@@ -157,6 +157,6 @@ go 1.24.4
 
 toolchain go1.24.13
 
-replace github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20260311111036-f94bc6f41690
+replace github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20260318102359-237e681a639a
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20260317192718-bbfe57450e01
+replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20260318113116-fbd4bba9beb1
