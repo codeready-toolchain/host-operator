@@ -159,4 +159,4 @@ toolchain go1.24.13
 
 replace github.com/codeready-toolchain/api => github.com/metlos/api v0.0.0-20260327105121-b79d7632f264
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20260327121435-9f768c4ff11c
+replace github.com/codeready-toolchain/toolchain-common => github.com/metlos/toolchain-common v0.0.0-20260327131152-458d0e3f354d
