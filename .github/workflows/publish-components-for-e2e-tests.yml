@@ -33,7 +33,7 @@ jobs:
     # Is executed only for comment events
     - name: Send Github API Request to get PR data
       id: request
-      uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # workaround for https://github.com/octokit/request-action/issues/315 - use SHA instead of the tag v2.4.0
+      uses: octokit/request-action@b91aabaa861c777dcdb14e2387e30eddf04619ae # workaround for https://github.com/octokit/request-action/issues/315 - use SHA instead of the tag v3.0.0
       if: ${{ github.event_name == 'issue_comment' }}
       with:
         route: ${{ github.event.issue.pull_request.url }}
