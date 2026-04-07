@@ -108,6 +108,16 @@ func initMetrics() {
 	HostOperatorCommitGaugeVec = newGaugeVec("host_operator_commit", "Full commit used to identify the version of the host operator", "commit")
 	HostOperatorShortCommitGaugeVec = newGaugeVec("host_operator_short_commit", "Short commit used to identify the version of the host operator", "commit")
 	ToolchainStatusGaugeVec = newGaugeVec("toolchain_status", "Current status of the toolchain components", "component")
+
+	// set the version metrics
+	shortCommit := version.Commit
+	if len(version.Commit) >= 7 {
+		shortCommit = version.Commit[0:7]
+	}
+	HostOperatorVersionGaugeVec.WithLabelValues(shortCommit).Set(1)                 // the HostOperatorVersionGaugeVec is set to `1`, Grafana will display the 'commit' label as the version for the instant record
+	HostOperatorCommitGaugeVec.WithLabelValues(version.Commit).SetToCurrentTime()   // automatically set the value to the current time, so that the highest value is the current commit
+	HostOperatorShortCommitGaugeVec.WithLabelValues(shortCommit).SetToCurrentTime() // automatically set the value to the current time, so that the highest value is the current commit
+
 	// Histograms
 	UserSignupProvisionTimeHistogram = newHistogram("user_signup_provision_time", "UserSignup provision time in seconds")
 	logger.Info("custom metrics initialized")
@@ -204,10 +214,6 @@ func RegisterCustomMetrics() []prometheus.Collector {
 		k8smetrics.Registry.MustRegister(v)
 		collectors = append(collectors, v)
 	}
-
-	HostOperatorVersionGaugeVec.WithLabelValues(version.Commit[0:7]).Set(1)                 // the HostOperatorVersionGaugeVec is set to `1`, Grafana will display the 'commit' label as the version for the instant record
-	HostOperatorCommitGaugeVec.WithLabelValues(version.Commit).SetToCurrentTime()           // automatically set the value to the current time, so that the highest value is the current commit
-	HostOperatorShortCommitGaugeVec.WithLabelValues(version.Commit[0:7]).SetToCurrentTime() // automatically set the value to the current time, so that the highest value is the current commit
 
 	logger.Info("custom metrics registered")
 	return collectors
