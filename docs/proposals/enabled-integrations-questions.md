@@ -34,44 +34,19 @@ This determines the shape of the array items in the CRD.
 
 ```yaml
 disabledIntegrations:
-  - "openshift"
+  - "devspaces"
 ```
 
 - **Pro:** Minimal API surface, easy to understand.
 - **Pro:** Follows the pattern used by comma-separated string lists elsewhere in the config (e.g. `domains`, `forbiddenUsernamePrefixes`), but as a proper array.
+- **Pro:** Does not leak internal product information via hardcoded constants or enum values in the CRD schema.
 - **Con:** No room for per-integration metadata (e.g. a display name or URL) without a future API change.
-- **Con:** Free-form strings are prone to typos and mismatches between backend and UI — a misspelled identifier is silently ignored.
+- **Con:** Free-form strings are prone to typos — a misspelled identifier is silently ignored.
 
-### Option B: Typed enum (`IntegrationName`) with kubebuilder validation
+**Decision:** Option A — simple `[]string` keeps the API minimal and avoids exposing internal integration details in the CRD schema. The UI ignores identifiers it does not recognize.
 
-Define a named string type with a `+kubebuilder:validation:Enum` marker and Go constants for each known integration. The CRD field becomes `[]IntegrationName` instead of `[]string`.
-
-```go
-// +kubebuilder:validation:Enum=openshift;openshift-ai;devspaces;ansible-automation-platform;openshift-virtualization
-type IntegrationName string
-
-const (
-    IntegrationOpenShift                 IntegrationName = "openshift"
-    IntegrationOpenShiftAI               IntegrationName = "openshift-ai"
-    IntegrationDevSpaces                 IntegrationName = "devspaces"
-    IntegrationAnsibleAutomationPlatform IntegrationName = "ansible-automation-platform"
-    IntegrationOpenShiftVirtualization   IntegrationName = "openshift-virtualization"
-)
-```
-
-```yaml
-disabledIntegrations:
-  - "openshift"
-```
-
-- **Pro:** Kubernetes rejects invalid values at admission time — immediate feedback on typos.
-- **Pro:** `kubectl explain` shows the valid values — self-documenting.
-- **Pro:** Go constants provide a canonical reference for backend and UI teams.
-- **Con:** Adding a new integration requires an API module change, CRD regeneration, and rollout.
-
-**Decision:** Option B — typed enum with kubebuilder validation. The safety of admission-time validation outweighs the cost of requiring an API change for new integrations. That cost is actually desirable — new integrations should be a deliberate, reviewable change.
-
-_Considered and rejected: Option A — simple `[]string` (too error-prone, no validation), Option C — array of structs (over-engineered for current needs), Option D — comma-separated string (less idiomatic for CRDs)._
+_Considered and rejected: Option B — typed enum with kubebuilder validation (leaks internal product information via hardcoded constants in the CRD), Option C — array of structs (over-engineered for current needs), Option D — comma-separated string (less idiomatic for CRDs)._
+>>>>>>> fd9accf (docs: design of the "disabled integrations" feature)
 
 ---
 

@@ -50,17 +50,7 @@ The field uses a **denylist** approach: the normal state is an empty field (all 
 
 ### Integration identifier
 
-Each integration is represented by a value of the `IntegrationName` type, a named string with kubebuilder enum validation. The valid identifiers are defined as Go constants in the API module:
-
-| Constant | Value |
-|----------|-------|
-| `IntegrationOpenShift` | `"openshift"` |
-| `IntegrationOpenShiftAI` | `"openshift-ai"` |
-| `IntegrationDevSpaces` | `"devspaces"` |
-| `IntegrationAnsibleAutomationPlatform` | `"ansible-automation-platform"` |
-| `IntegrationOpenShiftVirtualization` | `"openshift-virtualization"` |
-
-Kubernetes rejects any value not in this enum at admission time, preventing typos and misconfiguration. Adding a new integration requires an API module change and CRD regeneration.
+Each integration is represented by a **free-form string** (e.g. `"devspaces"`, `"openshift-ai"`). These are identifiers agreed upon between the backend configuration and the UI. No validation is performed on the values at the CRD level — the UI simply ignores identifiers it does not recognize.
 
 ### Default behavior
 
@@ -73,27 +63,14 @@ The `disabledIntegrations` field lives under `spec.host.registrationService` in 
 ### CRD field definition
 
 ```go
-// In api/v1alpha1/toolchainconfig_types.go:
-
-// +kubebuilder:validation:Enum=openshift;openshift-ai;devspaces;ansible-automation-platform;openshift-virtualization
-type IntegrationName string
-
-const (
-    IntegrationOpenShift                 IntegrationName = "openshift"
-    IntegrationOpenShiftAI               IntegrationName = "openshift-ai"
-    IntegrationDevSpaces                 IntegrationName = "devspaces"
-    IntegrationAnsibleAutomationPlatform IntegrationName = "ansible-automation-platform"
-    IntegrationOpenShiftVirtualization   IntegrationName = "openshift-virtualization"
-)
-
-// In RegistrationServiceConfig:
+// In RegistrationServiceConfig (api/v1alpha1/toolchainconfig_types.go):
 
 // DisabledIntegrations specifies the list of integrations that should be
 // hidden/disabled in the UI. When nil or empty, all integrations are
 // considered enabled. Only listed integrations are hidden.
 // +optional
 // +listType=set
-DisabledIntegrations []IntegrationName `json:"disabledIntegrations,omitempty"`
+DisabledIntegrations []string `json:"disabledIntegrations,omitempty"`
 ```
 
 ### REST response
@@ -102,9 +79,9 @@ The existing `UIConfigResponse` in the registration service is extended with a `
 
 ```go
 type UIConfigResponse struct {
-    UICanaryDeploymentWeight int                                `json:"uiCanaryDeploymentWeight"`
-    WorkatoWebHookURL        string                             `json:"workatoWebHookURL"`
-    DisabledIntegrations     []toolchainv1alpha1.IntegrationName `json:"disabledIntegrations"`
+    UICanaryDeploymentWeight int      `json:"uiCanaryDeploymentWeight"`
+    WorkatoWebHookURL        string   `json:"workatoWebHookURL"`
+    DisabledIntegrations     []string `json:"disabledIntegrations"`
 }
 ```
 
@@ -136,9 +113,8 @@ Changes span **three repositories** in the codeready-toolchain ecosystem:
 
 ### Phase 1: API types (`codeready-toolchain/api`)
 
-1. Define the `IntegrationName` type with a `+kubebuilder:validation:Enum` marker and the associated constants in `api/v1alpha1/toolchainconfig_types.go`.
-2. Add `DisabledIntegrations []IntegrationName` to `RegistrationServiceConfig` with `+listType=set` and `+optional` markers.
-3. Run code generation (`make generate`) to update DeepCopy methods and CRD manifests.
+1. Add `DisabledIntegrations []string` to `RegistrationServiceConfig` in `api/v1alpha1/toolchainconfig_types.go` with `+listType=set` and `+optional` markers.
+2. Run code generation (`make generate`) to update DeepCopy methods and CRD manifests.
 
 ### Phase 2: Host operator (`codeready-toolchain/host-operator`)
 
@@ -146,8 +122,8 @@ Changes span **three repositories** in the codeready-toolchain ecosystem:
 
 ### Phase 3: Registration service (`codeready-toolchain/registration-service`)
 
-1. Add a `DisabledIntegrations() []IntegrationName` accessor method on `RegistrationServiceConfig` in `pkg/configuration/configuration.go`. Note: unlike pointer-based fields (e.g. `UICanaryDeploymentWeight`, `WorkatoWebHookURL`) that use `commonconfig.Get*` helpers, this accessor returns the `[]IntegrationName` field directly — nil and empty both mean "nothing disabled," so no default-value wrapper is needed.
-2. Extend `UIConfigResponse` in `pkg/controller/uiconfig.go` to include the `DisabledIntegrations` field (typed as `[]toolchainv1alpha1.IntegrationName`).
+1. Add a `DisabledIntegrations() []string` accessor method on `RegistrationServiceConfig` in `pkg/configuration/configuration.go`. The accessor returns the `[]string` field directly — nil and empty both mean "nothing disabled," so no default-value wrapper is needed.
+2. Extend `UIConfigResponse` in `pkg/controller/uiconfig.go` to include the `DisabledIntegrations` field (`[]string`).
 3. Update the `GetHandler` to populate the new field from configuration, normalizing nil to an empty slice.
 4. Add unit tests for the updated handler.
 
@@ -160,7 +136,7 @@ The UI team will consume the `disabledIntegrations` field from the `/api/v1/uico
 | # | Question | Decision |
 |---|----------|----------|
 | Q1 | Allowlist vs. denylist | Denylist (`disabledIntegrations`) — only list broken integrations |
-| Q2 | Field type | Typed enum `[]IntegrationName` with kubebuilder validation |
+| Q2 | Field type | Simple `[]string` |
 | Q3 | Field placement | Under `spec.host.registrationService` |
 | Q4 | Endpoint | Extend existing `GET /api/v1/uiconfig` |
 | Q5 | Authentication | Keep JWT-secured (no change) |
