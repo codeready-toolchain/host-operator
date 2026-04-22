@@ -143,7 +143,7 @@ func loadTemplatesByTiers(userTierFS embed.FS, root string) (map[string]*tierDat
 		}
 		content, err := userTierFS.ReadFile(name)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to load templates")
+			return nil, fmt.Errorf("unable to load templates: %w", err)
 		}
 		tmpl := template{
 			content: content,
@@ -242,7 +242,7 @@ func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTem
 	tmplObj := &templatev1.Template{}
 	_, _, err := decoder.Decode(userTierTemplate.content, nil, tmplObj)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to generate '%s' UserTier manifest", tierName)
+		return nil, fmt.Errorf("unable to generate '%s' UserTier manifest: %w", tierName, err)
 	}
 
 	tmplProcessor := commonTemplate.NewProcessor(t.scheme)
