@@ -60,7 +60,7 @@ func templatesForAssets(notificationFS embed.FS, root string, setName string) (m
 		}
 		segments := strings.Split(path, "/")
 		if len(segments) != 5 {
-			return nil, fmt.Errorf("unable to load templates: %w", errors.New("path must contain directory and file"))
+			return nil, errors.New("unable to load templates: path must contain directory and file")
 		}
 		directoryName := segments[3]
 		filename := segments[4]

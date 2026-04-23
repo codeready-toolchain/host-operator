@@ -14,7 +14,6 @@ import (
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 
 	templatev1 "github.com/openshift/api/template/v1"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -33,13 +32,13 @@ func CreateOrUpdateResources(ctx context.Context, s *runtime.Scheme, client runt
 	// initialize tier generator, loads templates from assets
 	generator, err := newUserTierGenerator(s, client, namespace, userTiersFS, root)
 	if err != nil {
-		return errors.Wrap(err, "unable to create UserTier generator")
+		return fmt.Errorf("unable to create UserTier generator: %w", err)
 	}
 
 	// create the UserTier resources
 	err = generator.createUserTiers(ctx)
 	if err != nil {
-		return errors.Wrap(err, "unable to create UserTiers")
+		return fmt.Errorf("unable to create UserTiers: %w", err)
 	}
 
 	return nil
@@ -152,7 +151,7 @@ func loadTemplatesByTiers(userTierFS embed.FS, root string) (map[string]*tierDat
 		case "tier.yaml":
 			results[tier].rawTemplates.userTier = &tmpl
 		default:
-			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
+			return nil, fmt.Errorf("unable to load templates: unknown scope for file '%s'", name)
 		}
 	}
 
