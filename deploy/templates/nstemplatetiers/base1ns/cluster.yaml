@@ -136,6 +136,50 @@ objects:
     name: ${SPACE_NAME}-dev
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
+- apiVersion: admissionregistration.k8s.io/v1
+  kind: ValidatingAdmissionPolicy
+  metadata:
+    name: "for-${SPACE_NAME}-vms"
+  spec:
+    failurePolicy: Fail
+    matchConstraints:
+      resourceRules:
+      - apiGroups: ["kubevirt.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["virtualmachines"]
+    validations:
+    - expression: '!has(object.spec.template.spec.domain.memory) || !has(object.spec.template.spec.domain.memory.guest)
+        || quantity(object.spec.template.spec.domain.memory.guest).compareTo(quantity("8Gi"))
+        <= 0'
+      message: VM guest memory must not exceed 8Gi
+    - expression: '!has(object.spec.template.spec.domain.resources) || !has(object.spec.template.spec.domain.resources.limits)
+        || !has(object.spec.template.spec.domain.resources.limits.memory) || quantity(object.spec.template.spec.domain.resources.limits.memory).compareTo(quantity("8Gi"))
+        <= 0'
+      message: VM memory limit must not exceed 8Gi
+    - expression: '!has(object.spec.template.spec.domain.resources) || !has(object.spec.template.spec.domain.resources.requests)
+        || !has(object.spec.template.spec.domain.resources.requests.memory) || quantity(object.spec.template.spec.domain.resources.requests.memory).compareTo(quantity("8Gi"))
+        <= 0'
+      message: VM memory request must not exceed 8Gi
+    - expression: '!has(object.spec.template.spec.domain.resources) || !has(object.spec.template.spec.domain.resources.limits)
+        || !has(object.spec.template.spec.domain.resources.limits.cpu) || quantity(object.spec.template.spec.domain.resources.limits.cpu).compareTo(quantity("2"))
+        <= 0'
+      message: VM CPU limit must not exceed 2
+    - expression: '!has(object.spec.template.spec.domain.resources) || !has(object.spec.template.spec.domain.resources.requests)
+        || !has(object.spec.template.spec.domain.resources.requests.cpu) || quantity(object.spec.template.spec.domain.resources.requests.cpu).compareTo(quantity("2"))
+        <= 0'
+      message: VM CPU request must not exceed 2
+- apiVersion: admissionregistration.k8s.io/v1
+  kind: ValidatingAdmissionPolicyBinding
+  metadata:
+    name: "for-${SPACE_NAME}-vms"
+  spec:
+    policyName: "for-${SPACE_NAME}-vms"
+    validationActions: ["Deny"]
+    matchResources:
+      namespaceSelector:
+        matchLabels:
+            toolchain.dev.openshift.com/space: ${SPACE_NAME}
 parameters:
 - name: SPACE_NAME
   required: true
