@@ -132,6 +132,7 @@ func (r *Reconciler) refreshStatus(ctx context.Context, spc *toolchainv1alpha1.S
 		updateReadyCondition(spc, corev1.ConditionUnknown, toolchainv1alpha1.SpaceProvisionerConfigFailedToDetermineCapacityReason, err.Error())
 		return err
 	}
+	log.FromContext(ctx).Info("updating consumed capacity", "space count", spc.Status.ConsumedCapacity.SpaceCount, "memory usage", spc.Status.ConsumedCapacity.MemoryUsagePercentPerNodeRole)
 
 	capacityCondition := r.determineCapacityReadyState(spc)
 
