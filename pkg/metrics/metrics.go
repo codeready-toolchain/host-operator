@@ -234,6 +234,7 @@ func IncrementSpaceCount(clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Inc()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(1)
+	logger.Info("incremented space-per-cluster count", "clusterName", clusterName, "value", actual.(*atomic.Int32).Load())
 }
 
 // DecrementSpaceCount decreases the number of Spaces for the given member cluster
@@ -241,6 +242,7 @@ func DecrementSpaceCount(clusterName string) {
 	SpaceGaugeVec.WithLabelValues(clusterName).Dec()
 	actual, _ := cachedSpaceCounts.LoadOrStore(clusterName, &atomic.Int32{})
 	actual.(*atomic.Int32).Add(-1)
+	logger.Info("decremented space-per-cluster count", "clusterName", clusterName, "value", actual.(*atomic.Int32).Load())
 }
 
 // IncrementUsersPerActivationCounters updates the activation counters and metrics
