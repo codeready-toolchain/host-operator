@@ -11,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
-	"github.com/pkg/errors"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,12 +76,12 @@ func isAutoApprovalEnabled(userSignup *toolchainv1alpha1.UserSignup, config tool
 func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
+		return false, unknown, fmt.Errorf("unable to get ToolchainConfig: %w", err)
 	}
 
 	autoApproved, err := isAutoApprovalEnabled(userSignup, config)
 	if err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to determine automatic approval")
+		return false, unknown, fmt.Errorf("unable to determine automatic approval: %w", err)
 	}
 
 	if !states.ApprovedManually(userSignup) && !autoApproved {
@@ -106,7 +105,7 @@ func getClusterIfApproved(ctx context.Context, cl runtimeclient.Client, userSign
 		ClusterRoles:     clusterRoles,
 	})
 	if err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
+		return false, unknown, fmt.Errorf("unable to get the optimal target cluster: %w", err)
 	}
 	if clusterName == "" {
 		return states.ApprovedManually(userSignup), notFound, nil

@@ -830,9 +830,8 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 	// set the annotated assessment value: FRAUDULENT or LEGITIMATE
 	userSignup.Annotations[toolchainv1alpha1.UserSignupCaptchaAnnotatedAssessmentAnnotationKey] = newAnnotationName
 
-	go func() {
-		gctx := context.Background()
-		rclient, err := recaptcha.NewClient(gctx)
+	go func(ctx context.Context) {
+		rclient, err := recaptcha.NewClient(ctx)
 		if err != nil {
 			logger.Error(err, "error creating reCAPTCHA client, cannot annotate assessment")
 			return
@@ -844,13 +843,13 @@ func (r *Reconciler) annotateCaptchaAssessment(ctx context.Context, userSignup *
 			Annotation: newAssessmentAnnotation,
 		}
 
-		response, err := rclient.AnnotateAssessment(gctx, annotateRequest)
+		response, err := rclient.AnnotateAssessment(ctx, annotateRequest)
 		if err != nil {
 			logger.Error(err, "error annotating assessment")
 			return
 		}
 		logger.Info("Assessment annotated successfully", "assessment_annotation", newAnnotationName, "response", response.String())
-	}()
+	}(ctx)
 
 }
 

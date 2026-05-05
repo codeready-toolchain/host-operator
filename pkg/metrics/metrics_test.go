@@ -11,6 +11,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
+	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	metricscommontest "github.com/codeready-toolchain/toolchain-common/pkg/test/metrics"
@@ -44,29 +45,48 @@ func TestResetMetrics(t *testing.T) {
 }
 
 func TestGitCommitGauge(t *testing.T) {
-	t.Run("HostOperatorCommitGaugeVec", func(t *testing.T) {
+	t.Run("when commit is longer than 7 characters", func(t *testing.T) {
 		// given
+		version.Commit = "short12-34567890"
 		metrics.Reset()
 		defer metrics.Reset()
 		now := time.Now()
 
 		// when
-		metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890").SetToCurrentTime()
+		metrics.Reset()
 
 		// then
-		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("commit-1234567890")), float64(time.Minute.Seconds()))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("short12")), float64(time.Minute.Seconds()))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("short12-34567890")), float64(time.Minute.Seconds()))
 	})
-	t.Run("HostOperatorShortCommitGaugeVec", func(t *testing.T) {
+	t.Run("when commit is shorter than 7 characters", func(t *testing.T) {
 		// given
+		version.Commit = "short"
 		metrics.Reset()
 		defer metrics.Reset()
 		now := time.Now()
 
 		// when
-		metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890").SetToCurrentTime()
+		metrics.Reset()
 
 		// then
-		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("hash-1234567890")), float64(time.Minute.Seconds()))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("short")), float64(time.Minute.Seconds()))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("short")), float64(time.Minute.Seconds()))
+	})
+
+	t.Run("when commit is empty", func(t *testing.T) {
+		// given
+		version.Commit = ""
+		metrics.Reset()
+		defer metrics.Reset()
+		now := time.Now()
+
+		// when
+		metrics.Reset()
+
+		// then
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorShortCommitGaugeVec.WithLabelValues("")), float64(time.Minute.Seconds()))
+		assert.InDelta(t, float64(now.Unix()), promtestutil.ToFloat64(metrics.HostOperatorCommitGaugeVec.WithLabelValues("")), float64(time.Minute.Seconds()))
 	})
 }
 func TestIncrementMasterUserRecordCount(t *testing.T) {

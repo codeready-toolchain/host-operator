@@ -223,7 +223,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).                                                                                                                                   // condition is reflected from space status
 				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                                                                     // has new target cluster url
-				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2", SecretRef: "existingDevSecret2"}}). // expected secrets are there. The secret names may not match exactly since it is generated the first time it's created
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2", SecretRef: "existingDevSecret2"}}). // nolint:gosec // expected secrets are there. The secret names may not match exactly since it is generated the first time it's created
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
 			spacetest.AssertThatSpace(t, commontest.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
@@ -662,7 +662,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).                                                                                                                                   // condition is reflected from space status
 				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                                                                     // has new target cluster url
-				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2", SecretRef: "existingDevSecret2"}}). // expected secrets are there. The secret names may not match exactly since it is generated the first time it's created
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2", SecretRef: "existingDevSecret2"}}). // nolint:gosec // expected secrets are there. The secret names may not match exactly since it is generated the first time it's created
 				HasFinalizer()
 			// check that the secrets are there
 			secrets := &corev1.SecretList{}
@@ -1241,7 +1241,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasSpecTierName("appstudio-env").
-				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "existingDevSecret"}}). // expected secrets are there. The secret name may not match exactly since it is generated the first time it's created
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env", SecretRef: "existingDevSecret"}}). // nolint:gosec // expected secrets are there. The secret name may not match exactly since it is generated the first time it's created
 				HasFinalizer()
 		})
 	})
