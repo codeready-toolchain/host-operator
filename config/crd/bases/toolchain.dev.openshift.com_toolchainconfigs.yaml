@@ -159,6 +159,10 @@ spec:
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
+                      accountVerifierURL:
+                        description: AccountVerifierURL is the URL used to call the
+                          account verifier service
+                        type: string
                       analytics:
                         description: Keeps parameters necessary for the registration
                           service analytics config
@@ -205,6 +209,15 @@ spec:
                             description: SSORealm specifies the SSO realm name
                             type: string
                         type: object
+                      disabledIntegrations:
+                        description: |-
+                          DisabledIntegrations specifies the list of integrations that should be
+                          hidden/disabled in the UI. When nil or empty, all integrations are
+                          considered enabled. Only listed integrations are hidden.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
                       environment:
                         description: Environment specifies the environment such as
                           prod, stage, unit-tests, e2e-tests, dev, etc
@@ -403,15 +416,6 @@ spec:
                           WorkatoWebHookURL is used by the UI to push events to Marketo for analytics purposes.
                           The webhook URL is unique per environment.
                         type: string
-                      disabledIntegrations:
-                        description: |-
-                          DisabledIntegrations specifies the list of integrations that should be
-                          hidden/disabled in the UI. When nil or empty, all integrations are
-                          considered enabled. Only listed integrations are hidden.
-                        items:
-                          type: string
-                        type: array
-                        x-kubernetes-list-type: set
                     type: object
                   spaceConfig:
                     description: Keeps parameters necessary for configuring Space
