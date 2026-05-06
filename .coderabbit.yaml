@@ -2,24 +2,23 @@ inheritance: true
 knowledge_base:
   linked_repositories:
     - repository: 'codeready-toolchain/registration-service'
-      instructions: |
-        registration-service is the HTTP API for the Developer Sandbox signup flow, deployed and managed by host-operator.
-
-        When reviewing host-operator changes:
-        - Host-operator deploys registration-service via the embedded OpenShift template in deploy/templates/registration-service/registration-service.yaml. Changes to SA/Role/RoleBinding rules there must stay consistent with the cache warm-up list in registration-service's cmd/main.go.
-        - registration-service reads its runtime config from the ToolchainConfig CR (.spec.host.registrationService and referenced secrets). Changes to ToolchainConfig reconciliation or spec fields affect registration-service behavior — check that both sides stay aligned.
-        - ToolchainStatus controller health-checks registration-service at GET /api/v1/health over in-cluster DNS. If registration-service changes its health endpoint or probe behavior, the host-operator check may break.
-        - Both repos consume types from codeready-toolchain/api and utilities from codeready-toolchain/toolchain-common. Flag if host-operator makes assumptions about registration-service's use of these shared types that aren't guaranteed.
-        - The REGISTRATION_SERVICE_IMAGE env var controls which image is deployed. Changes to template parameters or image wiring in toolchainconfig_controller.go should be validated against the template's expected inputs.
+      instructions: >
+        registration-service is the HTTP API and signup frontend, deployed by host-operator. When reviewing changes:
+        - Check if changes to registration-service SA/Role/RoleBinding rules stay consistent with the cache warm-up list in registration-service.
+        - Verify that ToolchainConfig spec or reconciliation changes affecting .spec.host.registrationService fields or referenced secrets stay aligned with registration-service's runtime config readers.
+        - Check if ToolchainStatus health aggregation changes still match registration-service's GET /api/v1/health response contract.
+        - Verify that REGISTRATION_SERVICE_IMAGE wiring or template parameter changes match the embedded template's expected inputs.
+        - Flag changes to shared codeready-toolchain/api types or toolchain-common utilities that registration-service also consumes.
+        - For signup or proxy flow changes, call out when a sibling PR in registration-service or toolchain-e2e may be needed.
 
     - repository: 'codeready-toolchain/member-operator'
-      instructions: |
-        member-operator runs on member clusters and reconciles resources host-operator creates cross-cluster.
-
-        When reviewing host-operator changes:
-        - Host creates UserAccount (via MasterUserRecord) and NSTemplateSet (via Space) on members. Fields, labels, conditions, and status must match what member's useraccount and nstemplateset controllers expect.
-        - ToolchainConfig syncs MemberOperatorConfig to members. Sync logic or spec changes affect member's memberoperatorconfig controller.
-        - ToolchainStatus reads MemberStatus from members. Changes to aggregation or expected fields can break if member produces different output.
-        - ToolchainCluster RBAC (deploy/templates/toolchaincluster/) controls what member's ToolchainCluster controllers can access on host.
-        - Tier templates (NSTemplateTier, TierTemplate, TierTemplateRevision) live on host; member's nstemplateset reads them via cached client. Tier structure or feature flag changes must stay compatible.
-        - SpaceBindingRequest/SpaceRequest CRs live on members but are reconciled by host controllers via member caches. Watch scope or RBAC changes can desync these.
+      instructions: >
+        member-operator runs on member clusters and reconciles resources created cross-cluster by host-operator. When reviewing changes:
+        - Check if changes to UserAccount or NSTemplateSet fields, labels, conditions, or status match what member-operator's useraccount and nstemplateset controllers expect.
+        - Verify that ToolchainConfig sync logic or MemberOperatorConfig spec changes stay compatible with member-operator's memberoperatorconfig controller.
+        - Check if ToolchainStatus aggregation assumptions match the MemberStatus fields member-operator actually produces.
+        - Verify that ToolchainCluster RBAC changes still grant member-operator's controllers the required access.
+        - Check if tier template changes (NSTemplateTier, TierTemplate, TierTemplateRevision) stay compatible with member-operator's nstemplateset controller, which reads them via a cached host client.
+        - Flag if SpaceBindingRequest/SpaceRequest watch scope or RBAC changes could desync member-side resources.
+        - Flag changes to shared codeready-toolchain/api types or toolchain-common utilities that member-operator also consumes.
+        - For provisioning flow changes, call out when a sibling PR in member-operator or toolchain-e2e may be needed.
