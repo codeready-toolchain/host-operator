@@ -1,12 +1,24 @@
 inheritance: true
 knowledge_base:
   linked_repositories:
-    - repository: 'codeready-toolchain/toolchain-common'
+    - repository: 'codeready-toolchain/registration-service'
       instructions: >
-        toolchain-common contains shared controllers, utilities, and libraries used by host-operator.
+        registration-service is the HTTP API and signup frontend, deployed by host-operator. When reviewing changes:
+        - Check if changes to registration-service SA/Role/RoleBinding rules stay consistent with the cache warm-up list in registration-service.
+        - Verify that ToolchainConfig spec or reconciliation changes affecting .spec.host.registrationService fields or referenced secrets stay aligned with registration-service's runtime config readers.
+        - Check if ToolchainStatus health aggregation changes still match registration-service's GET /api/v1/health response contract.
+        - Verify that REGISTRATION_SERVICE_IMAGE wiring or template parameter changes match the embedded template's expected inputs.
+        - Flag changes to shared codeready-toolchain/api types or toolchain-common utilities that registration-service also consumes.
+        - For signup or proxy flow changes, call out when a sibling PR in registration-service or toolchain-e2e may be needed.
 
-        When reviewing host-operator changes:
-        - Check if host-operator is using deprecated or outdated patterns from toolchain-common when newer/better utilities exist.
-        - Verify behavioral assumptions — if host-operator expects specific return values or side effects from toolchain-common functions, check if that behavior is actually implemented.
-        - If host-operator duplicates logic that already exists in toolchain-common (pkg/cluster, pkg/condition, pkg/configuration, pkg/status), suggest using the shared implementation instead.
-        - Flag if host-operator is making assumptions about toolchain-common's internal state or behavior that isn't documented or guaranteed.
+    - repository: 'codeready-toolchain/member-operator'
+      instructions: >
+        member-operator runs on member clusters and reconciles resources created cross-cluster by host-operator. When reviewing changes:
+        - Check if changes to UserAccount or NSTemplateSet fields, labels, conditions, or status match what member-operator's useraccount and nstemplateset controllers expect.
+        - Verify that ToolchainConfig sync logic or MemberOperatorConfig spec changes stay compatible with member-operator's memberoperatorconfig controller.
+        - Check if ToolchainStatus aggregation assumptions match the MemberStatus fields member-operator actually produces.
+        - Verify that ToolchainCluster RBAC changes still grant member-operator's controllers the required access.
+        - Check if tier template changes (NSTemplateTier, TierTemplate, TierTemplateRevision) stay compatible with member-operator's nstemplateset controller, which reads them via a cached host client.
+        - Flag if SpaceBindingRequest/SpaceRequest watch scope or RBAC changes could desync member-side resources.
+        - Flag changes to shared codeready-toolchain/api types or toolchain-common utilities that member-operator also consumes.
+        - For provisioning flow changes, call out when a sibling PR in member-operator or toolchain-e2e may be needed.
