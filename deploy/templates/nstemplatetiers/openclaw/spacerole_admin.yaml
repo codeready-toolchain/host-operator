@@ -1,0 +1,95 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: openclaw-spacerole-admin
+objects:
+
+# Narrow user role applied to all namespaces in the tier.
+# In -dev this is redundant with the admin RBAC embedded in ns_dev.yaml.
+# In -openclaw this is the user's ONLY RBAC — carefully scoped to protect
+# operator-managed Secrets (claw-proxy-ca, claw-gateway-token, llm-keys).
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: openclaw-user
+    namespace: ${NAMESPACE}
+  rules:
+  # Manage the OpenClaw CR lifecycle
+  - apiGroups:
+    - claw.sandbox.redhat.com
+    resources:
+    - claws
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  # View pods for troubleshooting
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    verbs:
+    - get
+    - list
+    - watch
+  # View pod logs for troubleshooting
+  - apiGroups:
+    - ""
+    resources:
+    - pods/log
+    verbs:
+    - get
+    - list
+  # View events for troubleshooting
+  - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - get
+    - list
+    - watch
+  # View Routes to find the OpenClaw URL
+  - apiGroups:
+    - route.openshift.io
+    resources:
+    - routes
+    verbs:
+    - get
+    - list
+    - watch
+  # Create/manage credential Secrets (user's LLM API keys).
+  # Deliberately excludes get/list to prevent reading operator-managed
+  # Secrets like claw-proxy-ca. Users create Secrets via
+  # "kubectl create secret" (requires only create verb).
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - create
+    - update
+    - patch
+    - delete
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${USERNAME}-openclaw-user
+    namespace: ${NAMESPACE}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: openclaw-user
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+
+parameters:
+- name: NAMESPACE
+  required: true
+- name: USERNAME
+  required: true
