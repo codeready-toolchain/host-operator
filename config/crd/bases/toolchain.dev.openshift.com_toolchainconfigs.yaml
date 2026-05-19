@@ -159,6 +159,10 @@ spec:
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
+                      accountVerifierEnabled:
+                        description: AccountVerifierEnabled controls whether the registration
+                          service acts on responses from the account-verifier service.
+                        type: boolean
                       accountVerifierURL:
                         description: AccountVerifierURL is the URL used to call the
                           account verifier service
