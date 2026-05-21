@@ -120,6 +120,15 @@ objects:
         cpu: 10m
         memory: 64Mi
 
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-spacerequests
+    namespace: ${SPACE_NAME}-dev
+  spec:
+    hard:
+      count/spacerequests.toolchain.dev.openshift.com: "1"
+
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
