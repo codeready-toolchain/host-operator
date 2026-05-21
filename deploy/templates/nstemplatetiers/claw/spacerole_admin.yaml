@@ -4,6 +4,21 @@ metadata:
   name: claw-spacerole-admin
 objects:
 
+# RoleBinding to built-in view ClusterRole (read access to most resources, excludes secrets)
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${USERNAME}-view
+    namespace: ${NAMESPACE}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+
+# Custom Role for claw-specific permissions not covered by view
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
@@ -25,39 +40,18 @@ objects:
   - apiGroups:
     - ""
     resources:
-    - pods
+    - pods/exec
     verbs:
     - get
-    - list
-    - watch
-  - apiGroups:
-    - ""
-    resources:
-    - pods/log
-    verbs:
-    - get
-    - list
-  - apiGroups:
-    - ""
-    resources:
-    - events
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - "route.openshift.io"
-    resources:
-    - routes
-    verbs:
-    - get
-    - list
-    - watch
+    - create
   - apiGroups:
     - ""
     resources:
     - secrets
     verbs:
+    - get
+    - list
+    - watch
     - create
     - update
     - patch
