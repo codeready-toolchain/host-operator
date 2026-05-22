@@ -1,0 +1,171 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: claw-claw
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${SPACE_NAME}-claw
+      openshift.io/display-name: ${SPACE_NAME}-claw
+      openshift.io/requester: ${SPACE_NAME}
+    labels:
+      name: ${SPACE_NAME}-claw
+    name: ${SPACE_NAME}-claw
+
+# Role and RoleBindings for CRT administration (not associated with users)
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: exec-pods
+    namespace: ${SPACE_NAME}-claw
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - pods/exec
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - delete
+    - update
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: crtadmin-view
+    namespace: ${SPACE_NAME}-claw
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: crtadmin-users-view
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: crtadmin-pods
+    namespace: ${SPACE_NAME}-claw
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: exec-pods
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: crtadmin-users-view
+
+# ResourceQuota — sized for operator workloads (gateway, proxy, device-pairing)
+# plus headroom for future components and rolling updates.
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-deploy
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    hard:
+      limits.cpu: "8"
+      limits.memory: 10Gi
+      requests.cpu: "1"
+      requests.memory: 3Gi
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: storage
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    hard:
+      limits.ephemeral-storage: 5Gi
+      requests.storage: 15Gi
+      requests.ephemeral-storage: 5Gi
+      count/persistentvolumeclaims: "1"
+# LimitRange — default resource requests/limits for containers
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: resource-limits
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
+
+# NetworkPolicies — sandbox-standard ingress policies
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-same-namespace
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    podSelector: {}
+    ingress:
+    - from:
+      - podSelector: {}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-ingress
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-monitoring
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: monitoring
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-olm-namespaces
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            openshift.io/scc: anyuid
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-console-namespaces
+    namespace: ${SPACE_NAME}-claw
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: console
+    podSelector: {}
+    policyTypes:
+    - Ingress
+parameters:
+- name: SPACE_NAME
+  required: true

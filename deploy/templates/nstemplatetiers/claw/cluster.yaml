@@ -1,0 +1,35 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: claw-cluster-resources
+objects:
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${SPACE_NAME}-claw
+  spec:
+    quota:
+      hard:
+        count/deployments.apps: "5"
+        count/pods: "10"
+        count/routes.route.openshift.io: "3"
+        count/services: "5"
+        count/secrets: "50"
+        count/configmaps: "10"
+    selector:
+      annotations: null
+      labels:
+        matchLabels:
+          toolchain.dev.openshift.com/space: ${SPACE_NAME}
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${SPACE_NAME}-claw
+  spec:
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
+parameters:
+- name: SPACE_NAME
+  required: true
+- name: IDLER_TIMEOUT_SECONDS
+  # 12 hours
+  value: "43200"
