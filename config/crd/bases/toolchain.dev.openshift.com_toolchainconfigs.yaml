@@ -159,10 +159,16 @@ spec:
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
-                      accountVerifierEnabled:
-                        description: AccountVerifierEnabled controls whether the registration
-                          service acts on responses from the account-verifier service.
-                        type: boolean
+                      accountVerifierMode:
+                        description: |-
+                          AccountVerifierMode controls how the registration service handles responses from the account-verifier service.
+                          Valid values are "disabled" (do not call the verifier), "log" (call but only log the response),
+                          and "enabled" (call and enforce the response). Defaults to "log".
+                        enum:
+                        - disabled
+                        - log
+                        - enabled
+                        type: string
                       accountVerifierURL:
                         description: AccountVerifierURL is the URL used to call the
                           account verifier service
