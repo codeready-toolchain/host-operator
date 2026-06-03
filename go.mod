@@ -156,8 +156,3 @@ require (
 go 1.24.4
 
 toolchain go1.24.13
-
-replace (
-	github.com/codeready-toolchain/api => ../api
-	github.com/codeready-toolchain/toolchain-common => ../toolchain-common
-)
