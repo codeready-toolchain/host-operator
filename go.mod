@@ -157,4 +157,4 @@ go 1.24.4
 
 toolchain go1.24.13
 
-replace github.com/codeready-toolchain/api => github.com/fbm3307/toolchainapi v0.0.0-20260604095004-7254759589cb
+replace github.com/codeready-toolchain/api => github.com/fbm3307/toolchainapi v0.0.0-20260608073802-89362d94dca4

@@ -356,6 +356,15 @@ spec:
                               NotificationSender is used to specify which service should be used to send verification notifications. Allowed
                               values are "twilio", "aws".  If not specified, the Twilio sender will be used.
                             type: string
+                          phoneLookupExcludedCountries:
+                            description: |-
+                              PhoneLookupExcludedCountries is a list of ISO 3166-1 alpha-2 country codes (e.g. ["CA", "US"])
+                              for which Twilio Lookup should be skipped. Twilio Lookup data quality is insufficient
+                              for these regions. Canada also has CLNPC regulatory restrictions.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
                           phoneLookupMode:
                             default: log
                             description: |-
