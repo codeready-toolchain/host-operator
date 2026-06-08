@@ -182,6 +182,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(ctx, userSignup, r.setStatusBanned)
 	}
 
+	// Check if the user has been rejected
+	if states.Rejected(userSignup) {
+		if err := r.setStateLabel(ctx, config, userSignup, toolchainv1alpha1.UserSignupStateLabelValueRejected); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, r.updateStatus(ctx, userSignup, r.setStatusRejected)
+	}
+
 	// Check if the user has been deactivated
 	if states.Deactivated(userSignup) {
 		return r.handleDeactivatedUserSignup(ctx, config, userSignup)

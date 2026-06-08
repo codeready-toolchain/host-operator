@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	"context"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -178,6 +179,20 @@ func (u *StatusUpdater) setStatusBanned(ctx context.Context, userSignup *toolcha
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  toolchainv1alpha1.UserSignupUserBannedReason,
+			Message: message,
+		})
+}
+
+// setStatusRejected sets the Complete status to True with a reason of "Rejected" to indicate
+// the user was rejected and will not be provisioned.
+func (u *StatusUpdater) setStatusRejected(ctx context.Context, userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		ctx,
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  toolchainv1alpha1.UserSignupUserRejectedReason,
 			Message: message,
 		})
 }

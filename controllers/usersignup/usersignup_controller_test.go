@@ -3333,6 +3333,59 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	})
 }
 
+func TestUserSignupRejected(t *testing.T) {
+	// given
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueApproved
+	states.SetRejected(userSignup, true)
+
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
+	initObjs := []runtimeclient.Object{
+		userSignup,
+		baseNSTemplateTier,
+		deactivate30Tier,
+		commonsignup.NewUserSignup(commonsignup.WithName("jack"), commonsignup.WithActivations("1"), commonsignup.WithEmail("jack@example.com")),
+		murtest.NewMasterUserRecord(t, "jack", murtest.Email("jack@example.com")),
+	}
+	r, req, _ := prepareReconcile(t, userSignup.Name, config, initObjs...)
+
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+	err = r.Client.Get(context.TODO(), commontest.NamespacedName(commontest.HostOperatorNs, userSignup.Name), userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueRejected, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+
+	// Confirm the status is set to Rejected
+	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupUserRejectedReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "UserIsActive",
+		})
+
+	// Confirm that no MUR was created for this user
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1) // only jack's MUR should exist
+	spacetest.AssertThatSpaces(t, r.Client).HaveCount(0)
+	spacebindingtest.AssertThatSpaceBindings(t, r.Client).HaveCount(0)
+}
+
 func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
