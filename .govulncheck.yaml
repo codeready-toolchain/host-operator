@@ -1,19 +1,109 @@
 ignored-vulnerabilities:
-  # Incorrect parsing of IPv6 host literals in net/url
-  # Found in: net/url@go1.24.13
-  # Fixed in: net/url@go1.25.8
-  - id: GO-2026-4601
-    info: https://pkg.go.dev/vuln/GO-2026-4601
-    silence-until: 2026-04-08
-  # FileInfo can escape from a Root in os
-  # Found in: os@go1.24.13
-  # Fixed in: os@go1.25.8
-  - id: GO-2026-4602
-    info: https://pkg.go.dev/vuln/GO-2026-4602
-    silence-until: 2026-04-08
-  # URLs in meta content attribute actions are not escaped in html/template
-  # Found in: html/template@go1.24.13
-  # Fixed in: html/template@go1.25.8
-  - id: GO-2026-4603
-    info: https://pkg.go.dev/vuln/GO-2026-4603
-    silence-until: 2026-04-08
+    # Incorrect parsing of IPv6 host literals in net/url
+    # Found in: net/url@go1.24.13
+    # Fixed in: net/url@go1.25.8
+    - id: GO-2026-4601
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4601
+    # FileInfo can escape from a Root in os
+    # Found in: os@go1.24.13
+    # Fixed in: os@go1.25.8
+    - id: GO-2026-4602
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4602
+    # URLs in meta content attribute actions are not escaped in html/template
+    # Found in: html/template@go1.24.13
+    # Fixed in: html/template@go1.25.8
+    - id: GO-2026-4603
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4603
+    # JsBraceDepth Context Tracking Bugs (XSS) in html/template
+    # Found in: html/template@go1.24.13
+    # Fixed in: html/template@go1.25.9
+    - id: GO-2026-4865
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4865
+    # Unauthenticated TLS 1.3 KeyUpdate record can cause persistent connection retention and DoS in crypto/tls
+    # Found in: crypto/tls@go1.24.13
+    # Fixed in: crypto/tls@go1.25.9
+    - id: GO-2026-4870
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4870
+    # Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net
+    # Found in: net/http@go1.24.13
+    # Fixed in: net/http@go1.25.10
+    - id: GO-2026-4918
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4918
+    # Inefficient policy validation in crypto/x509
+    # Found in: crypto/x509@go1.24.13
+    # Fixed in: crypto/x509@go1.25.9
+    - id: GO-2026-4946
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4946
+    # Unexpected work during chain building in crypto/x509
+    # Found in: crypto/x509@go1.24.13
+    # Fixed in: crypto/x509@go1.25.9
+    - id: GO-2026-4947
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4947
+    # Panic in Dial and LookupPort when handling NUL byte on Windows in net
+    # Found in: net@go1.24.13
+    # Fixed in: net@go1.25.10
+    - id: GO-2026-4971
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4971
+    # Quadratic string concatenation in consumePhrase in net/mail
+    # Found in: net/mail@go1.24.13
+    # Fixed in: net/mail@go1.25.10
+    - id: GO-2026-4977
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4977
+    # Escaper bypass leads to XSS in html/template
+    # Found in: html/template@go1.24.13
+    # Fixed in: html/template@go1.25.10
+    - id: GO-2026-4980
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4980
+    # Bypass of meta content URL escaping causes XSS in html/template
+    # Found in: html/template@go1.24.13
+    # Fixed in: html/template@go1.25.10
+    - id: GO-2026-4982
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4982
+    # Quadratic string concatentation in consumeComment in net/mail
+    # Found in: net/mail@go1.24.13
+    # Fixed in: net/mail@go1.25.10
+    - id: GO-2026-4986
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-4986
+    # Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna
+    # Found in: golang.org/x/net/idna@v0.48.0
+    # Fixed in: golang.org/x/net/idna@v0.55.0
+    - id: GO-2026-5026
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-5026
+    # Inefficient candidate hostname parsing in crypto/x509
+    # Found in: crypto/x509@go1.24.13
+    # Fixed in: crypto/x509@go1.25.11
+    - id: GO-2026-5037
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-5037
+    # Quadratic complexity in WordDecoder.DecodeHeader in mime
+    # Found in: mime@go1.24.13
+    # Fixed in: mime@go1.25.11
+    - id: GO-2026-5038
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-5038
+    # Arbitrary inputs are included in errors without any escaping in net/textproto
+    # Found in: net/textproto@go1.24.13
+    # Fixed in: net/textproto@go1.25.11
+    - id: GO-2026-5039
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-5039
+    # Invoking Encrypted Client Hello privacy leak in crypto/tls
+    # Found in: crypto/tls@go1.24.13
+    # Fixed in: crypto/tls@go1.25.12
+    - id: GO-2026-5856
+      silence-until: 2026-08-19
+      info: https://pkg.go.dev/vuln/GO-2026-5856
