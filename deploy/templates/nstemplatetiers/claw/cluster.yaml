@@ -31,5 +31,5 @@ parameters:
 - name: SPACE_NAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
-  # 12 hours
-  value: "43200"
+  # no idling for claw resources
+  value: "0"
