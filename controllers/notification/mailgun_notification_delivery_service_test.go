@@ -185,7 +185,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 			var formValues url.Values
 			obs := func(request *http.Request, mock gock.Mock) {
-				err := request.ParseMultipartForm(-1)
+				err := request.ParseMultipartForm(-1) //nolint:gosec
 				require.NoError(t, err)
 				formValues = request.Form
 			}

@@ -22,12 +22,13 @@ jobs:
     steps:
     # Checkout from PR event
     - name: Checkout code from PR event
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       if: ${{ github.event_name == 'pull_request_target' }}
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
         fetch-depth: 0
+        allow-unsafe-pr-checkout: true
 
     # If the workflow was triggered based on comment, then we need to get the information about the PR
     # Is executed only for comment events
@@ -43,20 +44,21 @@ jobs:
     # Checkout the code based on the data retrieved from the previous step
     # Is executed only for comment events
     - name: Checkout code from PR
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       if: ${{ github.event_name == 'issue_comment' }}
       with:
         repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
         ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
         fetch-depth: 0
+        allow-unsafe-pr-checkout: true
 
     - name: Install Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version-file: go.mod
 
     - name: Cache dependencies
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles ('**/go.sum') }}
