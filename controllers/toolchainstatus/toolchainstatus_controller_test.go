@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +19,6 @@ import (
 	metricstest "github.com/codeready-toolchain/host-operator/test/metrics"
 	toolchainstatustest "github.com/codeready-toolchain/host-operator/test/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/version"
-	"github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -71,12 +69,9 @@ const respBodyGood = `{"alive":true,"environment":"prod","revision":"` + buildCo
 const respBodyInvalid = `{"not found"}`
 const respBodyBad = `{"alive":false,"environment":"prod","revision":"` + buildCommitSHA + `","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
-var mockLastGitHubAPICall = time.Now().Add(-time.Minute * 2)
-var defaultGitHubClient = test.MockGitHubClientForRepositoryCommits(buildCommitSHA, time.Now().Add(-time.Hour*1))
-
 var logger = logf.Log.WithName("toolchainstatus_controller_test")
 
-func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient, lastGitHubAPICall time.Time, mockedGetGitHubClient client.GetGitHubClientFunc, memberClusters []string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient, memberClusters []string, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -95,17 +90,13 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 			}
 			return clusters
 		},
-		VersionCheckManager: status.VersionCheckManager{GetGithubClientFunc: mockedGetGitHubClient, LastGHCallsPerRepo: map[string]time.Time{
-			"host-operator":        lastGitHubAPICall,
-			"registration-service": lastGitHubAPICall,
-		}},
 	}
 	metricstest.ResetCounters(t, fakeClient)
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 
 func prepareReconcileWithStatusConditions(t *testing.T, requestName string, memberClusters []string, conditions []toolchainv1alpha1.Condition, initObjs ...runtimeclient.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
-	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, memberClusters, initObjs...)
+	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters, initObjs...)
 
 	// explicitly set the conditions, so they are not empty/unknown
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
@@ -134,7 +125,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 	t.Run("No toolchainstatus resource found", func(t *testing.T) {
 		// given
 		requestName := "bad-name"
-		reconciler, req, _ := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"})
+		reconciler, req, _ := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -147,7 +138,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
 		requestName := toolchainconfig.ToolchainStatusName
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"})
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 				return fmt.Errorf("get failed")
@@ -180,12 +171,10 @@ func TestToolchainStatusConditions(t *testing.T) {
 		githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
 			"accessToken": []byte("abcd1234"),
 		})
-		commitTimeStamp := time.Now().Add(-time.Hour * 1)
-		version.Commit = buildCommitSHA // let's set the build version to a constant value
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := toolchainstatustest.NewToolchainStatus()
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(buildCommitSHA, commitTimeStamp), []string{"member-1", "member-2"},
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
 
 		// when
@@ -198,12 +187,10 @@ func TestToolchainStatusConditions(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 			)).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 			HasRegistrationServiceStatus(registrationServiceReady(
 				conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-				conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 			)). // also regservice is not up-to-date since we return the same mocked github commit
 			HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 	})
@@ -216,7 +203,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
 			// given
 			resetFunc := test.UnsetEnvVarAndRestore(t, commonconfig.OperatorNameEnvVar)
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
@@ -230,16 +217,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions("",
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason, "unable to get the deployment: OPERATOR_NAME must be set"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
@@ -252,17 +238,16 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason, "unable to get the deployment: deployments.apps \"host-operator-controller-manager\" not found"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -275,17 +260,16 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotReadyReason, "deployment has unready status conditions: Available"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -298,169 +282,12 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
 					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotReadyReason, "deployment has unready status conditions: Progressing"),
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
 				)).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
-		t.Run("Host operator and registration service deployments version are not up to date", func(t *testing.T) {
-			// given
-			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-			// we have a secret that contains the access token for GitHub authenticated APIs
-			githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
-				"accessToken": []byte("abcd1234"),
-			})
-			commitTimeStamp := time.Now().Add(-time.Hour * 1)
-			version.Commit = buildCommitSHA                                                                                                                                                                                          // let's set the build version to a constant value
-			latestCommitSHA := "xxxxaaaaa"                                                                                                                                                                                           // we set the latest commit to something that differs from the `buildCommitSHA` constant
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
-				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
-
-			// when
-			res, err := reconciler.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			assert.Equal(t, requeueResult, res)
-			toolchainstatustest.AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
-					conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
-				)).
-				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(
-					conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-					conditionNotReady(toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, "deployment version is not up to date with latest github commit SHA. deployed commit SHA "+version.Commit+" ,github latest SHA "+latestCommitSHA+", expected deployment timestamp: "+commitTimeStamp.Add(status.DeploymentThreshold).Format(time.RFC3339)),
-				)). // also regservice is not up-to-date since we return the same mocked github commit
-				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
-		})
-
-		t.Run("deployment version check is disabled", func(t *testing.T) {
-			t.Run("when environment is not prod", func(t *testing.T) {
-				// given
-				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("dev"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
-				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-				// we have a secret that contains the access token for GitHub authenticated APIs
-				githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
-					"accessToken": []byte("abcd1234"),
-				})
-				commitTimeStamp := time.Now().Add(-time.Hour * 1)
-				latestCommitSHA := "xxxxaaaaa"
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
-					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
-
-				// when
-				res, err := reconciler.Reconcile(context.TODO(), req)
-
-				// then
-				require.NoError(t, err)
-				assert.Equal(t, requeueResult, res)
-				toolchainstatustest.AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-					HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
-						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "is not running in prod environment"),
-					)).
-					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReady(
-						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "is not running in prod environment"),
-					)).
-					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
-			})
-
-			t.Run("when environment is prod but github secret is not present", func(t *testing.T) {
-				// given
-				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"),
-					testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken")) // the secret is not present
-				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-				commitTimeStamp := time.Now().Add(-time.Hour * 1)
-				latestCommitSHA := "xxxxaaaaa"
-				githubSecret := test.CreateSecret("othersecret", test.HostOperatorNs, map[string][]byte{ // we create some other random secret
-					"mykey": []byte("abcd1234"),
-				})
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, test.MockGitHubClientForRepositoryCommits(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"}, // github has a new commit that was not deployed
-					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
-
-				// when
-				res, err := reconciler.Reconcile(context.TODO(), req)
-
-				// then
-				require.NoError(t, err)
-				assert.Equal(t, requeueResult, res)
-				toolchainstatustest.AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-					HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
-						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"),
-					)).
-					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReady(
-						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"),
-					)).
-					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
-			})
-
-			t.Run("when environment is prod ,github secret is present but last github api call is not satisfied", func(t *testing.T) {
-				// given
-				// we have a toolchain status with some revision check conditions already present
-				// so that we check if they are preserved and not lost.
-				existingToolchainStatus := toolchainstatustest.NewToolchainStatus(
-					toolchainstatustest.WithHost(),
-					toolchainstatustest.WithRegistrationService(
-						toolchainstatustest.WithDeploymentCondition(
-							toolchainv1alpha1.Condition{
-								Type:   toolchainv1alpha1.ConditionReady,
-								Status: corev1.ConditionTrue,
-								Reason: toolchainv1alpha1.ToolchainStatusDeploymentReadyReason,
-							}),
-					),
-				)
-				existingToolchainStatus.Status.HostOperator.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
-					existingToolchainStatus.Status.HostOperator.RevisionCheck.Conditions, toolchainv1alpha1.Condition{
-						Type:   toolchainv1alpha1.ConditionReady,
-						Status: corev1.ConditionTrue,
-						Reason: toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason,
-					})
-				existingToolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
-					existingToolchainStatus.Status.RegistrationService.RevisionCheck.Conditions, toolchainv1alpha1.Condition{
-						Type:   toolchainv1alpha1.ConditionReady,
-						Status: corev1.ConditionTrue,
-						Reason: toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason,
-					})
-				toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"),
-					testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
-				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-				commitTimeStamp := time.Now().Add(-time.Hour * 1)
-				latestCommitSHA := "xxxxaaaaa"
-				githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
-					"accessToken": []byte("abcd1234"),
-				})
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), time.Now().Add(time.Second*1), // let's set the last time we called github at 1 second ago
-					test.MockGitHubClientForRepositoryCommits(latestCommitSHA, commitTimeStamp), []string{"member-1", "member-2"},
-					hostOperatorDeployment, memberStatus, registrationServiceDeployment, existingToolchainStatus, proxyRoute(), toolchainConfig, githubSecret)
-
-				// when
-				res, err := reconciler.Reconcile(context.TODO(), req)
-
-				// then
-				require.NoError(t, err)
-				assert.Equal(t, requeueResult, res)
-				toolchainstatustest.AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-					HasHostOperatorStatus(hostOperatorStatusWithConditions(defaultHostOperatorDeploymentName,
-						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentReadyReason),
-						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
-					)).
-					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReady(
-						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-						conditionReady(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason),
-					)).
-					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
-			})
-		})
 	})
 
 	t.Run("RegistrationService deployment tests", func(t *testing.T) {
@@ -470,7 +297,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
@@ -492,7 +319,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Registration service deployment not ready", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -512,7 +339,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Registration service deployment not progressing", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -538,7 +365,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - http client error", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
@@ -557,7 +384,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - bad status code", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
@@ -576,7 +403,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -595,7 +422,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - not alive", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -622,7 +449,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("proxy route not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
 
 			// when
@@ -635,7 +462,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostRoutesTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus("", proxyRouteUnavailable("routes.route.openshift.io \"api\" not found"))
 		})
 
@@ -644,7 +471,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			route := proxyRoute()
 			route.Spec.TLS = nil
 			route.Spec.Path = "/api"
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, route)
 
 			// when
@@ -657,7 +484,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus("http://api-toolchain-host-operator.apps.host-cluster/api", hostRoutesAvailable())
 		})
 	})
@@ -669,7 +496,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := toolchainstatustest.NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{},
 				hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 
 			// when
@@ -685,7 +512,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(
 					registrationServiceReady(
 						conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason),
-						conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+					)).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -712,7 +539,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			for i := range 10 {
 				initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("jack-space-%d", i), spacetest.WithSpecTargetCluster("member-2")))
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{}, initObjs...)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, initObjs...)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -727,7 +554,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -749,7 +576,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			for i := range 10 {
 				initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("user2-%d", i), spacetest.WithSpecTargetCluster("member-2")))
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-2"}, initObjs...)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"}, initObjs...)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -764,7 +591,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", ready()),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -786,7 +613,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			for i := range 10 {
 				initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("user2-%d", i), spacetest.WithSpecTargetCluster("member-2")))
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1"}, initObjs...)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1"}, initObjs...)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -801,7 +628,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", ready()),
 					memberCluster("member-2", noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -812,7 +639,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", notReady("NoMemberClustersFound", "no member clusters found")),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -825,14 +652,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := toolchainstatustest.NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 
 			// when
@@ -848,7 +675,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 					memberCluster("member-2", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -856,7 +683,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			emptyToolchainStatus := toolchainstatustest.NewToolchainStatus()
 			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 
 			// when
@@ -872,7 +699,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 					memberCluster("member-2", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -884,7 +711,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", notReady("ComponentsNotReady", "some cool error")),
 				memberCluster("member-2", ready()),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -897,7 +724,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -905,7 +732,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus()
 			toolchainStatus := toolchainstatustest.NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
@@ -918,7 +745,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1"), memberCluster("member-2")).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -945,7 +772,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				for i := range 10 {
 					initObjs = append(initObjs, spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("user-%d", i), spacetest.WithSpecTargetCluster("member-3")))
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"}, initObjs...)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, initObjs...)
 
 				// when
 				res, err := reconciler.Reconcile(context.TODO(), req)
@@ -961,7 +788,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 						memberCluster("member-2", ready()),
 						memberCluster("member-3", noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
-					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 			})
 
@@ -970,7 +797,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 					memberCluster("removed-cluster", ready()), // will move to `NotReady` since there is no MemberStatus for this cluster
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 				// when
@@ -983,7 +810,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+					HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 					HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 			})
 		})
@@ -1005,7 +832,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			for i := range 20 {
 				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, fmt.Sprintf("user-%d", i), murtest.TargetCluster("member-2"), murtest.Email(fmt.Sprintf("user-%d@example.com", i))))
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"},
 				initObjs...)
 
 			// when
@@ -1020,7 +847,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasMemberClusterStatus(
 					memberCluster("member-2", ready()), // member-1 status should be removed, only member-2 should remain
 				).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 		})
 
@@ -1045,8 +872,6 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		defer metrics.Reset()
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			mockLastGitHubAPICall,
-			defaultGitHubClient,
 			[]string{"member-1", "member-2"},
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
@@ -1135,7 +960,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		t.Run("no notificaion created", func(t *testing.T) {
 			// given
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 			// when
@@ -1149,7 +974,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason), conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided"))).
+				HasRegistrationServiceStatus(registrationServiceReady(conditionReady(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason))).
 				HasHostRoutesStatus(hostProxyURL, hostRoutesAvailable())
 
 			// Confirm there is no notification
@@ -1163,7 +988,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 			// when
@@ -1193,7 +1018,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
-					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 						hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, invalidConfig, proxyRoute())
 
 					// when
@@ -1229,7 +1054,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					t.Run("for email "+email, func(t *testing.T) {
 						toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
 
-						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 							hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 						// when
@@ -1256,7 +1081,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
 								toolchainStatus.Name), toolchainStatus))
 
-							reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+							reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 								hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 							// when
@@ -1289,7 +1114,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 									toolchainStatus.Name), toolchainStatus))
 
 								// Reconcile in order to update the ready status to false
-								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 								// when
@@ -1308,7 +1133,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 								overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 								// Reconcile once more
-								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 								// when
@@ -1334,7 +1159,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 									toolchainStatus.Name), toolchainStatus))
 
 								// Reconcile in order to update the ready status to false
-								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+								reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRouteInvalid())
 
 								// when
@@ -1353,7 +1178,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 								overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 								// Reconcile once more
-								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), mockLastGitHubAPICall, defaultGitHubClient, []string{"member-1", "member-2"},
+								reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 									hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRouteInvalid())
 
 								// when
@@ -1891,10 +1716,9 @@ func hostOperatorStatusReady() toolchainv1alpha1.HostOperatorStatus {
 	}
 }
 
-func hostOperatorStatusWithConditions(deploymentName string, hostOperatorStatusCondition, revisionCheckCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostOperatorStatus {
+func hostOperatorStatusWithConditions(deploymentName string, hostOperatorStatusCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostOperatorStatus {
 	return toolchainv1alpha1.HostOperatorStatus{
 		Conditions:     []toolchainv1alpha1.Condition{hostOperatorStatusCondition},
-		RevisionCheck:  toolchainv1alpha1.RevisionCheck{Conditions: []toolchainv1alpha1.Condition{revisionCheckCondition}},
 		BuildTimestamp: version.BuildTime,
 		DeploymentName: deploymentName,
 		Revision:       version.Commit,
@@ -1974,7 +1798,7 @@ type regTestDeployStatus struct {
 	condition      toolchainv1alpha1.Condition
 }
 
-func registrationServiceReady(healthCondition, revisionCheckCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
+func registrationServiceReady(healthCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
 	deploy := regTestDeployStatus{
 		deploymentName: defaultRegistrationServiceName,
 		condition: toolchainv1alpha1.Condition{
@@ -1983,7 +1807,7 @@ func registrationServiceReady(healthCondition, revisionCheckCondition toolchainv
 			Reason: toolchainv1alpha1.ToolchainStatusDeploymentReadyReason,
 		},
 	}
-	return registrationServiceStatus(deploy, healthCondition, revisionCheckCondition)
+	return registrationServiceStatus(deploy, healthCondition)
 }
 
 func registrationServiceDeploymentNotReady(reason, msg string) toolchainv1alpha1.HostRegistrationServiceStatus {
@@ -2003,13 +1827,7 @@ func registrationServiceDeploymentNotReady(reason, msg string) toolchainv1alpha1
 		Reason: "RegServiceReady",
 	}
 
-	revisionCheckCondition := toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.ConditionReady,
-		Status:  corev1.ConditionTrue,
-		Reason:  toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason,
-		Message: "access token key is not provided",
-	}
-	return registrationServiceStatus(deploy, healtCondition, revisionCheckCondition)
+	return registrationServiceStatus(deploy, healtCondition)
 }
 
 func registrationServiceHealthNotReady(msg string) toolchainv1alpha1.HostRegistrationServiceStatus {
@@ -2029,12 +1847,10 @@ func registrationServiceHealthNotReady(msg string) toolchainv1alpha1.HostRegistr
 		Message: msg,
 	}
 
-	revisionCheckCondition := toolchainv1alpha1.Condition{}
-
-	return registrationServiceStatus(deploy, healthCondition, revisionCheckCondition)
+	return registrationServiceStatus(deploy, healthCondition)
 }
 
-func registrationServiceStatus(deploy regTestDeployStatus, healthCondition, revisionCheckCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
+func registrationServiceStatus(deploy regTestDeployStatus, healthCondition toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
 	hostRegSerStatus := toolchainv1alpha1.HostRegistrationServiceStatus{
 		Deployment: toolchainv1alpha1.RegistrationServiceDeploymentStatus{
 			Name:       deploy.deploymentName,
@@ -2043,9 +1859,6 @@ func registrationServiceStatus(deploy regTestDeployStatus, healthCondition, revi
 		Health: toolchainv1alpha1.RegistrationServiceHealth{
 			Conditions: []toolchainv1alpha1.Condition{healthCondition},
 		},
-	}
-	if !reflect.ValueOf(revisionCheckCondition).IsZero() {
-		hostRegSerStatus.RevisionCheck = toolchainv1alpha1.RevisionCheck{Conditions: []toolchainv1alpha1.Condition{revisionCheckCondition}}
 	}
 	return hostRegSerStatus
 }
