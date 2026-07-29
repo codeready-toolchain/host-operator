@@ -165,7 +165,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus().GitHubSecretRef("github").GitHubSecretAccessTokenKey("accessToken"))
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment("prod"), testconfig.ToolchainStatus())
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		// we have a secret that contains the access token for GitHub authenticated APIs
 		githubSecret := test.CreateSecret("github", test.HostOperatorNs, map[string][]byte{
@@ -1289,28 +1289,6 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "Deployment", meta[0].ComponentType)
 	})
 
-	t.Run("test status metadata for host operator revision check not ready", func(t *testing.T) {
-		// given
-		toolchainStatus := toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithHost())
-		toolchainStatus.Status.HostOperator.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
-			toolchainStatus.Status.HostOperator.Conditions, toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.ConditionReady,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
-				Message: "Deployed commit and GitHub commit are not matching",
-			})
-
-		// when
-		meta := ExtractStatusMetadata(toolchainStatus)
-
-		// then
-		require.Len(t, meta, 1)
-		require.Equal(t, "Host Operator", meta[0].ComponentName)
-		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
-		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
-		require.Equal(t, "Revision", meta[0].ComponentType)
-	})
-
 	t.Run("test status metadata for one of two members not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := toolchainstatustest.NewToolchainStatus(
@@ -1365,29 +1343,6 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
 	})
 
-	t.Run("test status metadata for member revision check not ready", func(t *testing.T) {
-		// given
-		toolchainStatus := toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithMember("member-sandbox.ccc.openshiftapps.com"))
-		toolchainStatus.Status.Members[0].MemberStatus.MemberOperator = &toolchainv1alpha1.MemberOperatorStatus{}
-		toolchainStatus.Status.Members[0].MemberStatus.MemberOperator.RevisionCheck.Conditions, _ = condition.AddOrUpdateStatusConditions(
-			toolchainStatus.Status.Members[0].MemberStatus.MemberOperator.RevisionCheck.Conditions, toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.ConditionReady,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
-				Message: "Deployed commit and GitHub commit are not matching",
-			})
-
-		// when
-		meta := ExtractStatusMetadata(toolchainStatus)
-
-		// then
-		require.Len(t, meta, 1)
-		require.Equal(t, "Member Operator Revision", meta[0].ComponentType)
-		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
-		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
-		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
-	})
-
 	t.Run("test status metadata for registration service deployment not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithRegistrationService(toolchainstatustest.WithDeploymentCondition(
@@ -1422,27 +1377,6 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "HealthNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Health error message", meta[0].Message)
 		require.Equal(t, "Health", meta[0].ComponentType)
-	})
-
-	t.Run("test status metadata for registration service revision check not ready", func(t *testing.T) {
-		// given
-		toolchainStatus := toolchainstatustest.NewToolchainStatus(toolchainstatustest.WithRegistrationService(toolchainstatustest.WithRevisionCheckCondition(
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.ConditionReady,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason,
-				Message: "Deployed commit and GitHub commit are not matching",
-			})))
-
-		// when
-		meta := ExtractStatusMetadata(toolchainStatus)
-
-		// then
-		require.Len(t, meta, 1)
-		require.Equal(t, "Registration Service", meta[0].ComponentName)
-		require.Equal(t, toolchainv1alpha1.ToolchainStatusDeploymentNotUpToDateReason, meta[0].Reason)
-		require.Equal(t, "Deployed commit and GitHub commit are not matching", meta[0].Message)
-		require.Equal(t, "Revision", meta[0].ComponentType)
 	})
 }
 
@@ -1712,7 +1646,6 @@ func hostOperatorStatusReady() toolchainv1alpha1.HostOperatorStatus {
 		DeploymentName: defaultHostOperatorDeploymentName,
 		Revision:       version.Commit,
 		Version:        version.Version,
-		RevisionCheck:  toolchainv1alpha1.RevisionCheck{Conditions: []toolchainv1alpha1.Condition{conditionReadyWithMessage(toolchainv1alpha1.ToolchainStatusDeploymentRevisionCheckDisabledReason, "access token key is not provided")}},
 	}
 }
 
@@ -1869,15 +1802,6 @@ func proxyRouteUnavailable(msg string) toolchainv1alpha1.Condition {
 
 func hostRoutesAvailable() toolchainv1alpha1.Condition {
 	return *status.NewComponentReadyCondition("HostRoutesAvailable")
-}
-
-func conditionReadyWithMessage(reason, message string) toolchainv1alpha1.Condition { // nolint:unparam
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.ConditionReady,
-		Status:  corev1.ConditionTrue,
-		Reason:  reason,
-		Message: message,
-	}
 }
 
 func conditionReady(reason string) toolchainv1alpha1.Condition {

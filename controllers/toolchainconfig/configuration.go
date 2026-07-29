@@ -87,13 +87,6 @@ func (c *ToolchainConfig) Environment() string {
 	return commonconfig.GetString(c.cfg.Host.Environment, "prod")
 }
 
-func (c *ToolchainConfig) GitHubSecret() GitHubSecret {
-	return GitHubSecret{
-		s:       c.cfg.Host.ToolchainStatus.GitHubSecret,
-		secrets: c.secrets,
-	}
-}
-
 func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
 	return AutoApprovalConfig{c.cfg.Host.AutomaticApproval}
 }
@@ -188,21 +181,6 @@ func (d DeactivationConfig) UserSignupDeactivatedRetentionDays() int {
 
 func (d DeactivationConfig) UserSignupUnverifiedRetentionDays() int {
 	return commonconfig.GetInt(d.dctv.UserSignupUnverifiedRetentionDays, 7)
-}
-
-type GitHubSecret struct {
-	s       toolchainv1alpha1.GitHubSecret
-	secrets map[string]map[string]string
-}
-
-func (gh GitHubSecret) githubSecret(secretKey string) string {
-	secret := commonconfig.GetString(gh.s.Ref, "")
-	return gh.secrets[secret][secretKey]
-}
-
-func (gh GitHubSecret) AccessTokenKey() string {
-	key := commonconfig.GetString(gh.s.AccessTokenKey, "")
-	return gh.githubSecret(key)
 }
 
 type NotificationsConfig struct {
