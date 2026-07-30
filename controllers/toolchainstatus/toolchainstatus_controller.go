@@ -307,7 +307,7 @@ func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolch
 	// gather the functions for handling registration service status eg. deployment, health endpoint
 	substatusHandlers := []statusHandlerFunc{
 		s.addRegistrationServiceDeploymentStatus,
-		s.addRegistrationServiceHealthAndRevisionCheckStatus,
+		s.addRegistrationServiceHealthStatus,
 	}
 
 	// ensure the registrationservice part of the status is created
@@ -797,8 +797,8 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(ctx 
 	return true
 }
 
-// addRegistrationServiceHealthAndRevisionCheckStatus handles the RegistrationService.Health part of the toolchainstatus
-func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionCheckStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+// addRegistrationServiceHealthStatus handles the RegistrationService.Health part of the toolchainstatus
+func (s *regServiceSubstatusHandler) addRegistrationServiceHealthStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	logger := log.FromContext(ctx)
 	// get the JSON payload from the health endpoint
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
