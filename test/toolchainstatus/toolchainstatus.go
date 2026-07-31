@@ -43,7 +43,6 @@ func WithRegistrationService(options ...RegistrationServiceToolchainStatusOption
 			Deployment:                   toolchainv1alpha1.RegistrationServiceDeploymentStatus{},
 			RegistrationServiceResources: toolchainv1alpha1.RegistrationServiceResourcesStatus{},
 			Health:                       toolchainv1alpha1.RegistrationServiceHealth{},
-			RevisionCheck:                toolchainv1alpha1.RevisionCheck{},
 		}
 		for _, modify := range options {
 			modify(regService)
@@ -64,12 +63,6 @@ func WithDeploymentCondition(condition toolchainv1alpha1.Condition) Registration
 func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
 	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
 		status.Health.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.Health.Conditions, condition)
-	}
-}
-
-func WithRevisionCheckCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
-	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
-		status.RevisionCheck.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.RevisionCheck.Conditions, condition)
 	}
 }
 

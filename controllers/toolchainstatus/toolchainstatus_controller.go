@@ -289,8 +289,6 @@ func (r *Reconciler) hostOperatorHandleStatus(ctx context.Context, toolchainStat
 		allOK = false
 	}
 	operatorStatus.Conditions = deploymentConditions
-
-	operatorStatus.RevisionCheck.Conditions = []toolchainv1alpha1.Condition{*status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusDeploymentUpToDateReason)}
 	toolchainStatus.Status.HostOperator = operatorStatus
 	return allOK
 }
@@ -309,7 +307,7 @@ func (r *Reconciler) registrationServiceHandleStatus(ctx context.Context, toolch
 	// gather the functions for handling registration service status eg. deployment, health endpoint
 	substatusHandlers := []statusHandlerFunc{
 		s.addRegistrationServiceDeploymentStatus,
-		s.addRegistrationServiceHealthAndRevisionCheckStatus,
+		s.addRegistrationServiceHealthStatus,
 	}
 
 	// ensure the registrationservice part of the status is created
@@ -565,16 +563,6 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 				Message:       cond.Message,
 			})
 		}
-
-		cond, found = condition.FindConditionByType(instance.Status.HostOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
-		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, &ComponentNotReadyStatus{
-				ComponentName: "Host Operator",
-				ComponentType: "Revision",
-				Reason:        cond.Reason,
-				Message:       cond.Message,
-			})
-		}
 	}
 
 	if instance.Status.Members != nil {
@@ -603,18 +591,6 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 					})
 				}
 			}
-
-			if member.MemberStatus.MemberOperator != nil {
-				cond, found = condition.FindConditionByType(member.MemberStatus.MemberOperator.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
-				if found && cond.Status != corev1.ConditionTrue {
-					result = append(result, &ComponentNotReadyStatus{
-						ComponentType: "Member Operator Revision",
-						ComponentName: member.ClusterName,
-						Reason:        cond.Reason,
-						Message:       cond.Message,
-					})
-				}
-			}
 		}
 	}
 
@@ -634,16 +610,6 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*Compo
 			result = append(result, &ComponentNotReadyStatus{
 				ComponentName: "Registration Service",
 				ComponentType: "Health",
-				Reason:        cond.Reason,
-				Message:       cond.Message,
-			})
-		}
-
-		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RevisionCheck.Conditions, toolchainv1alpha1.ConditionReady)
-		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, &ComponentNotReadyStatus{
-				ComponentName: "Registration Service",
-				ComponentType: "Revision",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
@@ -831,8 +797,8 @@ func (s *regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(ctx 
 	return true
 }
 
-// addRegistrationServiceHealthAndRevisionCheckStatus handles the RegistrationService.Health part of the toolchainstatus
-func (s *regServiceSubstatusHandler) addRegistrationServiceHealthAndRevisionCheckStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+// addRegistrationServiceHealthStatus handles the RegistrationService.Health part of the toolchainstatus
+func (s *regServiceSubstatusHandler) addRegistrationServiceHealthStatus(ctx context.Context, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	logger := log.FromContext(ctx)
 	// get the JSON payload from the health endpoint
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
