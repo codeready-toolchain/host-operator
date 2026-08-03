@@ -169,12 +169,13 @@ func TestSpaceCountInParallelWithoutGoingNegative(t *testing.T) {
 	allDone := sync.WaitGroup{}
 	for range 100 {
 		for _, clusterName := range []string{"member-1", "member-2"} {
-			allDone.Add(2)
+			allDone.Add(3)
 			go func() {
 				gate.Wait()
 				metrics.IncrementSpaceCount(clusterName)
 				go func() {
 					metrics.DecrementSpaceCount(clusterName)
+					allDone.Done()
 				}()
 				allDone.Done()
 			}()
