@@ -32,6 +32,8 @@ require (
 	sigs.k8s.io/kustomize/kustomize/v5 v5.6.0
 )
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20260803142641-2756b24ebace
+
 require (
 	k8s.io/kubectl v0.33.4
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect

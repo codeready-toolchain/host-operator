@@ -188,7 +188,7 @@ func (t *tierGenerator) initUserTiers() error {
 
 // createUserTiers creates the UserTier resources from the tier map
 func (t *tierGenerator) createUserTiers(ctx context.Context) error {
-	applyCl := commonclient.NewSSAApplyClient(t.client, constants.HostOperatorFieldManager)
+	applyCl := commonclient.NewServerSideApplyClient(t.client, constants.HostOperatorFieldManager)
 
 	for tierName, tierData := range t.templatesByTier {
 		if len(tierData.objects) != 1 {
