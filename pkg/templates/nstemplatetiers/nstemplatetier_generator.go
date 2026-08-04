@@ -45,7 +45,7 @@ func SyncResources(ctx context.Context, s *runtime.Scheme, client runtimeclient.
 
 		bundledTierKeys = append(bundledTierKeys, runtimeclient.ObjectKeyFromObject(toEnsure))
 
-		applyCl := commonclient.NewSSAApplyClient(client, constants.HostOperatorFieldManager)
+		applyCl := commonclient.NewServerSideApplyClient(client, constants.HostOperatorFieldManager)
 		return applyCl.ApplyObject(ctx, toEnsure)
 	}, namespace, metadata, files)
 	if err != nil {

@@ -20,6 +20,6 @@ func CreateOrUpdateResources(ctx context.Context, client runtimeclient.Client, n
 		},
 		Spec: toolchainv1alpha1.ToolchainStatusSpec{},
 	}
-	cl := commonclient.NewSSAApplyClient(client, constants.HostOperatorFieldManager)
+	cl := commonclient.NewServerSideApplyClient(client, constants.HostOperatorFieldManager)
 	return cl.ApplyObject(ctx, toolchainStatus)
 }
