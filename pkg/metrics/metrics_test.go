@@ -160,6 +160,43 @@ func TestDecrementSpaceCount(t *testing.T) {
 		HaveSpacesForCluster("member-2", 1)
 }
 
+func TestSpaceCountInParallelWithoutGoingNegative(t *testing.T) {
+	// given
+	metrics.Reset()
+	defer metrics.Reset()
+	gate := sync.WaitGroup{}
+	gate.Add(1)
+	allDone := sync.WaitGroup{}
+	for range 100 {
+		for _, clusterName := range []string{"member-1", "member-2"} {
+			allDone.Add(3)
+			go func() {
+				gate.Wait()
+				metrics.IncrementSpaceCount(clusterName)
+				go func() {
+					metrics.DecrementSpaceCount(clusterName)
+					allDone.Done()
+				}()
+				allDone.Done()
+			}()
+			go func() {
+				gate.Wait()
+				metrics.DecrementSpaceCount(clusterName)
+				allDone.Done()
+			}()
+		}
+	}
+
+	// when
+	gate.Done()
+	allDone.Wait()
+
+	// then
+	metricstest.AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 0).
+		HaveSpacesForCluster("member-2", 0)
+}
+
 // end spaces tests ------
 
 func TestInitializeCountersFromExistingResources(t *testing.T) {
