@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:latest as build-tools
+FROM registry.access.redhat.com/ubi10/ubi:latest as build-tools
 
 LABEL maintainer "KubeSaw <devsandbox@redhat.com>"
 LABEL author "KubeSaw <devsandbox@redhat.com>"
@@ -8,8 +8,8 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME="KubeSaw" \
     GIT_COMMITTER_EMAIL=devsandbox@redhat.com \
-    GOLANG_VERSION=go1.24.13 \
-    GOLANG_SHA256=1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730
+    GOLANG_VERSION=go1.26.5 \
+    GOLANG_SHA256=5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 

@@ -1,0 +1,102 @@
+# Host Operator
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/codeready-toolchain/host-operator)](https://goreportcard.com/report/github.com/codeready-toolchain/host-operator)
+[![GoDoc](https://godoc.org/github.com/codeready-toolchain/host-operator?status.png)](https://godoc.org/github.com/codeready-toolchain/host-operator)
+[![Codecov.io](https://codecov.io/gh/codeready-toolchain/host-operator/branch/master/graph/badge.svg)](https://codecov.io/gh/codeready-toolchain/host-operator)
+[![Operator CD](https://github.com/codeready-toolchain/host-operator/actions/workflows/operator-cd.yml/badge.svg)](https://github.com/codeready-toolchain/host-operator/actions/workflows/operator-cd.yml)
+[![Image Repository on Quay](https://quay.io/repository/codeready-toolchain/host-operator/status)](https://quay.io/repository/codeready-toolchain/host-operator)
+
+This is the CodeReady Toolchain Host Operator repository. It contains the OpenShift Operator that is deployed on the "host" cluster in the SaaS.
+
+## Build
+
+Requires Go version 1.26.x (1.26.5 or higher) - download for your development environment [here](https://golang.org/dl/).
+
+This repository uses [Go modules](https://github.com/golang/go/wiki/Modules).
+
+## Development
+
+The dev.mk targets in the toolchain-e2e repository can be used to build and deploy the host and member operators for development, or use the [guide](https://github.com/codeready-toolchain/toolchain-e2e/blob/master/dev_install.adoc).
+
+## Releasing operator
+
+The releases of the operator are automatically managed via GitHub Actions workflow defined in this repository.
+
+### Broken release
+
+If there is any broken release that cannot be built & pushed through the pipeline - for example because of this error:
+```
+Invalid bundle toolchain-host-operator.v0.0.321-147-commit-477c4b7-5e49228, bundle specifies a non-existent replacement toolchain-host-operator.v0.0.320-146-commit-f46a8aa-8f94bc0
+```
+then the release has to be fixed manually. In such a case, please follow these steps:
+
+> **Note:** If the problem occurred when releasing registration-service, then don't do anything in the host-operator, but follow the steps in registration-service repo.
+
+1. Log in to quay.io using an account that has the write permissions in quay.io/codeready-toolchain/host-operator repo.
+2. Checkout to the problematic (missing) commit that failed in the pipeline and that has to be manually released.
+3. Run `make podman-push QUAY_NAMESPACE=codeready-toolchain`
+4. Run `make push-to-quay-staging QUAY_NAMESPACE=codeready-toolchain`
+
+### End-to-End tests
+
+#### Background & pairing
+
+E2E tests are not located in this repository - all e2e tests are in [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo, however, it's still possible to run them locally from this repo - see [Running End-to-End Tests](#running-end-to-end-tests).
+
+When there is a change introduced in this repository that should be either covered by e2e tests or requires changes in the already existing tests, then all needed changes should go into the [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo.
+The logic that executes tests in openshift-ci automatically tries to pair PR opened for this (host-operator) repository with a branch that potentially exists in the developer's fork of the [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo. This pairing is based on a branch name.
+
+For example, if a developer with GH account `cooljohn` opens a PR (for host-operator repo) from a branch `fix-reconcile`, then the logic checks if there is a branch `fix-reconcile` also in the `cooljohn/toolchain-e2e` fork.
+If there is, then the logic:
+
+1. clones latest changes from [codeready-toolchain/toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e)
+2. fetches the `fix-reconcile` branch from `cooljohn/toolchain-e2e` fork
+3. merges `master` branch with the changes from `fix-reconcile` branch
+4. clones latest changes from [member-operator](https://github.com/codeready-toolchain/member-operator) repo and builds & deploys the `member-operator` image out of it
+5. builds & deploys the `host-operator` image from the code that is in the PR
+6. runs e2e tests against both operators from the merged branch of the `toolchain-e2e` repo
+
+If the branch with the same name does not exist, then it only clones the latest changes from [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) and runs e2e tests from the `master`.
+
+If you still don't know what to do with e2e tests in some use-cases, go to [What to do](#what-to-do) section where all use-cases are covered.
+
+#### Prerequisites if running locally
+
+* Make sure you have set the `QUAY_NAMESPACE` variable: `export QUAY_NAMESPACE=<quay-username>`
+* Log in to the target OpenShift cluster with cluster admin privileges
+* The visibility of `host-operator` repository in quay is set to public (`https://quay.io/repository/<your-username>/host-operator?tab=settings`)
+
+#### Running End-to-End Tests
+
+Although the e2e tests are in the separated repository, it's still possible to run them from this repo (host-operator) and also against the current code that is at HEAD.
+There are two Makefile targets that will execute the e2e tests:
+
+* `make test-e2e` - this target clones latest changes from [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) and runs e2e tests for both operators from the master. As deployment for `host-operator` it uses the current code that is at HEAD.
+* `make test-e2e-local` - this target doesn't clone anything, but it runs run e2e tests for both operators from the directory `../toolchain-e2e`. As deployment for `host-operator` it uses the current code that is at HEAD.
+
+The tests executed within [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo will take care of creating all needed namespaces with random names (or see below for enforcing some specific namespace names).
+It will also create all required CRDs, role and role bindings for the service accounts, build the images for both operators and push them to the image registry. Finally, it will deploy the operators and run the tests.
+
+> **Note:** you can override the default namespace names where the end-to-end tests are going to be executed - eg.: `make test-e2e HOST_NS=my-host MEMBER_NS=my-member`
+
+##### What to do
+
+If you are still confused by the e2e location, execution and branch pairing, see the following cases and needed steps:
+
+* **Working locally:**
+  * **Need to test your code using the latest version of e2e tests from [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo:**
+    * execute `make test-e2e`
+  * **Need to test your code using e2e tests located in `../toolchain-e2e` repo:**
+    * `make test-e2e-local`
+
+* **Creating a PR:**
+  * **Your PR doesn't need any changes in [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo:**
+    1. check the name of a branch you are going to create a PR for
+    2. make sure that your fork of [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo doesn't contain branch with the same name
+    3. create a PR
+  * **Your PR requires changes in [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo:**
+    1. check the name of a branch you are going to create a PR for
+    2. create a branch with the same name within your fork of [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) repo and put all necessary changes there
+    3. push all changes into both forks of the repositories [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e) and [host-operator](https://github.com/codeready-toolchain/host-operator)
+    4. create a PR for [host-operator](https://github.com/codeready-toolchain/host-operator)
+    5. create a PR for [toolchain-e2e](https://github.com/codeready-toolchain/toolchain-e2e)
