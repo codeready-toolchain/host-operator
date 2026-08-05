@@ -7,12 +7,10 @@ GO111MODULE?=on
 export GO111MODULE
 goarch ?= $(shell go env GOARCH)
 
-GOFORMAT_FILES := $(shell find  . -name '*.go' | grep -vEf ./make/gofmt_exclude)
-
 .PHONY: format-go-code
 ## Formats any go file that does not match formatting defined by gofmt
 format-go-code:
-	$(Q)gofmt -s -l -w ${GOFORMAT_FILES}
+	$(Q)find . -name '*.go' -not -path '*/vendor/*' -not -path '*/.git/*' -exec gofmt -s -l -w {} +
 
 .PHONY: build
 ## Build the operator
