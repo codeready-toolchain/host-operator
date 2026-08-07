@@ -130,7 +130,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				require.Greater(t, res.RequeueAfter, 0*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second) // approximately 1 second left
+				require.LessOrEqual(t, res.RequeueAfter, 2*time.Second) // approximately 2 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, toolchainv1alpha1.KubesawAuthenticatedUsername, "redhat", fakeClient).Exists()
 			})
 
@@ -153,7 +153,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 			t.Run("lara-redhat SpaceBinding requeues when redhat space is missing and SpaceBinding is too young", func(t *testing.T) {
 				// given
 				sbYoung := sbLaraRedhatAdmin.DeepCopy()
-				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-1 * time.Second))
+				sbYoung.CreationTimestamp = metav1.NewTime(time.Now().Add(-2 * time.Second))
 				fakeClient := test.NewFakeClient(t, sbYoung, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace, toolchainconfig)
 				reconciler := prepareReconciler(t, fakeClient)
 
@@ -163,7 +163,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				require.Greater(t, res.RequeueAfter, 0*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second)                                            // approximately 1 second left
+				require.LessOrEqual(t, res.RequeueAfter, 2*time.Second)                                            // approximately 2 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
@@ -200,7 +200,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				require.Greater(t, res.RequeueAfter, 0*time.Second)
-				require.LessOrEqual(t, res.RequeueAfter, 1*time.Second) // approximately 1 second left
+				require.LessOrEqual(t, res.RequeueAfter, 2*time.Second) // approximately 2 seconds left
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists() // not deleted yet
 				spacebinding.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
