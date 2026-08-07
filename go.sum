@@ -29,6 +29,10 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 h1:aBangftG7EVZoUb69Os8IaYg++6uMOdKK83QtkkvJik=
 github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2/go.mod h1:qwXFYgsP6T7XnJtbKlf1HP8AjxZZyzxMmc+Lq5GjlU4=
+github.com/codeready-toolchain/api v0.0.0-20260807111559-e29da2fc346c h1:0fyFQlMi89U2ML+BjwEI3CW4MRJMJjQL7+RjrypxRDQ=
+github.com/codeready-toolchain/api v0.0.0-20260807111559-e29da2fc346c/go.mod h1:jkXNLbwYNA3rjOHZ6z6m8BsCs467LmveCapPQFfQZNY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260807125728-33faed3f17f9 h1:VKIQ1mvALQrHEt4aSlZlNcfXcGX2zCOcskiE2G97RVU=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20260807125728-33faed3f17f9/go.mod h1:TXPJQ/4BLJUA+B2sRnEmxynLJy/HIzMo42xNMEDIilI=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -270,10 +274,6 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
-github.com/xcoulon/api v0.0.0-20260805080027-7512d38caa3b h1:SjizGVyYxkZsFmRkMgL5rxoc5BV5jzesXNwESQ8xwRM=
-github.com/xcoulon/api v0.0.0-20260805080027-7512d38caa3b/go.mod h1:jkXNLbwYNA3rjOHZ6z6m8BsCs467LmveCapPQFfQZNY=
-github.com/xcoulon/toolchain-common v0.0.0-20260805080255-7db4efab1c46 h1:lVjG5XNUbUyavvs920qe4oxDV+j2861VsawM78jsqM0=
-github.com/xcoulon/toolchain-common v0.0.0-20260805080255-7db4efab1c46/go.mod h1:khBByCvZFRNPLT0TKUHPy1icQ3lzRWhnTbtHhev5FwM=
 github.com/xlab/treeprint v1.2.0 h1:HzHnuAF1plUN2zGlAFHbSQP2qJ0ZAD3XF5XD7OesXRQ=
 github.com/xlab/treeprint v1.2.0/go.mod h1:gj5Gd3gPdKtR1ikdDK6fnFLdmIS0X30kTTuNd/WEJu0=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

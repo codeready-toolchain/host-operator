@@ -6,8 +6,8 @@ toolchain go1.26.5
 
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
-	github.com/codeready-toolchain/api v0.0.0-20260731065234-734640c901d2
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20260804130313-0d4161d82454
+	github.com/codeready-toolchain/api v0.0.0-20260807111559-e29da2fc346c
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20260807125728-33faed3f17f9
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-logr/logr v1.4.3
 	github.com/gofrs/uuid v4.4.0+incompatible
@@ -35,10 +35,6 @@ require (
 	sigs.k8s.io/controller-tools v0.18.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.6.0
 )
-
-replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20260805080027-7512d38caa3b
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20260805080255-7db4efab1c46
 
 require (
 	k8s.io/kubectl v0.33.4

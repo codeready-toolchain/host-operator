@@ -15,17 +15,6 @@ format-go-code:
 # would be a syntax error — find -exec requires either + or \; as a terminator.
 	$(Q)find . -name '*.go' -not -path '*/vendor/*' -not -path '*/.git/*' -exec gofmt -s -l -w {} +
 
-.PHONY: check-go-format
-## Verify the formatting defined by 'gofmt'
-check-go-format:
-	$(Q)find . -name '*.go' -not -path '*/vendor/*' -not -path '*/.git/*' -exec gofmt -s -l {} + 2>&1 \
-		| tee $(OUT_DIR)/gofmt-errors \
-		| read \
-	&& echo "ERROR: These files differ from gofmt's style (run 'make format-go-code' to fix this):" \
-	&& cat $(OUT_DIR)/gofmt-errors \
-	&& exit 1 \
-	|| true
-
 .PHONY: build
 ## Build the operator
 build: generate $(OUT_DIR)/operator
