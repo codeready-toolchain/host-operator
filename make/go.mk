@@ -7,6 +7,14 @@ GO111MODULE?=on
 export GO111MODULE
 goarch ?= $(shell go env GOARCH)
 
+.PHONY: format-go-code
+## Formats any go file that does not match formatting defined by gofmt
+format-go-code:
+# The + tells find to batch multiple found files into a single gofmt invocation (like xargs),
+# which is much faster than the alternative \;, which runs gofmt once per file. Removing it
+# would be a syntax error — find -exec requires either + or \; as a terminator.
+	$(Q)find . -name '*.go' -not -path '*/vendor/*' -not -path '*/.git/*' -exec gofmt -s -l -w {} +
+
 .PHONY: build
 ## Build the operator
 build: generate $(OUT_DIR)/operator
