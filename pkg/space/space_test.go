@@ -1,7 +1,6 @@
 package space
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -97,12 +96,13 @@ func TestNewSubSpace(t *testing.T) {
 		spacerequesttest.WithTierName("appstudio"),
 		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
+	subSpaceName := SubSpaceName(parentSpace.Name, sr.Name)
 
 	// when
-	subSpace := NewSubSpace(sr, parentSpace)
+	subSpace := NewSubSpace(sr, parentSpace, subSpaceName)
 
 	// then
-	expectedSubSpace := spacetest.NewSpace(test.HostOperatorNs, SubSpaceName(parentSpace, sr),
+	expectedSubSpace := spacetest.NewSpace(test.HostOperatorNs, subSpaceName,
 		spacetest.WithSpecParentSpace(parentSpace.GetName()),
 		spacetest.WithTierName("appstudio"),
 		spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
@@ -113,33 +113,26 @@ func TestNewSubSpace(t *testing.T) {
 	assert.Equal(t, expectedSubSpace, subSpace)
 }
 
-func TestNewSubSubSpace(t *testing.T) {
-	// given
-	srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
-	sr := spacerequesttest.NewSpaceRequest("jane", "jane-tenant",
-		spacerequesttest.WithTierName("appstudio"),
-		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-	parentSpace := spacetest.NewSpace(test.HostOperatorNs, "parentSpace")
-	subSpace := NewSubSpace(sr, parentSpace)
-	sr2 := spacerequesttest.NewSpaceRequest("jane2", subSpace.GetName()+"-tenant",
-		spacerequesttest.WithTierName("appstudio"),
-		spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-
-	// when
-	subSubSpace := NewSubSpace(sr2, subSpace)
-
-	// then
-	expectedSubSubSpace := spacetest.NewSpace(test.HostOperatorNs, fmt.Sprintf("%s-%s", parentSpace.Name, sr2.UID[:5]),
-		spacetest.WithSpecParentSpace(subSpace.GetName()),
-		spacetest.WithTierName("appstudio"),
-		spacetest.WithSpecTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}),
-		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr2.GetName()),
-		spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr2.GetNamespace()),
-		spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, subSpace.GetName()),
-	)
-	assert.Equal(t, expectedSubSubSpace, subSubSpace)
-
-	// also assert that names don't grow in length as we increase nesting
-	assert.Len(t, subSubSpace.Name, len(subSpace.Name))
-	assert.NotEqual(t, subSpace.Name, subSubSpace.Name)
+func TestSubSpaceName(t *testing.T) {
+	t.Run("short spacerequest name", func(t *testing.T) {
+		assert.Equal(t, "johny-app", SubSpaceName("johny", "app"))
+	})
+	t.Run("exactly 8 characters", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefgh", SubSpaceName("johny", "abcdefgh"))
+	})
+	t.Run("longer than 8 characters", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefgh", SubSpaceName("johny", "abcdefghijklmnop"))
+	})
+	t.Run("trailing dash after truncation", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg", SubSpaceName("johny", "abcdefg-xyz"))
+	})
+	t.Run("trailing dot after truncation", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg", SubSpaceName("johny", "abcdefg.xyz"))
+	})
+	t.Run("trailing dashes and dots after truncation", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdef", SubSpaceName("johny", "abcdef-.xyz"))
+	})
+	t.Run("no trailing dash or dot within 8 chars", func(t *testing.T) {
+		assert.Equal(t, "johny-my-app-f", SubSpaceName("johny", "my-app-foo"))
+	})
 }
