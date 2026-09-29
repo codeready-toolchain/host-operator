@@ -4073,22 +4073,22 @@ func TestCaptchaAnnotatedWhenUserSignupBanned(t *testing.T) {
 		expectedUserSignupCaptchaAnnotatedAssessmentAnnotation string
 	}{
 		"captcha disabled and signup without UserSignupCaptchaAssessmentIDAnnotationKey": {
-			captchEnabled:                                          false, // captcha disabled
-			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			captchEnabled:           false, // captcha disabled
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
 			userSignupCaptchaAssessmentIDAnnotationKey:             "",
 			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
 			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "",
 		},
 		"captcha disabled and signup with UserSignupCaptchaAssessmentIDAnnotationKey": {
-			captchEnabled:                                          false,
-			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			captchEnabled:           false,
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
 			userSignupCaptchaAssessmentIDAnnotationKey:             "captcha-annotation-123",
 			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
 			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // expect assessment annotation to not be set because captcha is disabled
 		},
 		"signup without UserSignupCaptchaAssessmentIDAnnotationKey set": {
-			captchEnabled:                                          true, // captcha enabled
-			userSignupStateLabelKey:                                toolchainv1alpha1.UserSignupStateLabelValueApproved,
+			captchEnabled:           true, // captcha enabled
+			userSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValueApproved,
 			userSignupCaptchaAssessmentIDAnnotationKey:             "",
 			userSignupCaptchaAnnotatedAssessmentAnnotationKey:      "",
 			expectedUserSignupCaptchaAnnotatedAssessmentAnnotation: "", // expect assessment annotation to not be set because there was no assessment ID
