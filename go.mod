@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 go 1.26.0
 
-toolchain go1.26.5
+toolchain go1.26.6
 
 require (
 	cloud.google.com/go/recaptchaenterprise/v2 v2.13.0
