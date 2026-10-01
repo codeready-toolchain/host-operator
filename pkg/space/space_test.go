@@ -127,10 +127,10 @@ func TestSubSpaceName(t *testing.T) {
 		assert.Equal(t, "johny-abcdefg", SubSpaceName("johny", "abcdefg-xyz"))
 	})
 	t.Run("trailing dot after truncation", func(t *testing.T) {
-		assert.Equal(t, "johny-abcdefg", SubSpaceName("johny", "abcdefg.xyz"))
+		assert.Equal(t, "johny-abcdefgx", SubSpaceName("johny", "abcdefg.xyz"))
 	})
 	t.Run("trailing dashes and dots after truncation", func(t *testing.T) {
-		assert.Equal(t, "johny-abcdef", SubSpaceName("johny", "abcdef-.xyz"))
+		assert.Equal(t, "johny-abcdef-x", SubSpaceName("johny", "abcdef-.xyz"))
 	})
 	t.Run("no trailing dash or dot within 8 chars", func(t *testing.T) {
 		assert.Equal(t, "johny-my-app-f", SubSpaceName("johny", "my-app-foo"))
