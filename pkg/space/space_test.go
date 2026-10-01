@@ -114,25 +114,50 @@ func TestNewSubSpace(t *testing.T) {
 }
 
 func TestSubSpaceName(t *testing.T) {
+	t.Run("very short spacerequest name", func(t *testing.T) {
+		assert.Equal(t, "johny-a", SubSpaceName("johny", "a"))
+	})
 	t.Run("short spacerequest name", func(t *testing.T) {
 		assert.Equal(t, "johny-app", SubSpaceName("johny", "app"))
+	})
+	t.Run("short spacerequest name with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-app1", SubSpaceNameWithSuffix("johny", "app", "1"))
 	})
 	t.Run("exactly 8 characters", func(t *testing.T) {
 		assert.Equal(t, "johny-abcdefgh", SubSpaceName("johny", "abcdefgh"))
 	})
+
+	t.Run("exactly 8 characters with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg1", SubSpaceNameWithSuffix("johny", "abcdefgh", "1"))
+	})
 	t.Run("longer than 8 characters", func(t *testing.T) {
 		assert.Equal(t, "johny-abcdefgh", SubSpaceName("johny", "abcdefghijklmnop"))
+	})
+	t.Run("longer than 8 characters with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg1", SubSpaceNameWithSuffix("johny", "abcdefghijklmnop", "1"))
 	})
 	t.Run("trailing dash after truncation", func(t *testing.T) {
 		assert.Equal(t, "johny-abcdefg", SubSpaceName("johny", "abcdefg-xyz"))
 	})
+	t.Run("trailing dash after truncation with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg1", SubSpaceNameWithSuffix("johny", "abcdefg-xyz", "1"))
+	})
 	t.Run("trailing dot after truncation", func(t *testing.T) {
 		assert.Equal(t, "johny-abcdefgx", SubSpaceName("johny", "abcdefg.xyz"))
+	})
+	t.Run("trailing dot after truncation with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdefg1", SubSpaceNameWithSuffix("johny", "abcdefg.xyz", "1"))
 	})
 	t.Run("trailing dashes and dots after truncation", func(t *testing.T) {
 		assert.Equal(t, "johny-abcdef-x", SubSpaceName("johny", "abcdef-.xyz"))
 	})
+	t.Run("trailing dashes and dots after truncation with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-abcdef-1", SubSpaceNameWithSuffix("johny", "abcdef-.xyz", "1"))
+	})
 	t.Run("no trailing dash or dot within 8 chars", func(t *testing.T) {
 		assert.Equal(t, "johny-my-app-f", SubSpaceName("johny", "my-app-foo"))
+	})
+	t.Run("no trailing dash or dot within 8 chars with a suffix", func(t *testing.T) {
+		assert.Equal(t, "johny-my-app-1", SubSpaceNameWithSuffix("johny", "my-app-foo", "1"))
 	})
 }

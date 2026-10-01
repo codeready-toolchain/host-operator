@@ -101,10 +101,17 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 // SubSpaceName generates a base name for a subSpace using the root space name
 // and the first 8 characters of the SpaceRequest name (trimming trailing dashes and dots).
 func SubSpaceName(rootSpaceName, spaceRequestName string) string {
+	return SubSpaceNameWithSuffix(rootSpaceName, spaceRequestName, "")
+}
+
+// SubSpaceName generates a base name for a subSpace using the root space name
+// and the first 8 characters of the SpaceRequest name (trimming trailing dashes and dots).
+func SubSpaceNameWithSuffix(rootSpaceName, spaceRequestName, suffix string) string {
 	shortName := strings.ReplaceAll(spaceRequestName, ".", "") // namespace names cannot contain dots, so we need to remove them before truncating
-	if len(shortName) > maxSpaceRequestNamePrefixLength {
-		shortName = shortName[:maxSpaceRequestNamePrefixLength]
+	if len(shortName)+len(suffix) > maxSpaceRequestNamePrefixLength {
+		shortName = shortName[:maxSpaceRequestNamePrefixLength-len(suffix)]
 	}
+	shortName = fmt.Sprintf("%s-%s%s", rootSpaceName, shortName, suffix)
 	shortName = strings.TrimRight(shortName, "-") // trailing dashes are not allowed in namespace names
-	return fmt.Sprintf("%s-%s", rootSpaceName, shortName)
+	return shortName
 }

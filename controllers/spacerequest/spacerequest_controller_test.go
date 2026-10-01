@@ -117,8 +117,9 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			// the subSpace should have a collision-resolved name ("jane-jan1" instead of "jane-jane")
-			spacetest.AssertThatSpace(t, commontest.HostOperatorNs, "jane-jan1", hostClient).
+			// the subSpace should have a collision-resolved name ("jane-jane1" instead of "jane-jane") since `-jane` is already taken
+			// also, `jane-jane1`'s suffix `jane1` is less than 8 characters, so it is not truncated
+			spacetest.AssertThatSpace(t, commontest.HostOperatorNs, "jane-jane1", hostClient).
 				HasParentSpace(parentSpace.GetName()).
 				HasTier("appstudio-env")
 		})

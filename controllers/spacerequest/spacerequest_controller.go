@@ -273,20 +273,15 @@ func (r *Reconciler) getRootSpaceName(ctx context.Context, space *toolchainv1alp
 }
 
 func (r *Reconciler) resolveSubSpaceName(ctx context.Context, rootSpaceName string, spaceRequest *toolchainv1alpha1.SpaceRequest) (string, error) {
-	baseName := spaceutil.SubSpaceName(rootSpaceName, spaceRequest.Name)
 
 	for attempt := 0; attempt <= 100; attempt++ {
-		name := baseName
+		name := spaceutil.SubSpaceName(rootSpaceName, spaceRequest.Name)
 		if attempt > 0 {
-			suffix := strconv.Itoa(attempt)
-			minLen := len(rootSpaceName) + 2
-			cutPoint := len(baseName) - len(suffix)
-			if cutPoint < minLen {
+			if attempt == 100 {
 				return "", fmt.Errorf("unable to find available name for subSpace after %d attempts", attempt)
 			}
-			name = baseName[:cutPoint] + suffix
+			name = spaceutil.SubSpaceNameWithSuffix(rootSpaceName, spaceRequest.Name, strconv.Itoa(attempt))
 		}
-
 		existingSpace := &toolchainv1alpha1.Space{}
 		err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.Namespace, Name: name}, existingSpace)
 		if errors.IsNotFound(err) {
