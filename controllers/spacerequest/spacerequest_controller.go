@@ -290,6 +290,12 @@ func (r *Reconciler) resolveSubSpaceName(ctx context.Context, rootSpaceName stri
 		if err != nil {
 			return "", errs.Wrap(err, "unable to check for existing space")
 		}
+		// if the existing space has the expected labels, then it means that it already exists so we should return an error
+		// to avoid creating another subSpace for the same spaceRequest
+		if existingSpace.Labels[toolchainv1alpha1.SpaceRequestLabelKey] == spaceRequest.Name &&
+			existingSpace.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] == spaceRequest.Namespace {
+			return "", fmt.Errorf("a subSpace for this spaceRequest already exists: %s", existingSpace.Name)
+		}
 	}
 
 	return "", fmt.Errorf("unable to find available name for subSpace after 100 attempts")

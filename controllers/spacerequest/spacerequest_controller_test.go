@@ -1113,6 +1113,30 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasConditions(spacetest.ProvisioningFailed(cause)). // condition is set to unable to provision Space
 				HasFinalizer()
 		})
+
+		t.Run("subSpace already exists but client cache is not updated", func(t *testing.T) {
+			// given
+			// create a pre-existing space with the name that would be generated ("jane-jane")
+			existingSpace := spacetest.NewSpace(commontest.HostOperatorNs, spaceutil.SubSpaceName(parentSpace.Name, sr.Name),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()))
+			member1 := NewMemberClusterWithClient(commontest.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			hostClient := commontest.NewFakeClient(t, appstudioEnvTier, parentSpace, existingSpace)
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
+				// simulate that the existing space is not found in the list
+				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
+					return nil
+				}
+				return hostClient.Client.List(ctx, list, opts...)
+			}
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "a subSpace for this spaceRequest already exists: jane-jane")
+		})
 	})
 }
 
