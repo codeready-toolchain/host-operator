@@ -248,7 +248,7 @@ func (r *Reconciler) createNewSubSpace(ctx context.Context, spaceRequest *toolch
 
 	subSpace := spaceutil.NewSubSpace(spaceRequest, parentSpace, subSpaceName)
 	err = r.Client.Create(ctx, subSpace)
-	if err != nil && !errors.IsAlreadyExists(err) {
+	if err != nil {
 		return subSpace, errs.Wrap(err, "unable to create subSpace")
 	}
 
