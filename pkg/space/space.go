@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const maxSpaceRequestNamePrefixLength = 8
+
 // NewSpace creates a space CR for a UserSignup object.
 func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string, compliantUserName, tier string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
@@ -66,7 +68,7 @@ func addFeatureToggles(space *toolchainv1alpha1.Space, toggles []toolchainconfig
 }
 
 // NewSubSpace creates a space CR for a SpaceRequest object.
-func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *toolchainv1alpha1.Space {
+func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space, subSpaceName string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
 		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
 		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
@@ -76,7 +78,7 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: parentSpace.GetNamespace(),
-			Name:      SubSpaceName(parentSpace, spaceRequest),
+			Name:      subSpaceName,
 			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
@@ -96,20 +98,20 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 	return space
 }
 
-// SubSpaceName generates a name for a subSpace based on parentSpace name and spacerequest UID.
-func SubSpaceName(parentSpace *toolchainv1alpha1.Space, spacerequest *toolchainv1alpha1.SpaceRequest) string {
-	parentSpaceName := parentSpace.GetName()
+// SubSpaceName generates a base name for a subSpace using the root space name
+// and the first 8 characters of the SpaceRequest name (trimming trailing dashes and dots).
+func SubSpaceName(rootSpaceName, spaceRequestName string) string {
+	return SubSpaceNameWithSuffix(rootSpaceName, spaceRequestName, "")
+}
 
-	// if the parent space is itself a subspace, then we need to strip its UID
-	// suffix to prevent length limitations from kicking in
-	if parentSpace.Spec.ParentSpace != "" && len(parentSpaceName) > 6 {
-		// take off 6 characters to include the dash.  for example,
-		// "parentspace-12345" becomes "parentspace" when we strip the
-		// 5-character UID suffix and the "-"
-		parentSpaceName = string(parentSpaceName[:len(parentSpaceName)-6])
+// SubSpaceName generates a base name for a subSpace using the root space name
+// and the first 8 characters of the SpaceRequest name (trimming trailing dashes and dots).
+func SubSpaceNameWithSuffix(rootSpaceName, spaceRequestName, suffix string) string {
+	shortName := strings.ReplaceAll(spaceRequestName, ".", "") // namespace names cannot contain dots, so we need to remove them before truncating
+	if len(shortName)+len(suffix) > maxSpaceRequestNamePrefixLength {
+		shortName = shortName[:maxSpaceRequestNamePrefixLength-len(suffix)]
 	}
-
-	// only get the first 5 chars from the spacerequest's UID so we can keep
-	// the name within length limits.
-	return fmt.Sprintf("%v-%v", parentSpaceName, string(spacerequest.UID[:5]))
+	shortName = fmt.Sprintf("%s-%s%s", rootSpaceName, shortName, suffix)
+	shortName = strings.TrimRight(shortName, "-") // trailing dashes are not allowed in namespace names
+	return shortName
 }

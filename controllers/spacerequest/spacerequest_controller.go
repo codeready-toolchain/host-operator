@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -235,15 +236,69 @@ func (r *Reconciler) ensureSpace(ctx context.Context, memberCluster cluster.Clus
 }
 
 func (r *Reconciler) createNewSubSpace(ctx context.Context, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, error) {
-	subSpace := spaceutil.NewSubSpace(spaceRequest, parentSpace)
-	err := r.Client.Create(ctx, subSpace)
-	if err != nil && !errors.IsAlreadyExists(err) {
+	rootSpaceName, err := r.getRootSpaceName(ctx, parentSpace)
+	if err != nil {
+		return nil, errs.Wrap(err, "unable to find root space name")
+	}
+
+	subSpaceName, err := r.resolveSubSpaceName(ctx, rootSpaceName, spaceRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	subSpace := spaceutil.NewSubSpace(spaceRequest, parentSpace, subSpaceName)
+	err = r.Client.Create(ctx, subSpace)
+	if err != nil {
 		return subSpace, errs.Wrap(err, "unable to create subSpace")
 	}
 
 	logger := log.FromContext(ctx)
 	logger.Info("created subSpace", "subSpace.Name", subSpace.Name, "spaceRequest.Spec.TargetClusterRoles", spaceRequest.Spec.TargetClusterRoles, "spaceRequest.Spec.TierName", spaceRequest.Spec.TierName, "subSpace.Spec.TargetCluster", subSpace.Spec.TargetCluster)
 	return subSpace, nil
+}
+
+func (r *Reconciler) getRootSpaceName(ctx context.Context, space *toolchainv1alpha1.Space) (string, error) {
+	current := space
+	for current.Spec.ParentSpace != "" {
+		parent := &toolchainv1alpha1.Space{}
+		if err := r.Client.Get(ctx, types.NamespacedName{
+			Namespace: r.Namespace,
+			Name:      current.Spec.ParentSpace,
+		}, parent); err != nil {
+			return "", errs.Wrap(err, "unable to get parent space")
+		}
+		current = parent
+	}
+	return current.Name, nil
+}
+
+func (r *Reconciler) resolveSubSpaceName(ctx context.Context, rootSpaceName string, spaceRequest *toolchainv1alpha1.SpaceRequest) (string, error) {
+
+	for attempt := 0; attempt <= 100; attempt++ {
+		name := spaceutil.SubSpaceName(rootSpaceName, spaceRequest.Name)
+		if attempt > 0 {
+			if attempt == 100 {
+				return "", fmt.Errorf("unable to find available name for subSpace after %d attempts", attempt)
+			}
+			name = spaceutil.SubSpaceNameWithSuffix(rootSpaceName, spaceRequest.Name, strconv.Itoa(attempt))
+		}
+		existingSpace := &toolchainv1alpha1.Space{}
+		err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.Namespace, Name: name}, existingSpace)
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
+		if err != nil {
+			return "", errs.Wrap(err, "unable to check for existing space")
+		}
+		// if the existing space has the expected labels, then it means that it already exists so we should return an error
+		// to avoid creating another subSpace for the same spaceRequest
+		if existingSpace.Labels[toolchainv1alpha1.SpaceRequestLabelKey] == spaceRequest.Name &&
+			existingSpace.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] == spaceRequest.Namespace {
+			return "", fmt.Errorf("a subSpace for this spaceRequest already exists: %s", existingSpace.Name)
+		}
+	}
+
+	return "", fmt.Errorf("unable to find available name for subSpace after 100 attempts")
 }
 
 // updateExistingSubSpace updates the subSpace with the config from the spaceRequest.
