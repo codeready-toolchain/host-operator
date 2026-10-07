@@ -448,7 +448,7 @@ func (r *Reconciler) ensureNewMurIfApproved(
 		if err == nil && !alreadyVerificationRequired {
 			logger.Info("Incremented UserSignupVerificationRequiredTotal metric", "usersignup", userSignup.Name)
 			// increment the verification required counter only the first time the UserSignup status is set to verification required
-			metrics.UserSignupVerificationRequiredTotal.Inc()
+			metrics.UserSignupVerificationRequiredTotal.WithLabelValues(strconv.FormatBool(states.NoProvisioning(userSignup))).Inc()
 		}
 		return err
 	}
@@ -610,7 +610,7 @@ func (r *Reconciler) setStateLabel(
 
 func (r *Reconciler) updateUserSignupMetricsByState(userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
 	if oldState == "" {
-		metrics.UserSignupUniqueTotal.Inc()
+		metrics.UserSignupUniqueTotal.WithLabelValues(strconv.FormatBool(states.NoProvisioning(userSignup))).Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
@@ -625,7 +625,7 @@ func (r *Reconciler) updateUserSignupMetricsByState(userSignup *toolchainv1alpha
 			metrics.UserSignupDeactivatedTotal.Inc()
 		}
 	case toolchainv1alpha1.UserSignupStateLabelValueBanned:
-		metrics.UserSignupBannedTotal.Inc()
+		metrics.UserSignupBannedTotal.WithLabelValues(strconv.FormatBool(states.NoProvisioning(userSignup))).Inc()
 	}
 }
 

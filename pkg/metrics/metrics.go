@@ -19,8 +19,9 @@ var logger = logf.Log.WithName("toolchain_metrics")
 
 // counters
 var (
-	// UserSignupUniqueTotal is incremented only the first time a user signup is created, there is 1 for each unique user
-	UserSignupUniqueTotal prometheus.Counter
+	// UserSignupUniqueTotal is incremented when the UserSignup state label goes from empty to any value
+	// (create or reactivation). Label no_provisioning is "true" if spec.states contains no-provisioning at that moment.
+	UserSignupUniqueTotal *prometheus.CounterVec
 
 	// UserSignupApprovedTotal is incremented each time a user signup is approved, can be multiple times per user if they reactivate multiple times
 	UserSignupApprovedTotal prometheus.Counter
@@ -28,8 +29,9 @@ var (
 	// UserSignupApprovedWithMethodTotal is incremented each time a user signup is approved and includes either 'automatic' or 'manual' labels, can be multiple times per user if they reactivate multiple times
 	UserSignupApprovedWithMethodTotal *prometheus.CounterVec
 
-	// UserSignupBannedTotal is incremented each time a user signup is banned
-	UserSignupBannedTotal prometheus.Counter
+	// UserSignupBannedTotal is incremented each time a user signup is banned.
+	// Label no_provisioning is "true" if spec.states contains no-provisioning at that moment.
+	UserSignupBannedTotal *prometheus.CounterVec
 
 	// UserSignupDeactivatedTotal is incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
 	UserSignupDeactivatedTotal prometheus.Counter
@@ -37,14 +39,17 @@ var (
 	// UserSignupAutoDeactivatedTotal is incremented each time a user signup is automatically deactivated, can be multiple times per user if they reactivate multiple times
 	UserSignupAutoDeactivatedTotal prometheus.Counter
 
-	// UserSignupDeletedWithInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was initiated
-	UserSignupDeletedWithInitiatingVerificationTotal prometheus.Counter
+	// UserSignupDeletedWithInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was initiated.
+	// Label no_provisioning is "true" if spec.states contains no-provisioning at that moment.
+	UserSignupDeletedWithInitiatingVerificationTotal *prometheus.CounterVec
 
-	// UserSignupDeletedWithoutInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was NOT initiated
-	UserSignupDeletedWithoutInitiatingVerificationTotal prometheus.Counter
+	// UserSignupDeletedWithoutInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was NOT initiated.
+	// Label no_provisioning is "true" if spec.states contains no-provisioning at that moment.
+	UserSignupDeletedWithoutInitiatingVerificationTotal *prometheus.CounterVec
 
-	// UserSignupVerificationRequiredTotal is incremented only the first time a user signup requires verification, can be multiple times per user if they reactivate multiple times
-	UserSignupVerificationRequiredTotal prometheus.Counter
+	// UserSignupVerificationRequiredTotal is incremented the first time Complete is set to VerificationRequired in a stint
+	// (can fire again after reactivation). Label no_provisioning is "true" if spec.states contains no-provisioning at that moment.
+	UserSignupVerificationRequiredTotal *prometheus.CounterVec
 )
 
 // gauge with labels
@@ -91,15 +96,15 @@ func init() {
 func initMetrics() {
 	logger.Info("initializing custom metrics")
 	// Counters
-	UserSignupUniqueTotal = newCounter("user_signups_total", "Total number of unique UserSignups")
+	UserSignupUniqueTotal = newCounterVec("user_signups_total", "Total number of UserSignups whose state label was set from empty (create or reactivation)", "no_provisioning")
 	UserSignupApprovedTotal = newCounter("user_signups_approved_total", "Total number of approved UserSignups")
 	UserSignupApprovedWithMethodTotal = newCounterVec("user_signups_approved_with_method_total", "Total number of UserSignups approved, includes either 'automatic' or 'manual' labels for the approval method", "method")
-	UserSignupBannedTotal = newCounter("user_signups_banned_total", "Total number of banned UserSignups")
+	UserSignupBannedTotal = newCounterVec("user_signups_banned_total", "Total number of banned UserSignups", "no_provisioning")
 	UserSignupDeactivatedTotal = newCounter("user_signups_deactivated_total", "Total number of deactivated UserSignups")
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of automatically deactivated UserSignups")
-	UserSignupDeletedWithInitiatingVerificationTotal = newCounter("user_signups_deleted_with_initiating_verification_total", "Total number of UserSignups deleted after verification time trial and with verification initiated")
-	UserSignupDeletedWithoutInitiatingVerificationTotal = newCounter("user_signups_deleted_without_initiating_verification_total", "Total number of deleted UserSignups after verification time trial but without verification initiated")
-	UserSignupVerificationRequiredTotal = newCounter("user_signups_verification_required_total", "Total number of UserSignups that require verification, does not count verification attempts")
+	UserSignupDeletedWithInitiatingVerificationTotal = newCounterVec("user_signups_deleted_with_initiating_verification_total", "Total number of UserSignups deleted after verification time trial and with verification initiated", "no_provisioning")
+	UserSignupDeletedWithoutInitiatingVerificationTotal = newCounterVec("user_signups_deleted_without_initiating_verification_total", "Total number of deleted UserSignups after verification time trial but without verification initiated", "no_provisioning")
+	UserSignupVerificationRequiredTotal = newCounterVec("user_signups_verification_required_total", "Total number of UserSignups that require verification, does not count verification attempts", "no_provisioning")
 	// Gauges with labels
 	SpaceGaugeVec = newGaugeVec("spaces_current", "Current number of Spaces (per member cluster)", "cluster_name")
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)

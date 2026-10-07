@@ -243,10 +243,11 @@ func (r *Reconciler) deleteSignupUnverifiedRetentionPeriod(ctx context.Context, 
 	}
 
 	// increment the appropriate counter, based on whether the phone verification was triggered or not
+	noProvisioning := strconv.FormatBool(states.NoProvisioning(userSignup))
 	if phoneVerificationTriggered {
-		metrics.UserSignupDeletedWithInitiatingVerificationTotal.Inc()
+		metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues(noProvisioning).Inc()
 	} else {
-		metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.Inc()
+		metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues(noProvisioning).Inc()
 	}
 	logger := log.FromContext(ctx)
 	logger.Info("incremented counter", "name", userSignup.Name, "phone verification triggered", phoneVerificationTriggered)
