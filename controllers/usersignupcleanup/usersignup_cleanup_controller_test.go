@@ -116,8 +116,8 @@ func TestUserCleanup(t *testing.T) {
 				statusErr := &apierrors.StatusError{}
 				require.ErrorAs(t, err, &statusErr)
 				require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
-				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
-				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // unchanged
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues("false"))    // unchanged
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues("false")) // unchanged
 			})
 		}
 	})
@@ -144,64 +144,79 @@ func TestUserCleanup(t *testing.T) {
 		require.ErrorAs(t, err, &statusErr)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 		// and verify the metrics
-		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
-		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // incremented
+		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues("false"))    // unchanged
+		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues("false")) // incremented
 
 		t.Run("deletion is not initiated twice", func(t *testing.T) {
 			alreadyDeletedSignupIgnored(t, userSignup)
 		})
 	})
 
-	t.Run("without phone verification initiated", func(t *testing.T) {
-		// given
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(days(8)),
-			commonsignup.VerificationRequiredAgo(days(8)),
-		)
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
-		// when
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-		// then
-		// confirm the UserSignup has been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.True(t, apierrors.IsNotFound(err))
-		require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
-		// and verify the metrics
-		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // unchanged
-		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // incremented
+	for name, noProvisioning := range map[string]bool{
+		"sandbox":         false,
+		"no-provisioning": true,
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given
+			modifiers := []commonsignup.Modifier{
+				commonsignup.CreatedBefore(days(8)),
+				commonsignup.VerificationRequiredAgo(days(8)),
+			}
+			if noProvisioning {
+				modifiers = append(modifiers, commonsignup.NoProvisioning())
+			}
+			label := "false"
+			otherLabel := "true"
+			if noProvisioning {
+				label = "true"
+				otherLabel = "false"
+			}
 
-		t.Run("deletion is not initiated twice", func(t *testing.T) {
-			alreadyDeletedSignupIgnored(t, userSignup)
+			t.Run("without phone verification initiated", func(t *testing.T) {
+				// given
+				userSignup := commonsignup.NewUserSignup(modifiers...)
+				r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+				// when
+				_, err := r.Reconcile(context.TODO(), req)
+				require.NoError(t, err)
+				// then
+				key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+				err = r.Client.Get(context.Background(), key, userSignup)
+				require.True(t, apierrors.IsNotFound(err))
+				require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues(label))
+				metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues(label))
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues(otherLabel))
+
+				t.Run("deletion is not initiated twice", func(t *testing.T) {
+					alreadyDeletedSignupIgnored(t, userSignup)
+				})
+			})
+
+			t.Run("with phone verification initiated", func(t *testing.T) {
+				// given
+				modifiers = append(modifiers, commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserPhoneHashLabelKey, "12345"))
+				userSignup := commonsignup.NewUserSignup(modifiers...)
+				r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+				// when
+				_, err := r.Reconcile(context.TODO(), req)
+				require.NoError(t, err)
+				// then
+				key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+				err = r.Client.Get(context.Background(), key, userSignup)
+				require.True(t, apierrors.IsNotFound(err))
+				require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+				metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues(label))
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues(otherLabel))
+				metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues(label))
+
+				t.Run("deletion is not initiated twice", func(t *testing.T) {
+					alreadyDeletedSignupIgnored(t, userSignup)
+				})
+			})
 		})
-	})
-
-	t.Run("with phone verification initiated", func(t *testing.T) {
-		// given
-		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(days(8)),
-			commonsignup.VerificationRequiredAgo(days(8)),
-			commonsignup.WithLabel(toolchainv1alpha1.UserSignupUserPhoneHashLabelKey, "12345"),
-		)
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
-		// when
-		_, err := r.Reconcile(context.TODO(), req)
-		require.NoError(t, err)
-		// then
-		// confirm the UserSignup has been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.True(t, apierrors.IsNotFound(err))
-		require.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
-		// and verify the metrics
-		metricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeletedWithInitiatingVerificationTotal)    // incremented
-		metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal) // unchanged
-
-		t.Run("deletion is not initiated twice", func(t *testing.T) {
-			alreadyDeletedSignupIgnored(t, userSignup)
-		})
-	})
+	}
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
 
@@ -436,8 +451,8 @@ func alreadyDeletedSignupIgnored(t *testing.T, userSignup *toolchainv1alpha1.Use
 	require.NoError(t, err)
 
 	// And verify that the metrics stay unchanged after they were reset to "0" when we prepared the reconcile above.
-	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal)
-	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithInitiatingVerificationTotal.WithLabelValues("false"))
+	metricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.WithLabelValues("false"))
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {

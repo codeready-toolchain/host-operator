@@ -32,14 +32,14 @@ func TestResetMetrics(t *testing.T) {
 	defer metrics.Reset()
 
 	// when
-	metrics.UserSignupUniqueTotal.Inc()
+	metrics.UserSignupUniqueTotal.WithLabelValues("false").Inc()
 	metrics.SpaceGaugeVec.WithLabelValues("member-1").Set(20)
 	metrics.UserSignupProvisionTimeHistogram.Observe(1)
 
 	metrics.Reset()
 
 	// then
-	metricscommontest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	metricscommontest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	metricscommontest.AssertMetricsGaugeEquals(t, 0, metrics.SpaceGaugeVec.WithLabelValues("member-1"))
 	metricscommontest.AssertAllHistogramBucketsAreEmpty(t, metrics.UserSignupProvisionTimeHistogram)
 }

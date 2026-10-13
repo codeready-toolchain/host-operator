@@ -139,7 +139,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			default:
 				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTier(*deactivate30Tier)
 			}
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false")) // zero because we started with a not-ready state instead of empty as per usual
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 			segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
@@ -382,52 +382,68 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 }
 
 func TestUserSignupVerificationRequiredMetric(t *testing.T) {
-	// given
 	spaceProvisionerConfig := hspc.NewEnabledValidTenantSPC("member1")
-	defer metrics.Reset()
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(
-		commonsignup.ApprovedManually(),
-	)
-	// set verification required to true in spec only, status will be added during reconcile
-	states.SetVerificationRequired(userSignup, true)
-	r, req, _ := prepareReconcile(t, userSignup.Name, nil, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal) // nothing yet since not reconciled yet
 
-	// when
-	_, err := r.Reconcile(context.TODO(), req)
+	for testname, noProvisioning := range map[string]bool{
+		"without no-provisioning": false,
+		"with no-provisioning":    true,
+	} {
+		t.Run(testname, func(t *testing.T) {
+			// given
+			defer metrics.Reset()
+			modifiers := []commonsignup.Modifier{commonsignup.ApprovedManually()}
+			if noProvisioning {
+				modifiers = append(modifiers, commonsignup.NoProvisioning())
+			}
+			userSignup := commonsignup.NewUserSignup(modifiers...)
+			// set verification required to true in spec only, status will be added during reconcile
+			states.SetVerificationRequired(userSignup, true)
+			r, req, _ := prepareReconcile(t, userSignup.Name, nil, spaceProvisionerConfig, userSignup, baseNSTemplateTier)
+			label := "false"
+			otherLabel := "true"
+			if noProvisioning {
+				label = "true"
+				otherLabel = "false"
+			}
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal.WithLabelValues(label)) // nothing yet since not reconciled yet
 
-	// then
-	require.NoError(t, err)
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
 
-	// assert that usersignup status has verification required condition
-	updatedUserSignup := &toolchainv1alpha1.UserSignup{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: commontest.HostOperatorNs,
-		Name:      userSignup.Name,
-	}, updatedUserSignup)
-	require.NoError(t, err)
+			// then
+			require.NoError(t, err)
 
-	// verify that the status has the verification required condition
-	commontest.AssertContainsCondition(t, updatedUserSignup.Status.Conditions, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.UserSignupComplete,
-		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.UserSignupVerificationRequiredReason,
-	})
+			// assert that usersignup status has verification required condition
+			updatedUserSignup := &toolchainv1alpha1.UserSignup{}
+			err = r.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: commontest.HostOperatorNs,
+				Name:      userSignup.Name,
+			}, updatedUserSignup)
+			require.NoError(t, err)
 
-	// Verify the metric
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should be 1 since verification required status was set
+			// verify that the status has the verification required condition
+			commontest.AssertContainsCondition(t, updatedUserSignup.Status.Conditions, toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: corev1.ConditionFalse,
+				Reason: toolchainv1alpha1.UserSignupVerificationRequiredReason,
+			})
 
-	t.Run("second reconcile - metrics counter still equals 1", func(t *testing.T) {
-		// when
-		_, err := r.Reconcile(context.TODO(), req)
+			// Verify the metric
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal.WithLabelValues(label))
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal.WithLabelValues(otherLabel))
 
-		// then
-		require.NoError(t, err)
+			t.Run("second reconcile - metrics counter still equals 1", func(t *testing.T) {
+				// when
+				_, err := r.Reconcile(context.TODO(), req)
 
-		// Verify the metric
-		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should still be 1 since verification required status was already set
-	})
+				// then
+				require.NoError(t, err)
+				commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal.WithLabelValues(label))
+				commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal.WithLabelValues(otherLabel))
+			})
+		})
+	}
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
@@ -456,10 +472,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2) // new MUR created for the user signup + existing MUR for the external user
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.IdentityClaims.PreferredUsername, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -563,10 +579,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		})
 	})
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	commonmetricstest.AssertHistogramBucketEquals(t, 1, 1, metrics.UserSignupProvisionTimeHistogram) // could fail in debug mode
 	segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 }
@@ -598,7 +614,7 @@ func TestUserSignupWithMissingEmailAddressFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -645,7 +661,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -705,7 +721,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			"1,external": 1, // unchanged
 		})
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
@@ -735,7 +751,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
@@ -782,10 +798,10 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Get()
 	segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
@@ -930,8 +946,8 @@ func TestUserSignupFailedMissingTier(t *testing.T) {
 					Reason: "UserIsActive",
 				})
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)                        // incremented, even though the provisioning failed due to missing NSTemplateTier
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false")) // incremented, even though the provisioning failed due to missing NSTemplateTier
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 			metricstest.AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecordsPerDomain(map[string]int{
@@ -996,7 +1012,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 		})
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	metricstest.AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.External): 1,
@@ -1056,7 +1072,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		})
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	metricstest.AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.External): 1,
@@ -1095,7 +1111,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2) // new MUR created for the user signup + existing MUR for the external user
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -1166,7 +1182,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
@@ -1230,7 +1246,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2) // new MUR created for the user signup + existing MUR for the external user
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
@@ -1305,7 +1321,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1367,7 +1383,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// There should be no new MasterUserRecords
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1) // only the existing MUR for the external user
@@ -1429,7 +1445,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2) // new MUR created for the user signup + existing MUR for the external user
 	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -1504,7 +1520,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1563,7 +1579,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupApproved,
@@ -1682,7 +1698,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	}
@@ -1727,7 +1743,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 }
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
@@ -1769,8 +1785,8 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // zero since starting state was approved
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)   // zero since starting state was approved
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)                        // zero since starting state was approved
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false")) // zero since starting state was approved
 	assert.Empty(t, userSignup.Status.Conditions)
 }
 
@@ -1816,7 +1832,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	assert.Empty(t, userSignup.Status.Conditions)
 }
 
@@ -1864,7 +1880,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
@@ -1943,7 +1959,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 		commontest.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
@@ -2021,7 +2037,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Exists()
 	segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
@@ -2037,7 +2053,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Exists()
 		segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
@@ -2168,7 +2184,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 			"1,internal": 1,
 		})
 	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).Exists()
 	segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 }
@@ -2228,9 +2244,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		// The state label should still be set to approved until the controller reconciles the deactivation
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // 0 because usersignup has not reconciled the deactivation
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)    // 0 because usersignup was originally deactivated
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)      // 0 because state was initially set to approved
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)                     // 0 because usersignup has not reconciled the deactivation
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)                        // 0 because usersignup was originally deactivated
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false")) // 0 because state was initially set to approved
 
 		// Confirm the status is now set to Deactivating
 		commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2287,7 +2303,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal) // one because the deactivation was reconciled
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 		// Confirm the status has been set to Deactivated
 		commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2499,7 +2515,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 		// A deactivated notification should not have been created
 		notificationList := &toolchainv1alpha1.NotificationList{}
@@ -2619,7 +2635,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		assert.Equal(t, "3", userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).Exists()
 		segmenttest.AssertMessageQueuedForUserSignup(t, r.SegmentClient, userSignup)
 
@@ -2708,7 +2724,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 		// A deactivation notification should not be created because this is the reactivation case
 		ntest.AssertNoNotificationsExist(t, r.Client)
@@ -2834,7 +2850,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]) // State should still be approved at this stage
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 			// Confirm the status is still set to Deactivating
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2912,7 +2928,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			// metrics should be the same after the 2nd reconcile
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 			// The Space and SpaceBinding should still exist because cleanup would be handled by the space cleanup controller
 			spacetest.AssertThatSpace(t, commontest.HostOperatorNs, space.Name, r.Client).Exists()
@@ -3101,10 +3117,10 @@ func TestUserSignupBannedWithoutMURAndSpace(t *testing.T) {
 	err = r.Client.Get(context.TODO(), commontest.NamespacedName(commontest.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Confirm the status is set to Banned
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3151,10 +3167,11 @@ func TestUserSignupNoProvisioning(t *testing.T) {
 	err = r.Client.Get(context.TODO(), commontest.NamespacedName(commontest.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNoProvisioning, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("true"))
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Confirm the status is set to InNotProvisioningState
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3214,10 +3231,10 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.Client.Get(context.TODO(), commontest.NamespacedName(commontest.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Confirm the status is set to VerificationRequired
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3315,10 +3332,10 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Confirm the status is set to Banning
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3359,10 +3376,10 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 
 		assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		// metrics should be the same after the 2nd reconcile
-		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 		// Confirm the status is now set to Banned
 		commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3419,10 +3436,10 @@ func TestUserSignupRejected(t *testing.T) {
 	err = r.Client.Get(context.TODO(), commontest.NamespacedName(commontest.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueRejected, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Confirm the status is set to Rejected
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3542,7 +3559,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 			// Confirm the status is set to UnableToDeleteMUR
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3577,7 +3594,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				// the metrics should be the same, deactivation should only be counted once
 				commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 				commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-				commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+				commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 				// The Space and SpaceBinding should still exist because cleanup would be handled by the space cleanup controller
 				spacetest.AssertThatSpaces(t, r.Client).HaveCount(1)
@@ -3692,7 +3709,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	// Status unchanged since it could not be updated
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3779,7 +3796,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 
 			commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -4000,7 +4017,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		})
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 }
 
 func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
@@ -4035,7 +4052,7 @@ func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 
 	commontest.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -4452,12 +4469,28 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("true"))
+			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
+		})
+
+		t.Run("empty -> not-ready with no-provisioning - increment UserSignupUniqueTotal true", func(t *testing.T) {
+			// given
+			metrics.Reset()
+			r := &Reconciler{
+				SegmentClient: segment.NewClient(segmenttest.NewClient()),
+			}
+			noProvisioningSignup := commonsignup.NewUserSignup(commonsignup.NoProvisioning())
+			// when
+			r.updateUserSignupMetricsByState(noProvisioningSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			// then
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal.WithLabelValues("true"))
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4472,12 +4505,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4492,12 +4525,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "approved")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4512,12 +4545,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "approved", "deactivated")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4532,12 +4565,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "deactivated")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4552,12 +4585,28 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "deactivated", "banned")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 2, metrics.UserSignupBannedTotal.WithLabelValues("false"))
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("true"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
+			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
+		})
+
+		t.Run("deactivated -> banned with no-provisioning - increment UserSignupBannedTotal true", func(t *testing.T) {
+			// given
+			metrics.Reset()
+			r := &Reconciler{
+				SegmentClient: segment.NewClient(segmenttest.NewClient()),
+			}
+			noProvisioningSignup := commonsignup.NewUserSignup(commonsignup.NoProvisioning())
+			// when
+			r.updateUserSignupMetricsByState(noProvisioningSignup, "deactivated", "banned")
+			// then
+			commonmetricstest.AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal.WithLabelValues("true"))
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	})
@@ -4574,12 +4623,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4594,12 +4643,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -4614,12 +4663,12 @@ func TestUpdateMetricsByState(t *testing.T) {
 			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "x")
 			// then
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal.WithLabelValues("false"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
 			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
-			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			commonmetricstest.AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal.WithLabelValues("false"))
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 	})
