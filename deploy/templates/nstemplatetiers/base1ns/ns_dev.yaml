@@ -127,7 +127,7 @@ objects:
     namespace: ${SPACE_NAME}-dev
   spec:
     hard:
-      count/spacerequests.toolchain.dev.openshift.com: "1"
+      count/spacerequests.toolchain.dev.openshift.com: "5"
 
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
