@@ -1,0 +1,49 @@
+name: push-e2e-images
+on:
+  workflow_run:
+    workflows: ["publish-components-for-e2e-tests"]
+    types: [completed]
+
+permissions:
+  actions: read
+
+jobs:
+  push:
+    name: Push e2e images
+    runs-on: ubuntu-26.04
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          (github.event.workflow_run.event == 'pull_request' ||
+           github.event.workflow_run.event == 'issue_comment') }}
+    steps:
+    - name: Download e2e-images
+      uses: actions/download-artifact@v8
+      with:
+        name: e2e-images
+        path: e2e-images
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Locate archive
+      id: files
+      shell: bash
+      run: |
+        set -euo pipefail
+        archive=$(find e2e-images -name e2e-images.tar -print -quit)
+        images=$(find e2e-images -name images.txt -print -quit)
+        if [[ -z "${archive}" || -z "${images}" ]]; then
+          echo "e2e-images artifact is missing the archive or image list" >&2
+          find e2e-images -print >&2
+          exit 1
+        fi
+        {
+          echo "archive=${archive}"
+          echo "images=${images}"
+        } >> "${GITHUB_OUTPUT}"
+
+    - name: Push e2e image archive
+      uses: codeready-toolchain/toolchain-cicd/push-e2e-image-archive@master
+      with:
+        quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
+        archive-path: ${{ steps.files.outputs.archive }}
+        images-file: ${{ steps.files.outputs.images }}
