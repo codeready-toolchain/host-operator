@@ -17,14 +17,18 @@ jobs:
           name: coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
+          path: coverage-artifact
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # The 'files' attribute consists of 'coverage/coverage.txt'.
-          # The 'coverage' directory is created upon the download of the coverage artifact from previous step (it creates a directory with the name of the artifact).
-          files: coverage/coverage.txt
+          files: coverage-artifact/coverage.txt
           flags: unittests # optional
-          fail_ci_if_error: true    
+          fail_ci_if_error: true
           verbose: true
+          # workflow_run uses the default-branch SHA. Point Codecov at the
+          # commit that produced this coverage report.
+          override_commit: ${{ github.event.workflow_run.head_sha }}
+          override_branch: ${{ github.event.workflow_run.head_branch }}
+          override_pr: ${{ github.event.workflow_run.pull_requests[0].number }}
