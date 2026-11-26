@@ -99,3 +99,27 @@ jobs:
         name: e2e-images
         path: e2e-images/
         if-no-files-found: error
+
+    # A /test e2e run uses the workflow on master, so save the pull request
+    # commit from the GitHub API for the push job.
+    - name: Save pull request identity for the image push
+      if: ${{ github.event_name == 'issue_comment' }}
+      env:
+        PR_SHA: ${{ fromJson(steps.request.outputs.data).head.sha }}
+        PR_NUMBER: ${{ fromJson(steps.request.outputs.data).number }}
+      run: |
+        set -euo pipefail
+        if [[ ! "${PR_SHA}" =~ ^[0-9a-f]{40}$ || ! "${PR_NUMBER}" =~ ^[0-9]+$ ]]; then
+          echo "pull request identity from GitHub is not usable" >&2
+          exit 1
+        fi
+        mkdir -p e2e-push-identity
+        printf '%s\n' "${PR_SHA}" > e2e-push-identity/sha
+        printf '%s\n' "${PR_NUMBER}" > e2e-push-identity/pr
+    - name: Upload pull request identity
+      if: ${{ github.event_name == 'issue_comment' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: e2e-push-identity
+        path: e2e-push-identity/
+        if-no-files-found: error
