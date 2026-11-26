@@ -35,7 +35,7 @@ jobs:
       run: |
         set -euo pipefail
         if [[ "${EVENT}" == "issue_comment" ]]; then
-          gh run download "${RUN_ID}" -n e2e-push-identity -D e2e-push-identity
+          gh run download "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" -n e2e-push-identity -D e2e-push-identity
           sha=$(tr -d '[:space:]' < e2e-push-identity/sha)
           number=$(tr -d '[:space:]' < e2e-push-identity/pr)
         else

@@ -105,8 +105,8 @@ jobs:
     - name: Save pull request identity for the image push
       if: ${{ github.event_name == 'issue_comment' }}
       env:
-        PR_SHA: ${{ fromJson(steps.request.outputs.data).head.sha }}
-        PR_NUMBER: ${{ fromJson(steps.request.outputs.data).number }}
+        PR_SHA: ${{ fromJson(steps.request.outputs.data || '{}').head.sha }}
+        PR_NUMBER: ${{ fromJson(steps.request.outputs.data || '{}').number }}
       run: |
         set -euo pipefail
         if [[ ! "${PR_SHA}" =~ ^[0-9a-f]{40}$ || ! "${PR_NUMBER}" =~ ^[0-9]+$ ]]; then
