@@ -1,4 +1,15 @@
 name: push-e2e-images
+# Runs after publish-components-for-e2e-tests succeeds.
+# That build has no Quay token. This job pushes the archive it saved.
+#
+# A pull request may only push its own test tag. Fork pull requests do not
+# include the pull request number on this event, so the job looks it up.
+# A /test e2e comment rebuild does not send that identity. The push action
+# then only checks that the tag has the usual test shape.
+#
+# GitHub records this job on master. The last step copies the result onto
+# the pull request commit as "Push e2e images". Require that name in branch
+# protection to wait for the Quay push before merge.
 on:
   workflow_run:
     workflows: ["publish-components-for-e2e-tests"]
@@ -6,6 +17,8 @@ on:
 
 permissions:
   actions: read
+  pull-requests: read
+  statuses: write
 
 jobs:
   push:
@@ -13,7 +26,38 @@ jobs:
     runs-on: ubuntu-26.04
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+    # Find the open pull request for this build. The commit, branch, and
+    # repository come from GitHub, not from the archive.
+    - name: Resolve pull request
+      id: pr
+      if: ${{ github.event.workflow_run.event == 'pull_request' }}
+      env:
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        if [[ ! "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "workflow run head sha is not a commit id" >&2
+          exit 1
+        fi
+        owner="${HEAD_REPO%%/*}"
+        number=$(gh api -X GET "repos/${GITHUB_REPOSITORY}/pulls" \
+          -f state=open \
+          -f head="${owner}:${HEAD_BRANCH}" \
+          --jq ".[] | select(.head.sha == \"${HEAD_SHA}\") | .number" | head -n 1)
+        if [[ ! "${number}" =~ ^[0-9]+$ ]]; then
+          echo "no open pull request for ${owner}:${HEAD_BRANCH} at ${HEAD_SHA}" >&2
+          exit 1
+        fi
+        {
+          echo "number=${number}"
+          echo "sha=${HEAD_SHA}"
+        } >> "${GITHUB_OUTPUT}"
+
     - name: Download e2e-images
+      id: download
       uses: actions/download-artifact@v8
       with:
         name: e2e-images
@@ -22,8 +66,41 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Push e2e image archive
+      id: push
       uses: codeready-toolchain/toolchain-cicd/push-e2e-image-archive@master
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
         archive-path: e2e-images/e2e-images.tar
         images-file: e2e-images/images.txt
+        expected-repository: ${{ github.event.workflow_run.event == 'pull_request' && github.event.repository.name || '' }}
+        expected-pr-number: ${{ steps.pr.outputs.number }}
+        expected-sha: ${{ steps.pr.outputs.sha }}
+
+    # Put the result on the pull request commit. The name matches the job
+    # name so branch protection can require "Push e2e images".
+    - name: Record image push on the pull request
+      if: ${{ always() && github.event.workflow_run.event == 'pull_request' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        RESOLVE: ${{ steps.pr.outcome }}
+        DOWNLOAD: ${{ steps.download.outcome }}
+        PUSH: ${{ steps.push.outcome }}
+        TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        if [[ ! "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "workflow run head sha is not a commit id" >&2
+          exit 1
+        fi
+        state=failure
+        description="e2e image push failed"
+        if [[ "${RESOLVE}" == "success" && "${DOWNLOAD}" == "success" && "${PUSH}" == "success" ]]; then
+          state=success
+          description="e2e images pushed to Quay"
+        fi
+        gh api "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+          -f state="${state}" \
+          -f context="Push e2e images" \
+          -f description="${description}" \
+          -f target_url="${TARGET_URL}"
