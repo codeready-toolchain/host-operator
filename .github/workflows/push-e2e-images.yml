@@ -1,0 +1,100 @@
+name: push-e2e-images
+# Pushes the archive saved by publish-components-for-e2e-tests. The build
+# has no Quay token. Only this pull request's test tag is pushed.
+#
+# A pull request number is looked up from GitHub. A /test e2e comment runs
+# from master, so the build saves the pull request commit and this job reads
+# it. Either way the result is written on that commit as "Push e2e images".
+on:
+  workflow_run:
+    workflows: ["publish-components-for-e2e-tests"]
+    types: [completed]
+
+permissions:
+  actions: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  push:
+    name: Push e2e images
+    runs-on: ubuntu-26.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+    # Pull request: the commit is on the event, the number is looked up.
+    # Comment: the event commit is master, so read the commit the build saved.
+    - name: Resolve pull request
+      id: pr
+      env:
+        EVENT: ${{ github.event.workflow_run.event }}
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        RUN_ID: ${{ github.event.workflow_run.id }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        if [[ "${EVENT}" == "issue_comment" ]]; then
+          gh run download "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" -n e2e-push-identity -D e2e-push-identity
+          sha=$(tr -d '[:space:]' < e2e-push-identity/sha)
+          number=$(tr -d '[:space:]' < e2e-push-identity/pr)
+        else
+          sha="${HEAD_SHA}"
+          [[ "${sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "workflow run head sha is not a commit id" >&2; exit 1; }
+          owner="${HEAD_REPO%%/*}"
+          number=$(gh api -X GET "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=open -f head="${owner}:${HEAD_BRANCH}" \
+            --jq ".[] | select(.head.sha == \"${sha}\") | .number" | head -n 1)
+        fi
+        if [[ ! "${sha}" =~ ^[0-9a-f]{40}$ || ! "${number}" =~ ^[0-9]+$ ]]; then
+          echo "no pull request commit for this build" >&2
+          exit 1
+        fi
+        {
+          echo "number=${number}"
+          echo "sha=${sha}"
+        } >> "${GITHUB_OUTPUT}"
+
+    - name: Download e2e-images
+      id: download
+      uses: actions/download-artifact@v8
+      with:
+        name: e2e-images
+        path: e2e-images
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push e2e image archive
+      id: push
+      uses: codeready-toolchain/toolchain-cicd/push-e2e-image-archive@master
+      with:
+        quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
+        archive-path: e2e-images/e2e-images.tar
+        images-file: e2e-images/images.txt
+        expected-repository: ${{ steps.pr.outputs.sha && github.event.repository.name || '' }}
+        expected-pr-number: ${{ steps.pr.outputs.number }}
+        expected-sha: ${{ steps.pr.outputs.sha }}
+
+    # The job itself is recorded on master. This copies the result onto the
+    # pull request commit so branch protection can require "Push e2e images".
+    - name: Record image push on the pull request
+      if: ${{ always() && (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'issue_comment') }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HEAD_SHA: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.head_sha || steps.pr.outputs.sha }}
+        RESOLVE: ${{ steps.pr.outcome }}
+        DOWNLOAD: ${{ steps.download.outcome }}
+        PUSH: ${{ steps.push.outcome }}
+        TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        [[ "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]] || { echo "workflow run head sha is not a commit id" >&2; exit 1; }
+        state=failure
+        description="e2e image push failed"
+        if [[ "${RESOLVE}" == "success" && "${DOWNLOAD}" == "success" && "${PUSH}" == "success" ]]; then
+          state=success
+          description="e2e images pushed to Quay"
+        fi
+        gh api "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+          -f state="${state}" -f context="Push e2e images" \
+          -f description="${description}" -f target_url="${TARGET_URL}"
